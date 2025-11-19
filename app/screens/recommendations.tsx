@@ -1,27 +1,76 @@
-import React, { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { ClinicalAssessmentEngine } from '@/services/clinicalAssessment';
+import { FontAwesome5 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
+  Alert,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
-  Alert,
-  ActivityIndicator,
+  View,
 } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ClinicalAssessmentEngine } from '@/services/clinicalAssessment';
+
+// Translations
+const translations = {
+  en: {
+    title: 'Recommendations',
+    backButton: 'Back',
+    loading: 'Loading recommendations...',
+    error: 'Error',
+    errorLoading: 'Failed to load recommendations',
+    noResults: 'No results found',
+    tryAgain: 'Try Again',
+    viewHistory: 'View History',
+    score: 'Score',
+    severity: 'Severity',
+    recommendations: 'AI Recommendations',
+  },
+  ka: {
+    title: 'რეკომენდაციები',
+    backButton: 'უკან',
+    loading: 'რეკომენდაციების ჩატვირთვა...',
+    error: 'შეცდომა',
+    errorLoading: 'რეკომენდაციების ჩატვირთვა ვერ მოხერხდა',
+    noResults: 'შედეგები ვერ მოიძებნა',
+    tryAgain: 'ხელახლა ცდა',
+    viewHistory: 'ისტორიის ნახვა',
+    score: 'ქულა',
+    severity: 'სიმძიმე',
+    recommendations: 'AI რეკომენდაციები',
+  },
+  ru: {
+    title: 'Рекомендации',
+    backButton: 'Назад',
+    loading: 'Загрузка рекомендаций...',
+    error: 'Ошибка',
+    errorLoading: 'Не удалось загрузить рекомендации',
+    noResults: 'Результаты не найдены',
+    tryAgain: 'Попробовать снова',
+    viewHistory: 'Посмотреть историю',
+    score: 'Баллы',
+    severity: 'Тяжесть',
+    recommendations: 'AI рекомендации',
+  }
+};
+
+const isDark = (theme: any) => theme.colors.background === '#000000' || theme.colors.background === '#1a1a1a';
 
 export default function RecommendationsScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
+  const { language } = useLanguage();
   const router = useRouter();
   const params = useLocalSearchParams();
   const [recommendations, setRecommendations] = useState('');
   const [loading, setLoading] = useState(true);
   const [testResult, setTestResult] = useState<any>(null);
+  
+  const t = translations[language as keyof typeof translations] || translations.en;
 
   useEffect(() => {
     loadRecommendations();
@@ -100,16 +149,17 @@ export default function RecommendationsScreen() {
             }
           } else {
             console.log('No assessments found for type:', assessmentType);
-            setRecommendations('Нет данных о прохождении этого теста. Пожалуйста, пройдите тест, чтобы получить рекомендации.');
+            setRecommendations(t.noResults);
           }
         } else {
           console.log('No clinical assessments found in storage');
-          setRecommendations('История тестов не найдена. Пройдите тесты, чтобы получить персональные рекомендации.');
+          setRecommendations(t.noResults);
         }
       }
     } catch (error) {
       console.error('Error loading recommendations:', error);
-      setRecommendations('Не удалось загрузить рекомендации. Попробуйте позже.');
+      setRecommendations(t.errorLoading);
+      Alert.alert(t.error, t.errorLoading);
     } finally {
       setLoading(false);
     }
@@ -303,13 +353,13 @@ export default function RecommendationsScreen() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <FontAwesome5 name="arrow-left" size={20} color={theme.colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Рекомендации</Text>
+          <Text style={styles.headerTitle}>{t.title}</Text>
         </View>
         
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.accent} />
           <Text style={styles.loadingText}>
-            Анализируем ваши результаты и генерируем персональные рекомендации...
+            {t.loading}
           </Text>
         </View>
       </SafeAreaView>
@@ -322,7 +372,7 @@ export default function RecommendationsScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <FontAwesome5 name="arrow-left" size={20} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Результаты и рекомендации</Text>
+        <Text style={styles.headerTitle}>{t.title}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -334,7 +384,7 @@ export default function RecommendationsScreen() {
             
             <View style={styles.scoreContainer}>
               <Text style={styles.scoreText}>
-                Результат: {testResult.totalScore || testResult.score || 'Н/Д'} баллов
+                {t.score}: {testResult.totalScore || testResult.score || 'N/A'}
               </Text>
               
               {testResult.severity && (
@@ -350,49 +400,43 @@ export default function RecommendationsScreen() {
             </View>
             
             <Text style={styles.dateText}>
-              Дата прохождения: {new Date(testResult.testDate || Date.now()).toLocaleDateString('ru-RU')}
+              {new Date(testResult.testDate || Date.now()).toLocaleDateString()}
             </Text>
           </View>
         )}
 
         <View style={styles.recommendationCard}>
-          <Text style={styles.recommendationTitle}>
-            🤖 Персональные рекомендации
-          </Text>
-          
-          <Text style={styles.recommendationText}>
-            {recommendations || 'Рекомендации генерируются...'}
-          </Text>
+          <Text style={styles.recommendationTitle}>🤖 {t.recommendations}</Text>
+
+          {Array.isArray(recommendations) ? (
+            recommendations.map((rec: string, i: number) => (
+              <View key={i} style={{ marginBottom: 12 }}>
+                <Text style={styles.recommendationText}>{`${i + 1}. ${rec}`}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.recommendationText}>{recommendations || t.loading}</Text>
+          )}
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionButton, styles.secondaryButton]}
-            onPress={() => router.push('/screens/tests')}
+            onPress={() => router.push('/screens/test-history')}
           >
-            <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-              Другие тесты
-            </Text>
+            <FontAwesome5 name="history" size={18} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.buttonText}>{t.viewHistory}</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => router.push('/general')}
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.secondaryButton, { borderWidth: 1, borderColor: theme.colors.border }]}
+            onPress={() => router.back()}
           >
-            <Text style={styles.buttonText}>
-              На главную
-            </Text>
+            <FontAwesome5 name="redo" size={18} color={theme.colors.text} style={{ marginRight: 8 }} />
+            <Text style={styles.secondaryButtonText}>{t.tryAgain}</Text>
           </TouchableOpacity>
         </View>
-        
-        <TouchableOpacity 
-          style={[styles.historyButton, { backgroundColor: theme.colors.background }]}
-          onPress={() => router.push('/screens/test-history')}
-        >
-          <Text style={{ color: theme.colors.accent, textAlign: 'center' }}>
-            История всех тестов
-          </Text>
-        </TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   );

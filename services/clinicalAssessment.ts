@@ -1,5 +1,6 @@
-// Standardized Clinical Assessment Tools
+﻿// Standardized Clinical Assessment Tools
 // სტანდარტიზებული კლინიკური შეფასების ინსტრუმენტები
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface PHQ9Assessment {
   questions: {
@@ -712,7 +713,238 @@ export class ClinicalAssessmentEngine {
     return { wellnessLevel, strengths, growthAreas };
   }
 
-  // Generate AI-powered clinical recommendations using OpenAI API
+  // User Profile Management
+  private static readonly PROFILE_STORAGE_KEY = 'userPsychologicalProfile';
+
+  static async getUserProfile(): Promise<UserProfile | null> {
+    try {
+      const profileData = await AsyncStorage.getItem(this.PROFILE_STORAGE_KEY);
+      if (profileData) {
+        return JSON.parse(profileData);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      return null;
+    }
+  }
+
+  static async saveUserProfile(profile: UserProfile): Promise<void> {
+    try {
+      profile.updatedAt = new Date().toISOString();
+      await AsyncStorage.setItem(this.PROFILE_STORAGE_KEY, JSON.stringify(profile));
+    } catch (error) {
+      console.error('Error saving user profile:', error);
+    }
+  }
+
+  static async updateUserProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
+    try {
+      let profile = await this.getUserProfile();
+      
+      if (!profile) {
+        // Create new profile
+        profile = {
+          personalInfo: {},
+          psychologicalProfile: {
+            personalityTraits: [],
+            emotionalPatterns: [],
+            strengthsAndResources: [],
+            growthAreas: [],
+            copingStrategies: [],
+            communicationStyle: '',
+            motivationalFactors: [],
+            stressIndicators: []
+          },
+          assessmentHistory: {
+            completedTests: [],
+            totalTests: 0,
+            completionPercentage: 0,
+            lastTestDate: new Date().toISOString(),
+            progressNotes: []
+          },
+          latestAssessments: {},
+          aiInsights: {
+            overallWellness: '',
+            keyRecommendations: [],
+            personalizationNotes: [],
+            nextSteps: [],
+            riskFactors: [],
+            protectiveFactors: []
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      }
+
+      // Deep merge updates
+      if (updates.psychologicalProfile) {
+        profile.psychologicalProfile = {
+          ...profile.psychologicalProfile,
+          ...updates.psychologicalProfile
+        };
+      }
+
+      if (updates.aiInsights) {
+        profile.aiInsights = {
+          ...profile.aiInsights,
+          ...updates.aiInsights
+        };
+      }
+
+      if (updates.assessmentHistory) {
+        profile.assessmentHistory = {
+          ...profile.assessmentHistory,
+          ...updates.assessmentHistory
+        };
+      }
+
+      if (updates.latestAssessments) {
+        profile.latestAssessments = {
+          ...profile.latestAssessments,
+          ...updates.latestAssessments
+        };
+      }
+
+      await this.saveUserProfile(profile);
+      return profile;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
+  }
+
+  // Update user profile with test results
+  static async updateProfileWithTestResults(assessmentType: string, results: any, recommendations: string): Promise<void> {
+    try {
+      const currentDate = new Date().toISOString();
+      
+      // Prepare profile updates
+      const profileUpdates: Partial<UserProfile> = {
+        latestAssessments: {
+          [assessmentType]: {
+            result: results,
+            date: currentDate,
+            analysis: recommendations
+          }
+        },
+        assessmentHistory: {
+          completedTests: [],
+          totalTests: 0,
+          completionPercentage: 0,
+          lastTestDate: currentDate,
+          lastTestType: assessmentType,
+          progressNotes: []
+        }
+      };
+
+      // Get current profile to merge
+      const currentProfile = await this.getUserProfile();
+      if (currentProfile) {
+        // Merge completed tests
+        const completedTests = currentProfile.assessmentHistory?.completedTests || [];
+        if (!completedTests.includes(assessmentType)) {
+          completedTests.push(assessmentType);
+        }
+        
+        profileUpdates.assessmentHistory = {
+          ...currentProfile.assessmentHistory,
+          completedTests,
+          totalTests: completedTests.length,
+          completionPercentage: (completedTests.length / 7) * 100, // 7 total tests
+          lastTestDate: currentDate,
+          lastTestType: assessmentType,
+          progressNotes: currentProfile.assessmentHistory?.progressNotes || []
+        };
+
+        // Merge latest assessments
+        profileUpdates.latestAssessments = {
+          ...currentProfile.latestAssessments,
+          [assessmentType]: {
+            result: results,
+            date: currentDate,
+            analysis: recommendations
+          }
+        };
+      }
+
+      await this.updateUserProfile(profileUpdates);
+      
+      // Generate comprehensive profile analysis with AI
+      try {
+        const currentProfile = await this.getUserProfile();
+        const aiAnalysis = await this.generateUserProfileAnalysis(
+          assessmentType, 
+          results, 
+          currentProfile || undefined
+        );
+        
+        // Update profile with AI insights
+        if (aiAnalysis && aiAnalysis.userProfileUpdate) {
+          await this.updateUserProfile(aiAnalysis.userProfileUpdate);
+        }
+      } catch (aiError) {
+        console.error('Error generating AI profile analysis:', aiError);
+        // Continue even if AI analysis fails
+      }
+    } catch (error) {
+      console.error('Error updating profile with test results:', error);
+    }
+  }
+
+  // Format AI recommendations from JSON to readable text
+  static formatAIRecommendations(rawRecommendations: string): string {
+    try {
+      // Try to extract JSON from markdown code block if present
+      let jsonText = rawRecommendations.trim();
+      
+      // Remove markdown code blocks
+      const jsonMatch = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1];
+      }
+      
+      // Try to parse JSON
+      const recommendations = JSON.parse(jsonText);
+      
+      // Format as readable text
+      let formatted = '✨ Спасибо за прохождение теста!\n\n';
+      
+      // Validation
+      if (recommendations.validation) {
+        formatted += `💭 ${recommendations.validation}\n\n`;
+      }
+      
+      // Recommendations
+      if (recommendations.recommendations && Array.isArray(recommendations.recommendations)) {
+        formatted += '📋 Персональные рекомендации:\n\n';
+        
+        recommendations.recommendations.forEach((rec: any, index: number) => {
+          formatted += `${rec.emoji || '•'} ${rec.title || `Рекомендация ${index + 1}`}\n`;
+          formatted += `${rec.description}\n\n`;
+        });
+      }
+      
+      // Next steps
+      if (recommendations.next_steps) {
+        formatted += `🎯 Следующие шаги:\n${recommendations.next_steps}\n\n`;
+      }
+      
+      // Closing message
+      if (recommendations.closing_message) {
+        formatted += `💪 ${recommendations.closing_message}`;
+      }
+      
+      return formatted;
+      
+    } catch (error) {
+      console.error('Error parsing AI recommendations JSON:', error);
+      // Return original text if parsing fails
+      return `Спасибо за прохождение теста! Вот персональные рекомендации на основе ваших ответов:\n\n${rawRecommendations}`;
+    }
+  }
+
+  // Generate AI-powered clinical recommendations using OpenAI API with user context
   static async generateAIRecommendations(assessmentType: string, results: any): Promise<string> {
     try {
       const apiKey = process.env.EXPO_PUBLIC_API_KEY;
@@ -721,66 +953,38 @@ export class ClinicalAssessmentEngine {
         return 'Извините, сервис რეკომენდაციები временно недоступენ. Обратитесь к специалисту для получения персональной консультации.';
       }
 
-      const analysisPrompt = this.createAnalysisPrompt(assessmentType, results);
+      // Load existing user profile for context
+      const userProfile = await this.getUserProfile();
       
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      // Create enriched prompt with user context
+      const analysisPrompt = this.createEnrichedAnalysisPrompt(assessmentType, results, userProfile);
+      
+      const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            {
-              role: 'system',
-              content: `Вы - опытный клинический психолог с 15-летним стажем. Ваша задача - создать короткие, позитивные, практические рекомендации на основе результатов психологических тестов.
-
-ТРЕБОВАНИЯ:
-- Отвечайте ТОЛЬКО на русском языке
-- Рекомендации должны быть короткими (2-4 предложения каждая)
-- Фокусируйтесь на позитивных, практических советах
-- Избегайте медицинских диагнозов и кризисных предупреждений
-- Используйте эмодзи для визуального улучшения
-- Давайте конкретные, выполнимые советы
-- Поддерживающий и ободряющий тон
-
-СОХРАНЕНИЕ ИНФОРМАЦИИ О ПОЛЬЗОВАТЕЛЕ:
-- Анализируйте паттерны в ответах пользователя
-- Запоминайте ключевые особенности личности и предпочтения
-- Учитывайте эмоциональные триггеры и области роста
-- Отмечайте сильные стороны пользователя
-- Фиксируйте эффективные стратегии преодоления
-- Создавайте психологический профиль для долгосрочного сопровождения
-
-ИСПОЛЬЗОВАНИЕ КОНТЕКსტА:
-- Применяйте накопленную информацию для персонализации советов
-- Ссылайтесь на предыдущие достижения и прогресс
-- Адаптируйте рекомендации под индивидуальный стиль пользователя
-- Учитывайте жизненные обстоятельства и цели
-- Интегрируйте данные всех пройденных тестов
-
-ПРОФИЛИРОВАНИЕ ПОЛЬЗОВАТЕЛЯ:
-- Определите доминирующие черты личности
-- Выявите предпочтительные стили обучения и взаимодействия
-- Запомните успешные техники и стратегии
-- Отметьте области для развития и роста
-- Учтите სოციალური და კულტურული მახასიათებლები
-
-ფორმატი პასუხი:
-• [Эмოდზი] [Краткая рекомендация на основе კონკრეტული პასუხები]
-• [Эმოდზი] [Еще одна რეკომენდაცია]
-(максимუმ 4-5 რეკომენდაციები)
-
-ВАЖНО: Создавайте базу знаний о пользователе для долгосрочного сопровождения და უფრო ღრმა გაგება მისი საჭიროებების.`
-            },
+          prompt: {
+            id: 'pmpt_6914d26efccc8190ac8650eb60da46110b64c04ad0fe3b77',
+            version: '1'
+          },
+          input: [
             {
               role: 'user',
               content: analysisPrompt
             }
           ],
-          max_tokens: 500,
-          temperature: 0.7,
+          text: {
+            format: {
+              type: 'text'
+            }
+          },
+          reasoning: {},
+          max_output_tokens: 2048,
+          store: true,
+          include: ['web_search_call.action.sources']
         }),
       });
 
@@ -789,13 +993,44 @@ export class ClinicalAssessmentEngine {
       }
 
       const data = await response.json();
-      const aiRecommendations = data.choices?.[0]?.message?.content || 'Не удалось сгенерировать рекомендации.';
+      console.log('API Response:', JSON.stringify(data, null, 2));
       
-      return `Спасибо за прохождение теста! Вот персональные рекомендации на основе ваших ответов:\n\n${aiRecommendations}`;
+      // Parse response based on OpenAI Responses API structure
+      let aiRecommendations = 'Не удалось сгенерировать рекомендации.';
+      
+      // OpenAI Responses API structure: data.output[0].content[0].text
+      if (data.output && Array.isArray(data.output) && data.output.length > 0) {
+        const outputItem = data.output[0];
+        
+        if (outputItem.content && Array.isArray(outputItem.content) && outputItem.content.length > 0) {
+          const contentItem = outputItem.content[0];
+          
+          if (contentItem.type === 'output_text' && contentItem.text) {
+            aiRecommendations = contentItem.text;
+          }
+        }
+      } else if (typeof data.output === 'string') {
+        // Fallback: if output is a direct string
+        aiRecommendations = data.output;
+      } else if (data.text) {
+        // Fallback: if text is at root level
+        aiRecommendations = data.text;
+      } else if (data.content) {
+        // Fallback: if content is at root level
+        aiRecommendations = data.content;
+      }
+      
+      // Parse and format JSON recommendations if present
+      const formattedRecommendations = this.formatAIRecommendations(aiRecommendations);
+      
+      // Update user profile with test results and insights
+      await this.updateProfileWithTestResults(assessmentType, results, formattedRecommendations);
+      
+      return formattedRecommendations;
       
     } catch (error) {
       console.error('Error generating AI recommendations:', error);
-      return 'Извините, возникла ошибка при генерации рекомендаций. Рекомендуется консультация с психологом для получения персональных советов.';
+      return 'Произошла ошибка при генერации рекомендаций. Пожалуйста, попробуйте позже или обратитесь к специалисту.';
     }
   }
 
@@ -824,6 +1059,80 @@ export class ClinicalAssessmentEngine {
     }
 
     return prompt;
+  }
+
+  // Create enriched analysis prompt with user profile context
+  static createEnrichedAnalysisPrompt(assessmentType: string, results: any, userProfile: UserProfile | null): string {
+    // Get basic test analysis
+    const basePrompt = this.createAnalysisPrompt(assessmentType, results);
+    
+    if (!userProfile) {
+      return basePrompt;
+    }
+
+    // Add user context
+    let contextInfo = '\n\n=== КОНТЕКСТ ПОЛЬЗОВАТЕЛЯ ===\n';
+    
+    // Previous tests and patterns
+    if (userProfile.assessmentHistory && userProfile.assessmentHistory.completedTests.length > 0) {
+      contextInfo += `\nПройденные тесты: ${userProfile.assessmentHistory.completedTests.join(', ')}`;
+      contextInfo += `\nВсего тестов: ${userProfile.assessmentHistory.totalTests}`;
+      contextInfo += `\nПоследний тест: ${userProfile.assessmentHistory.lastTestType || 'N/A'}`;
+    }
+
+    // Psychological profile
+    if (userProfile.psychologicalProfile) {
+      const profile = userProfile.psychologicalProfile;
+      
+      if (profile.personalityTraits && profile.personalityTraits.length > 0) {
+        contextInfo += `\n\nЛичностные черты: ${profile.personalityTraits.join(', ')}`;
+      }
+      
+      if (profile.emotionalPatterns && profile.emotionalPatterns.length > 0) {
+        contextInfo += `\nЭмоциональные паттерны: ${profile.emotionalPatterns.join(', ')}`;
+      }
+      
+      if (profile.strengthsAndResources && profile.strengthsAndResources.length > 0) {
+        contextInfo += `\nСильные стороны: ${profile.strengthsAndResources.join(', ')}`;
+      }
+      
+      if (profile.copingStrategies && profile.copingStrategies.length > 0) {
+        contextInfo += `\nУспешные стратегии преодоления: ${profile.copingStrategies.join(', ')}`;
+      }
+    }
+
+    // Previous AI insights
+    if (userProfile.aiInsights) {
+      const insights = userProfile.aiInsights;
+      
+      if (insights.overallWellness) {
+        contextInfo += `\n\nОбщее благополучие: ${insights.overallWellness}`;
+      }
+      
+      if (insights.protectiveFactors && insights.protectiveFactors.length > 0) {
+        contextInfo += `\nЗащитные факторы: ${insights.protectiveFactors.join(', ')}`;
+      }
+    }
+
+    // Latest assessments for comparison
+    if (userProfile.latestAssessments && Object.keys(userProfile.latestAssessments).length > 0) {
+      contextInfo += '\n\n=== ПРЕДЫДУЩИЕ РЕЗУЛЬТАТЫ ===';
+      Object.entries(userProfile.latestAssessments).forEach(([testType, data]) => {
+        if (data.result && data.result.totalScore !== undefined) {
+          contextInfo += `\n${testType}: ${data.result.totalScore} (${data.date})`;
+        }
+      });
+    }
+
+    contextInfo += '\n\n=== ИНСТРУКЦИЯ ===';
+    contextInfo += '\nИСПОЛЬЗУЙТЕ весь контекст выше для создания ПЕРСОНАЛИЗИРОВАННЫХ рекомендаций:';
+    contextInfo += '\n- Ссылайтесь на предыдущие результаты и прогресс';
+    contextInfo += '\n- Учитывайте известные личностные черты и предпочтения';
+    contextInfo += '\n- Опирайтесь на успешные стратегии из прошлого';
+    contextInfo += '\n- Отмечайте улучшения или изменения с прошлого раза';
+    contextInfo += '\n- Адаптируйте рекомендации под уникальный профиль пользователя';
+
+    return basePrompt + contextInfo;
   }
 
   // Create detailed analysis prompts for each test type
@@ -1008,57 +1317,32 @@ export class ClinicalAssessmentEngine {
 
       const analysisPrompt = this.createProfileAnalysisPrompt(assessmentType, results, existingProfile);
       
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            {
-              role: 'system',
-              content: `Вы - ведущий психолог-аналитик с экспертизой в создании психологических профилей. Ваша задача - проанализировать результаты тестов и создать комплексный профиль пользователя для долгосрочного психологического сопровождения.
-
-ТРЕБОВАНИЯ:
-- Отвечайте ТОЛЬКО на русском языке
-- Создайте детальный психологический анализ
-- Определите ключевые личностные характеристики
-- Выявите паттерны поведения и мышления
-- Предложите персонализированные стратегии развития
-- Отметьте защитные факторы и ресурсы личности
-
-ФОРМАТ ОТВЕТА (строго JSON):
-{
-  "personalityTraits": ["черта1", "черта2", "черта3"],
-  "emotionalPatterns": ["паттерн1", "паттерн2"],
-  "strengthsAndResources": ["сила1", "сила2", "сила3"],
-  "growthAreas": ["область1", "область2"],
-  "copingStrategies": ["стратегия1", "стратегия2"],
-  "communicationStyle": "описание стиля коммуникации",
-  "motivationalFactors": ["фактор1", "фактор2"],
-  "stressIndicators": ["индикатор1", "индикатор2"],
-  "overallWellness": "общая оценка благополучия",
-  "keyRecommendations": ["рекомендация1", "рекомендация2", "рекомендация3"],
-  "personalizationNotes": ["заметка1", "заметка2"],
-  "nextSteps": ["шаг1", "шаг2"],
-  "riskFactors": ["фактор1", "фактор2"],
-  "protectiveFactors": ["фактор1", "фактор2"],
-  "testSpecificInsights": ["инсайт1", "инсайт2", "инсайт3"],
-  "progressIndicators": ["показатель1", "показатель2"],
-  "contextualAnalysis": "детальный анализ контекста и значимости результатов"
-}
-
-ВАЖНО: Отвечайте только валидным JSON без дополнительного текста.`
-            },
+          prompt: {
+            id: 'pmpt_6914d26efccc8190ac8650eb60da46110b64c04ad0fe3b77',
+            version: '1'
+          },
+          input: [
             {
               role: 'user',
               content: analysisPrompt
             }
           ],
-          max_tokens: 1000,
-          temperature: 0.7,
+          text: {
+            format: {
+              type: 'text'
+            }
+          },
+          reasoning: {},
+          max_output_tokens: 2048,
+          store: true,
+          include: ['web_search_call.action.sources']
         }),
       });
 
@@ -1067,7 +1351,32 @@ export class ClinicalAssessmentEngine {
       }
 
       const data = await response.json();
-      const aiResponse = data.choices?.[0]?.message?.content || '{}';
+      console.log('Profile API Response:', JSON.stringify(data, null, 2));
+      
+      // Parse response based on OpenAI Responses API structure
+      let aiResponse = '{}';
+      
+      // OpenAI Responses API structure: data.output[0].content[0].text
+      if (data.output && Array.isArray(data.output) && data.output.length > 0) {
+        const outputItem = data.output[0];
+        
+        if (outputItem.content && Array.isArray(outputItem.content) && outputItem.content.length > 0) {
+          const contentItem = outputItem.content[0];
+          
+          if (contentItem.type === 'output_text' && contentItem.text) {
+            aiResponse = contentItem.text;
+          }
+        }
+      } else if (typeof data.output === 'string') {
+        // Fallback: if output is a direct string
+        aiResponse = data.output;
+      } else if (data.text) {
+        // Fallback: if text is at root level
+        aiResponse = data.text;
+      } else if (data.content) {
+        // Fallback: if content is at root level
+        aiResponse = data.content;
+      }
       
       // Parse AI response
       let analysisData;
@@ -1159,37 +1468,116 @@ export class ClinicalAssessmentEngine {
 
   // Create analysis prompt for AI profile generation
   static createProfileAnalysisPrompt(assessmentType: string, results: any, existingProfile?: UserProfile): string {
-    let prompt = `АНАЛИЗ ПСИХОЛОГИЧЕСКОГО ТЕСТА: ${assessmentType}\n\n`;
+    let prompt = `=== ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ И ПРОФИЛИРОВАНИЕ ===\n\n`;
+    prompt += `Тест: ${assessmentType}\n\n`;
     
-    // Add test results
+    // Add test results with detailed breakdown
     if (assessmentType === 'PHQ9') {
-      prompt += `Результаты PHQ-9:
+      prompt += `РЕЗУЛЬТАТЫ PHQ-9 (Депрессия):
 - Общий балл: ${results.totalScore}/27
 - Уровень: ${results.severity}
-- Детальные ответы: ${JSON.stringify(results.questions)}`;
+- Ответы: ${JSON.stringify(results.questions, null, 2)}\n\n`;
+      
+      prompt += `ЗАДАЧА: На основе ответов определите:
+- Эмоциональные паттерны (какие эмоции доминируют)
+- Сильные стороны (что хорошо работает)
+- Области для развития (что нуждается в поддержке)
+- Копинг-стратегии (как человек справляется)
+- Индикаторы стресса (на что реагирует)`;
+      
     } else if (assessmentType === 'GAD7') {
-      prompt += `Результаты GAD-7:
+      prompt += `РЕЗУЛЬТАТЫ GAD-7 (Тревожность):
 - Общий балл: ${results.totalScore}/21
 - Уровень: ${results.severity}
-- Детальные ответы: ${JSON.stringify(results.questions)}`;
+- Ответы: ${JSON.stringify(results.questions, null, 2)}\n\n`;
+      
+      prompt += `ЗАДАЧА: Определите:
+- Паттерны тревожности
+- Триггеры беспокойства
+- Защитные факторы
+- Стиль коммуникации (как тревожность влияет на общение)
+- Мотивационные факторы`;
+      
     } else if (assessmentType === 'BigFive') {
-      prompt += `Результаты Big Five:
-- Открытость: ${results.openness?.score || 'N/A'}
-- Добросовестность: ${results.conscientiousness?.score || 'N/A'}
-- Экстраверсия: ${results.extraversion?.score || 'N/A'}
-- Доброжелательность: ${results.agreeableness?.score || 'N/A'}
-- Нейротизм: ${results.neuroticism?.score || 'N/A'}`;
+      prompt += `РЕЗУЛЬТАТЫ BIG FIVE (Личность):
+- Открытость: ${results.openness?.score || 'N/A'}/5
+- Добросовестность: ${results.conscientiousness?.score || 'N/A'}/5
+- Экстраверсия: ${results.extraversion?.score || 'N/A'}/5
+- Доброжелательность: ${results.agreeableness?.score || 'N/A'}/5
+- Нейротизм: ${results.neuroticism?.score || 'N/A'}/5\n\n`;
+      
+      prompt += `ЗАДАЧА: Определите:
+- Ключевые личностные черты (3-5 главных)
+- Стиль коммуникации
+- Предпочтительные копинг-стратегии
+- Мотивационные факторы
+- Сильные стороны личности`;
+      
+    } else if (assessmentType === 'DASS21') {
+      prompt += `РЕЗУЛЬТАТЫ DASS-21:
+- Депрессия: ${results.depression?.score || 'N/A'}
+- Тревожность: ${results.anxiety?.score || 'N/A'}
+- Стресс: ${results.stress?.score || 'N/A'}
+- Ответы: ${JSON.stringify(results.questions, null, 2)}\n\n`;
+      
+      prompt += `ЗАДАЧА: Комплексный анализ эмоционального состояния`;
     }
     
     // Add existing profile context if available
     if (existingProfile?.psychologicalProfile) {
-      prompt += `\n\nСУЩЕСТВУЮЩИЙ ПРОФИЛЬ:
-- Личностные черты: ${existingProfile.psychologicalProfile.personalityTraits?.join(', ')}
-- Сильные стороны: ${existingProfile.psychologicalProfile.strengthsAndResources?.join(', ')}
-- Области роста: ${existingProfile.psychologicalProfile.growthAreas?.join(', ')}`;
+      prompt += `\n\n=== СУЩЕСТВУЮЩИЙ ПРОФИЛЬ ===\n`;
+      const prof = existingProfile.psychologicalProfile;
+      
+      if (prof.personalityTraits?.length > 0) {
+        prompt += `Личностные черты: ${prof.personalityTraits.join(', ')}\n`;
+      }
+      if (prof.emotionalPatterns?.length > 0) {
+        prompt += `Эмоциональные паттерны: ${prof.emotionalPatterns.join(', ')}\n`;
+      }
+      if (prof.strengthsAndResources?.length > 0) {
+        prompt += `Сильные стороны: ${prof.strengthsAndResources.join(', ')}\n`;
+      }
+      if (prof.growthAreas?.length > 0) {
+        prompt += `Области роста: ${prof.growthAreas.join(', ')}\n`;
+      }
+      if (prof.copingStrategies?.length > 0) {
+        prompt += `Копинг-стратегии: ${prof.copingStrategies.join(', ')}\n`;
+      }
+      if (prof.communicationStyle) {
+        prompt += `Стиль коммуникации: ${prof.communicationStyle}\n`;
+      }
+      
+      prompt += `\nИНСТРУКЦИЯ: ДОПОЛНИТЕ и ОБОГАТИТЕ существующий профиль новыми инсайтами из текущего теста.`;
+    } else {
+      prompt += `\n\nИНСТРУКЦИЯ: Создайте НОВЫЙ психологический профиль на основе результатов теста.`;
     }
     
-    prompt += `\n\nПроанализируйте результаты и создайте/обновите психологический профиль пользователя. Учтите существующие данные и интегрируйте новую информацию.`;
+    prompt += `\n\n=== ФОРМАТ ОТВЕТА (строго JSON) ===
+{
+  "personalityTraits": ["черта1", "черта2", "черта3"],
+  "emotionalPatterns": ["паттерн1", "паттерн2"],
+  "strengthsAndResources": ["сила1", "сила2", "сила3"],
+  "growthAreas": ["область1", "область2"],
+  "copingStrategies": ["стратегия1", "стратегия2"],
+  "communicationStyle": "описание стиля",
+  "motivationalFactors": ["фактор1", "фактор2"],
+  "stressIndicators": ["индикатор1", "индикатор2"],
+  "overallWellness": "общая оценка",
+  "keyRecommendations": ["рекомендация1", "рекомендация2"],
+  "personalizationNotes": ["заметка1", "заметка2"],
+  "nextSteps": ["шаг1", "шаг2"],
+  "riskFactors": ["фактор1"],
+  "protectiveFactors": ["фактор1", "фактор2"],
+  "testSpecificInsights": ["инсайт1", "инсайт2"],
+  "progressIndicators": ["показатель1"],
+  "contextualAnalysis": "детальный анализ"
+}
+
+ВАЖНО: 
+- Каждое поле должно быть ЗАПОЛНЕНО конкретными данными из теста
+- НЕ используйте общие фразы, будьте СПЕЦИФИЧНЫ
+- Базируйтесь ТОЛЬКО на данных теста
+- Отвечайте ТОЛЬКО валидным JSON`;
     
     return prompt;
   }
@@ -1212,33 +1600,33 @@ export const ClinicalQuestions = {
       'Снижение или повышение аппетита',
       'Плохое мнение о себе или чувство, что Вы неудачник, или что Вы подвели себя или свою семью',
       'Трудности концентрации внимания на чтении, просмотре телевизора или других задачах',
-      'Заметно медленные движения или речь, или наоборот, беспокойство და არაწყვეტილი',
+      'Заметно медленные движения или речь, или наоборот, беспокойство и непрерывная суетливость',
       'Мысли о том, что лучше было бы умереть или причинить себе вред каким-либо способом'
     ]
   },
   GAD7: {
-    title: 'GAD-7 - შკალა გენერალიზებული შფოთვის აშლილობისთვის',
+    title: 'GAD-7 - Шкала генерализованного тревожного расстройства',
     description: 'За последние 2 недели, как часто Вас беспокоили следующие проблемы? Этот тест оценивает уровень тревожности.',
     instructions: 'Выберите ответ, который наиболее точно отражает частоту Ваших переживаний за последние две недели.',
     options: ['Никогда', 'Несколько дней', 'Более половины дней', 'Почти каждый день'],
-    purpose: 'GAD-7 — валიდირებული ინსტრუმენტი გენერალიზებული შფოთვის აშლილობის დიაგნოსტიკისთვის.',
-    scoring: 'Баллы: 0-4 (минимальная), 5-9 (легкая), 10-14 (უმერებული), 15-21 (тяжелая тревожность)',
+    purpose: 'GAD-7 — валидированный инструмент для диагностики генерализованного тревожного расстройства.',
+    scoring: 'Баллы: 0-4 (минимальная), 5-9 (легкая), 10-14 (умеренная), 15-21 (тяжелая тревожность)',
     questions: [
-      'ნერვიულობა, შფოთვა ან დაძაბულობა',
-      'შეშფოთების გაკონტროლების შეუძლებლობა',
-      'სხვადასხვა საკითხებზე ზედმეტი შეშფოთება',
-      'მოსვენების სირთულეები',
-      'მნიშვნელოვანი დაღლილობა ან სისუსტე',
-      'გაღიზიანებადობა ან აგრესიულობა',
-      'შიში, რომ შეიძლება რაღაც საშინელი მოხდეს'
+      'Нервозность, тревога или напряжение',
+      'Неспособность контролировать беспокойство',
+      'Чрезмерное беспокойство по различным поводам',
+      'Трудности с расслаблением',
+      'Выраженная усталость или слабость',
+      'Раздражительность или агрессивность',
+      'Страх, что может произойти что-то ужасное'
     ]
   },
   BDI: {
-    title: 'შკალა დეპრესიის ბეკის მიხედვით (BDI-II)',
-    description: 'Выберите для каждого вопросა тот ответ, который лучше всего описывает Ваше состояние за последнюю неделю, включая сегодняшний день.',
+    title: 'Шкала депрессии Бека (BDI-II)',
+    description: 'Выберите для каждого вопроса тот ответ, который лучше всего описывает Ваше состояние за последнюю неделю, включая сегодняшний день.',
     instructions: 'Внимательно прочитайте все варианты ответов в каждой группе, затем выберите ОДИН ответ из каждой группы, который лучше всего описывает Ваши чувства.',
-    purpose: 'BDI-II — один из наиболее широко используемых психометрических тестов для измерения тяжести დეპრესიის.',
-    scoring: 'Баллы: 0-13 (минимальная), 14-19 (легкая), 20-28 (უმერებული), 29-63 (тяжелая დეპრესია)',
+    purpose: 'BDI-II — один из наиболее широко используемых психометрических тестов для измерения тяжести депрессии.',
+    scoring: 'Баллы: 0-13 (минимальная), 14-19 (легкая), 20-28 (умеренная), 29-63 (тяжелая депрессия)',
     questions: [
       {
         question: '1. Печаль',
@@ -1246,7 +1634,7 @@ export const ClinicalQuestions = {
           'Я не чувствую печали',
           'Я чувствую печаль большую часть времени',
           'Мне все время грустно',
-          'Я настолько печален და несчастен, რომ არ могу этого выносить'
+          'Я настолько печален и несчастен, что не могу этого выносить'
         ]
       },
       {
@@ -1327,7 +1715,7 @@ export const ClinicalQuestions = {
           'Я плачу не больше, чем обычно',
           'Я плачу больше, чем раньше',
           'Я плачу по любому поводу',
-          'Раньше я мог плакать, მაგრამ ახლა ვერ ვახერხებ, 심지어 원할 때도'
+          'Раньше я мог плакать, но теперь не могу, даже когда хочу'
         ]
       },
       {
@@ -1335,7 +1723,7 @@ export const ClinicalQuestions = {
         options: [
           'Я не более беспокоен или напряжен, чем обычно',
           'Я чувствую себя более беспокойным или напряженным, чем обычно',
-          'Я настолько беспокоен или возбужден, რომ მიჭირს ადგილზე დარჩენა',
+          'Я настолько беспокоен или возбужден, что трудно оставаться на месте',
           'Я იმდენად беспოენ ან возбუდენ, რომ უნდა ვიმოძრაო ან რაღაც გავაკეთო'
         ]
       },

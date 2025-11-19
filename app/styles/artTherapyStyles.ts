@@ -1,4 +1,4 @@
-import { StyleSheet, Platform, Dimensions, StatusBar } from 'react-native';
+import { Dimensions, Platform, StatusBar, StyleSheet } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -135,6 +135,47 @@ export const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.colors.background,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
+  },
+  imageControls: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    gap: 8,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight,
+  },
+  imageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  clearImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.warning || '#ff6b6b',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  imageButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  recommendationContainer: {
+    flex: 1,
+    paddingLeft: 8,
+    justifyContent: 'center',
+  },
+  recommendationText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    textAlign: 'left',
   },
   colorSection: {
     marginBottom: 16,

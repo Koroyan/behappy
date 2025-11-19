@@ -1,11 +1,10 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform, View, StyleSheet, Dimensions } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Tabs } from 'expo-router';
+import React from 'react';
+import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 
-import { HapticTab } from '@/components/HapticTab';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -79,27 +78,27 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="tools"
+        name="ai-therapy-chat"
         options={{
-          title: "Инструменты",
+          title: "AI Терапия",
           tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="tools" size={size} color={color} />
+            <FontAwesome5 name="brain" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="art-therapy"
         options={{
-          title: "Чат",
+          title: "Арт Терапия",
           tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="comment-alt" size={size} color={color} />
+            <FontAwesome5 name="palette" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="general"
         options={{
-          title: "Главная",
+          title: "Профиль",
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="user" size={size} color={color} />
           ),

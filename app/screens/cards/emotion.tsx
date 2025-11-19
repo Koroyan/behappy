@@ -1,20 +1,156 @@
-import React, { useState } from 'react';
+import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Alert,
+  Dimensions,
+  Image,
   SafeAreaView,
   ScrollView,
-  TouchableOpacity,
-  Image,
-  Dimensions,
   StatusBar,
-  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+
+// Helper to pick translation
+const pick = <T extends Record<string, any>>(obj: T, lang: AppLanguage): string => {
+  return obj[lang] || obj.en || Object.values(obj)[0] || '';
+};
+
+// Multilingual translations
+const T = {
+  headerTitle: {
+    en: 'Emotion Cards',
+    ka: 'ემოციების ბარათები',
+    ru: 'Эмоциональные карты',
+    hy: 'Հույզերի Քարտեր',
+    tr: 'Duygu Kartları',
+    az: 'Emosiya Kartları',
+    es: 'Cartas de Emoción',
+    de: 'Emotionskarten',
+    fr: 'Cartes d\'Émotion',
+    pt: 'Cartões de Emoção',
+    id: 'Kartu Emosi',
+    it: 'Carte delle Emozioni',
+    ar: 'بطاقات العواطف',
+    hi: 'भावना कार्ड',
+    zh: '情感卡片',
+    ja: '感情カード',
+    ko: '감정 카드',
+    uk: 'Емоційні картки',
+    pl: 'Karty Emocji',
+  },
+  selectCard: {
+    en: 'Select a Card',
+    ka: 'აირჩიეთ ბარათი',
+    ru: 'Выберите карту',
+    hy: 'Ընտրեք քարտ',
+    tr: 'Bir Kart Seçin',
+    az: 'Kart Seçin',
+    es: 'Seleccione una Carta',
+    de: 'Wählen Sie eine Karte',
+    fr: 'Sélectionnez une Carte',
+    pt: 'Selecione um Cartão',
+    id: 'Pilih Kartu',
+    it: 'Seleziona una Carta',
+    ar: 'اختر بطاقة',
+    hi: 'एक कार्ड चुनें',
+    zh: '选择卡片',
+    ja: 'カードを選択',
+    ko: '카드 선택',
+    uk: 'Виберіть картку',
+    pl: 'Wybierz Kartę',
+  },
+  subtitle: {
+    en: 'Choose the card that best reflects your current emotional state',
+    ka: 'აირჩიეთ ბარათი, რომელიც საუკეთესოდ ასახავს თქვენს მიმდინარე ემოციურ მდგომარეობას',
+    ru: 'Выберите карту, которая лучше всего отражает ваше текущее эмоциональное состояние',
+    hy: 'Ընտրեք քարտը, որը լավագույնս արտացոլում է ձեր ընթացիկ հուզական վիճակը',
+    tr: 'Mevcut duygusal durumunuzu en iyi yansıtan kartı seçin',
+    az: 'Hazırkı emosional vəziyyətinizi ən yaxşı əks etdirən kartı seçin',
+    es: 'Elija la carta que mejor refleje su estado emocional actual',
+    de: 'Wählen Sie die Karte, die Ihren aktuellen emotionalen Zustand am besten widerspiegelt',
+    fr: 'Choisissez la carte qui reflète le mieux votre état émotionnel actuel',
+    pt: 'Escolha o cartão que melhor reflete seu estado emocional atual',
+    id: 'Pilih kartu yang paling mencerminkan keadaan emosional Anda saat ini',
+    it: 'Scegli la carta che riflette meglio il tuo stato emotivo attuale',
+    ar: 'اختر البطاقة التي تعكس بشكل أفضل حالتك العاطفية الحالية',
+    hi: 'वह कार्ड चुनें जो आपकी वर्तमान भावनात्मक स्थिति को सबसे अच्छे से दर्शाता है',
+    zh: '选择最能反映您当前情绪状态的卡片',
+    ja: '現在の感情状態を最もよく反映するカードを選択してください',
+    ko: '현재 감정 상태를 가장 잘 반영하는 카드를 선택하세요',
+    uk: 'Виберіть картку, яка найкраще відображає ваш поточний емоційний стан',
+    pl: 'Wybierz kartę, która najlepiej odzwierciedla Twój obecny stan emocjonalny',
+  },
+  errorTitle: {
+    en: 'Error',
+    ka: 'შეცდომა',
+    ru: 'Ошибка',
+    hy: 'Սխալ',
+    tr: 'Hata',
+    az: 'Xəta',
+    es: 'Error',
+    de: 'Fehler',
+    fr: 'Erreur',
+    pt: 'Erro',
+    id: 'Kesalahan',
+    it: 'Errore',
+    ar: 'خطأ',
+    hi: 'त्रुटि',
+    zh: '错误',
+    ja: 'エラー',
+    ko: '오류',
+    uk: 'Помилка',
+    pl: 'Błąd',
+  },
+  selectCardError: {
+    en: 'Please select a card',
+    ka: 'გთხოვთ აირჩიოთ ბარათი',
+    ru: 'Пожалуйста, выберите карту',
+    hy: 'Խնդրում ենք ընտրել քարտ',
+    tr: 'Lütfen bir kart seçin',
+    az: 'Zəhmət olmasa kart seçin',
+    es: 'Por favor seleccione una carta',
+    de: 'Bitte wählen Sie eine Karte',
+    fr: 'Veuillez sélectionner une carte',
+    pt: 'Por favor selecione um cartão',
+    id: 'Silakan pilih kartu',
+    it: 'Si prega di selezionare una carta',
+    ar: 'الرجاء اختيار بطاقة',
+    hi: 'कृपया एक कार्ड चुनें',
+    zh: '请选择卡片',
+    ja: 'カードを選択してください',
+    ko: '카드를 선택하세요',
+    uk: 'Будь ласка, виберіть картку',
+    pl: 'Proszę wybrać kartę',
+  },
+  startTherapy: {
+    en: 'Start Emotion Therapy',
+    ka: 'ემოციების თერაპიის დაწყება',
+    ru: 'Начать эмоциональную терапию',
+    hy: 'Սկսել Հույզերի Թերապիան',
+    tr: 'Duygu Terapisini Başlat',
+    az: 'Emosiya Terapiyasına başla',
+    es: 'Iniciar Terapia Emocional',
+    de: 'Emotionstherapie starten',
+    fr: 'Commencer la Thérapie Émotionnelle',
+    pt: 'Iniciar Terapia Emocional',
+    id: 'Mulai Terapi Emosi',
+    it: 'Inizia Terapia Emozionale',
+    ar: 'بدء العلاج العاطفي',
+    hi: 'भावना चिकित्सा शुरू करें',
+    zh: '开始情感治疗',
+    ja: '感情療法を開始',
+    ko: '감정 치료 시작',
+    uk: 'Почати Емоційну Терапію',
+    pl: 'Rozpocznij Terapię Emocji',
+  },
+};
 
 // Import emotion cards from assets/cards/emotions folder
 const emotionCards = [
@@ -43,6 +179,7 @@ const emotionCards = [
 
 export default function EmotionCardsScreen() {
   const { theme, isDark } = useTheme();
+  const { language } = useLanguage();
   const router = useRouter();
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const screenWidth = Dimensions.get('window').width;
@@ -54,17 +191,17 @@ export default function EmotionCardsScreen() {
 
   const handleStartConsultation = () => {
     if (!selectedCard) {
-      Alert.alert('Ошибка', 'Пожалуйста, выберите карту');
+      Alert.alert(pick(T.errorTitle, language), pick(T.selectCardError, language));
       return;
     }
 
-    // Navigate to chat with selected emotion card parameters
+    // Navigate to therapeutic chat with selected emotion card
     router.push({
-      pathname: '/chat',
+      pathname: '/screens/cards/therapy-chat',
       params: {
-        context: 'emotion_card',
+        context: 'emotion',
         cardId: selectedCard.id,
-        cardType: 'emotions'
+        cardImageUri: JSON.stringify(selectedCard.uri), // Pass image URI
       },
     });
   };
@@ -104,8 +241,15 @@ export default function EmotionCardsScreen() {
       textAlign: 'center',
       flex: 1,
     },
-    placeholder: {
-      width: 40,
+    historyButton: {
+      padding: 10,
+      borderRadius: 10,
+      backgroundColor: theme.colors.background,
+      elevation: 1,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
     instructionsContainer: {
       paddingHorizontal: 20,
@@ -255,15 +399,20 @@ export default function EmotionCardsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <FontAwesome5 name="arrow-left" size={18} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Эмоциональные карты</Text>
-        <View style={styles.placeholder} />
+        <Text style={styles.headerTitle}>{pick(T.headerTitle, language)}</Text>
+        <TouchableOpacity 
+          onPress={() => router.push('/screens/cards/sessions-history')} 
+          style={styles.historyButton}
+        >
+          <MaterialCommunityIcons name="history" size={20} color={theme.colors.text} />
+        </TouchableOpacity>
       </View>
 
       {/* Instructions */}
       <View style={styles.instructionsContainer}>
-        <Text style={styles.title}>Выберите карту</Text>
+        <Text style={styles.title}>{pick(T.selectCard, language)}</Text>
         <Text style={styles.subtitle}>
-          Выберите карту, которая лучше всего отражает ваше текущее эмоциональное состояние
+          {pick(T.subtitle, language)}
         </Text>
       </View>
 
@@ -309,7 +458,7 @@ export default function EmotionCardsScreen() {
               style={styles.startButtonInner}
             >
               <FontAwesome5 name="comments" size={20} color="#ffffff" />
-              <Text style={styles.startButtonText}>Начать эмоциональную терапию</Text>
+              <Text style={styles.startButtonText}>{pick(T.startTherapy, language)}</Text>
             </TouchableOpacity>
           </LinearGradient>
         </View>

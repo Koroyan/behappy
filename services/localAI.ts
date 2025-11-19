@@ -943,16 +943,9 @@ export const generateAIChatResponse = async (
 ПРИЛОЖЕНИЕ beHappy - ПОЛНАЯ ИНФОРМАЦИЯ О ВСЕХ ФУНКЦИЯХ:
 
 ОСНОВНЫЕ МОДУЛИ ТЕРАПИИ:
-1. КПТ (Когнитивно-поведенческая терапия) - /screens/cbt/:
+1. КПТ (Когнитивно-поведенческая терапия) - /screens/cbt:
    - Главная страница КПТ - /screens/cbt
-   - Записи мыслей - /screens/cbt/thought-record (анализ и изменение негативных мыслей)
-   - Трекер настроения - /screens/cbt/mood-tracker (ежедневный мониторинг эмоций)
-   - Поведенческие эксперименты - /screens/cbt/behavior-experiment (тестирование убеждений)
-   - Когнитивные искажения - /screens/cbt/cognitive-distortions (работа с мыслительными ошибками)
-   - Упражнения КПТ - /screens/cbt/exercises (практические техники)
-   - Решение проблем - /screens/cbt/problem-solving (структурированный подход к трудностям)
-   - Постановка целей - /screens/cbt/goal-setting (планирование и достижение целей)
-   - Аналитика КПТ - /screens/cbt/analytics (визуализация прогресса)
+  - Умный чат КПТ - /screens/cbt (всё через диалог с коучем)
 
 2. ДПТ (Диалектическая поведенческая терапия) - /screens/dbt/:
    - Главная страница ДПТ - /screens/dbt
@@ -1216,7 +1209,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'cbt-main',
             title: 'КПТ Терапия',
             description: 'Когнитивно-поведенческая терапия для работы с мыслями',
-            route: '/screens/cbt',
+            route: '/screens/anulia',
             icon: 'psychology',
             color: ['#667eea', '#764ba2']
           };
@@ -1243,7 +1236,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'thought-records',
             title: 'Записи мыслей',
             description: 'Анализ и изменение негативных мыслей',
-            route: '/screens/cbt/thought-record',
+            route: '/screens/anulia',
             icon: 'lightbulb',
             color: ['#43e97b', '#38f9d7']
           };
@@ -1252,7 +1245,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'mood-tracker',
             title: 'Трекер настроения',
             description: 'Отслеживание эмоционального состояния',
-            route: '/screens/cbt/mood-tracker',
+            route: '/screens/anulia',
             icon: 'favorite',
             color: ['#ff6b6b', '#ffa726']
           };
@@ -1261,7 +1254,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'behavior-experiments',
             title: 'Поведенческие эксперименты',
             description: 'Тестирование убеждений через действия',
-            route: '/screens/cbt/behavior-experiment',
+            route: '/screens/anulia',
             icon: 'science',
             color: ['#96CEB4', '#FFECD2']
           };
@@ -1270,7 +1263,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'cognitive-distortions',
             title: 'Когнитивные искажения',
             description: 'Работа с мыслительными ошибками',
-            route: '/screens/cbt/cognitive-distortions',
+            route: '/screens/anulia',
             icon: 'lightbulb',
             color: ['#667eea', '#764ba2']
           };
@@ -1279,7 +1272,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'cbt-exercises',
             title: 'Упражнения КПТ',
             description: 'Практические техники КПТ',
-            route: '/screens/cbt/exercises',
+            route: '/screens/anulia',
             icon: 'fitness-center',
             color: ['#43e97b', '#38f9d7']
           };
@@ -1288,7 +1281,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'problem-solving',
             title: 'Решение проблем',
             description: 'Структурированный подход к трудностям',
-            route: '/screens/cbt/problem-solving',
+            route: '/screens/anulia',
             icon: 'puzzle',
             color: ['#f093fb', '#f5576c']
           };
@@ -1297,7 +1290,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'goal-setting',
             title: 'Постановка целей',
             description: 'Планирование и достижение целей',
-            route: '/screens/cbt/goal-setting',
+            route: '/screens/anulia',
             icon: 'flag',
             color: ['#4facfe', '#00f2fe']
           };
@@ -1306,7 +1299,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'cbt-analytics',
             title: 'Аналитика КПТ',
             description: 'Визуализация прогресса в КПТ',
-            route: '/screens/cbt/analytics',
+            route: '/screens/anulia',
             icon: 'analytics',
             color: ['#667eea', '#764ba2']
           };
@@ -1531,7 +1524,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
             id: 'ai-analysis-cbt',
             title: 'ИИ анализ КПТ',
             description: 'Персональные рекомендации по КПТ',
-            route: '/screens/cbt',
+            route: '/screens/anulia',
             icon: 'psychology',
             color: ['#667eea', '#764ba2']
           };
@@ -1574,7 +1567,7 @@ ai-analysis-cbt, ai-analysis-dbt, ai-analysis-emdr
           id: 'cbt-main',
           title: 'КПТ Терапия',
           description: 'Когнитивно-поведенческая терапия для работы с мыслями',
-          route: '/screens/cbti',
+          route: '/screens/anulia',
           icon: 'psychology',
           color: ['#667eea', '#764ba2']
         },

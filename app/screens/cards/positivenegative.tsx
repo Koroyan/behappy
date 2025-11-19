@@ -1,22 +1,282 @@
-import React, { useState, useEffect } from 'react';
+import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
   FlatList,
   Image,
-  Alert,
   SafeAreaView,
-  Platform,
-  ActivityIndicator,
   StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import * as FileSystem from 'expo-file-system';
-import { useRouter } from 'expo-router';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { useTheme } from '@/contexts/ThemeContext';
-import { LinearGradient } from 'expo-linear-gradient';
+
+// Helper to pick translation
+const pick = <T extends Record<string, any>>(obj: T, lang: AppLanguage): string => {
+  return obj[lang] || obj.en || Object.values(obj)[0] || '';
+};
+
+// Multilingual translations
+const T = {
+  headerTitle: {
+    en: 'Mood Cards',
+    ka: 'განწყობის ბარათები',
+    ru: 'Карты настроения',
+    hy: 'Տրամադրության Քարտեր',
+    tr: 'Ruh Hali Kartları',
+    az: 'Əhval-ruhiyyə Kartları',
+    es: 'Cartas de Estado de Ánimo',
+    de: 'Stimmungskarten',
+    fr: 'Cartes d\'Humeur',
+    pt: 'Cartões de Humor',
+    id: 'Kartu Suasana Hati',
+    it: 'Carte dell\'Umore',
+    ar: 'بطاقات المزاج',
+    hi: 'मनोदशा कार्ड',
+    zh: '心情卡片',
+    ja: '気分カード',
+    ko: '기분 카드',
+    uk: 'Картки Настрою',
+    pl: 'Karty Nastroju',
+  },
+  selectTwoCards: {
+    en: 'Choose Two Cards',
+    ka: 'აირჩიეთ ორი ბარათი',
+    ru: 'Выберите две карты',
+    hy: 'Ընտրեք երկու քարտ',
+    tr: 'İki Kart Seçin',
+    az: 'İki Kart Seçin',
+    es: 'Elija Dos Cartas',
+    de: 'Wählen Sie zwei Karten',
+    fr: 'Choisissez Deux Cartes',
+    pt: 'Escolha Dois Cartões',
+    id: 'Pilih Dua Kartu',
+    it: 'Scegli Due Carte',
+    ar: 'اختر بطاقتين',
+    hi: 'दो कार्ड चुनें',
+    zh: '选择两张卡片',
+    ja: '2枚のカードを選択',
+    ko: '두 장의 카드 선택',
+    uk: 'Виберіть дві картки',
+    pl: 'Wybierz Dwie Karty',
+  },
+  subtitle: {
+    en: 'Choose one that evokes positive feelings and one that evokes negative emotions',
+    ka: 'აირჩიეთ ერთი, რომელიც გამოწვევს პოზიტიურ გრძნობებს და ერთი, რომელიც გამოწვევს ნეგატიურ ემოციებს',
+    ru: 'Выберите одну, которая вызывает у вас позитивные чувства, и одну, которая вызывает негативные эмоции',
+    hy: 'Ընտրեք մեկը, որը դրական զգացմունքներ է առաջացնում, և մեկը՝ բացասական հուզմունքներ',
+    tr: 'Pozitif duygular uyandıran bir tane ve negatif duygular uyandıran bir tane seçin',
+    az: 'Müsbət hisslər oyadan birini və mənfi emosiyalar oyadan birini seçin',
+    es: 'Elija una que evoque sentimientos positivos y una que evoque emociones negativas',
+    de: 'Wählen Sie eine, die positive Gefühle hervorruft, und eine, die negative Emotionen hervorruft',
+    fr: 'Choisissez-en une qui évoque des sentiments positifs et une qui évoque des émotions négatives',
+    pt: 'Escolha uma que evoque sentimentos positivos e uma que evoque emoções negativas',
+    id: 'Pilih satu yang membangkitkan perasaan positif dan satu yang membangkitkan emosi negatif',
+    it: 'Scegli una che evoca sentimenti positivi e una che evoca emozioni negative',
+    ar: 'اختر واحدة تثير مشاعر إيجابية وواحدة تثير عواطف سلبية',
+    hi: 'एक चुनें जो सकारात्मक भावनाएँ जगाता है और एक जो नकारात्मक भावनाएँ जगाता है',
+    zh: '选择一张唤起积极感受的和一张唤起消极情绪的',
+    ja: 'ポジティブな感情を呼び起こすものを1つと、ネガティブな感情を呼び起こすものを1つ選択してください',
+    ko: '긍정적인 감정을 불러일으키는 것 하나와 부정적인 감정을 불러일으키는 것 하나를 선택하세요',
+    uk: 'Виберіть одну, яка викликає позитивні почуття, і одну, яка викликає негативні емоції',
+    pl: 'Wybierz jedną, która wywołuje pozytywne uczucia, i jedną, która wywołuje negatywne emocje',
+  },
+  positive: {
+    en: 'Positive',
+    ka: 'პოზიტიური',
+    ru: 'Позитив',
+    hy: 'Դրական',
+    tr: 'Pozitif',
+    az: 'Müsbət',
+    es: 'Positivo',
+    de: 'Positiv',
+    fr: 'Positif',
+    pt: 'Positivo',
+    id: 'Positif',
+    it: 'Positivo',
+    ar: 'إيجابي',
+    hi: 'सकारात्मक',
+    zh: '积极',
+    ja: 'ポジティブ',
+    ko: '긍정',
+    uk: 'Позитив',
+    pl: 'Pozytywny',
+  },
+  negative: {
+    en: 'Negative',
+    ka: 'ნეგატიური',
+    ru: 'Негатив',
+    hy: 'Բացասական',
+    tr: 'Negatif',
+    az: 'Mənfi',
+    es: 'Negativo',
+    de: 'Negativ',
+    fr: 'Négatif',
+    pt: 'Negativo',
+    id: 'Negatif',
+    it: 'Negativo',
+    ar: 'سلبي',
+    hi: 'नकारात्मक',
+    zh: '消极',
+    ja: 'ネガティブ',
+    ko: '부정',
+    uk: 'Негатив',
+    pl: 'Negatywny',
+  },
+  selectBothTitle: {
+    en: 'Select Both Cards',
+    ka: 'აირჩიეთ ორივე ბარათი',
+    ru: 'Выберите обе карты',
+    hy: 'Ընտրեք երկու քարտերը',
+    tr: 'Her İki Kartı Seçin',
+    az: 'Hər iki kartı seçin',
+    es: 'Seleccione Ambas Cartas',
+    de: 'Beide Karten wählen',
+    fr: 'Sélectionner les Deux Cartes',
+    pt: 'Selecione Ambos os Cartões',
+    id: 'Pilih Kedua Kartu',
+    it: 'Seleziona Entrambe le Carte',
+    ar: 'حدد كلتا البطاقتين',
+    hi: 'दोनों कार्ड चुनें',
+    zh: '选择两张卡片',
+    ja: '両方のカードを選択',
+    ko: '두 카드 모두 선택',
+    uk: 'Виберіть обидві картки',
+    pl: 'Wybierz Obie Karty',
+  },
+  selectBothMessage: {
+    en: 'Choose one positive and one negative card',
+    ka: 'აირჩიეთ ერთი პოზიტიური და ერთი ნეგატიური ბარათი',
+    ru: 'Выберите одну позитивную и одну негативную карту',
+    hy: 'Ընտրեք մեկ դրական և մեկ բացասական քարտ',
+    tr: 'Bir pozitif ve bir negatif kart seçin',
+    az: 'Bir müsbət və bir mənfi kart seçin',
+    es: 'Elija una carta positiva y una negativa',
+    de: 'Wählen Sie eine positive und eine negative Karte',
+    fr: 'Choisissez une carte positive et une négative',
+    pt: 'Escolha um cartão positivo e um negativo',
+    id: 'Pilih satu kartu positif dan satu negatif',
+    it: 'Scegli una carta positiva e una negativa',
+    ar: 'اختر بطاقة إيجابية وبطاقة سلبية',
+    hi: 'एक सकारात्मक और एक नकारात्मक कार्ड चुनें',
+    zh: '选择一张积极卡片和一张消极卡片',
+    ja: 'ポジティブなカード1枚とネガティブなカード1枚を選択してください',
+    ko: '긍정적인 카드 하나와 부정적인 카드 하나를 선택하세요',
+    uk: 'Виберіть одну позитивну та одну негативну картку',
+    pl: 'Wybierz jedną pozytywną i jedną negatywną kartę',
+  },
+  cardsAlreadySelectedTitle: {
+    en: 'Cards Already Selected',
+    ka: 'ბარათები უკვე არჩეულია',
+    ru: 'Карты уже выбраны',
+    hy: 'Քարտերը արդեն ընտրված են',
+    tr: 'Kartlar Zaten Seçildi',
+    az: 'Kartlar artıq seçildi',
+    es: 'Cartas Ya Seleccionadas',
+    de: 'Karten bereits ausgewählt',
+    fr: 'Cartes Déjà Sélectionnées',
+    pt: 'Cartões Já Selecionados',
+    id: 'Kartu Sudah Dipilih',
+    it: 'Carte Già Selezionate',
+    ar: 'البطاقات محددة بالفعل',
+    hi: 'कार्ड पहले से चुने गए',
+    zh: '卡片已选择',
+    ja: 'カードは既に選択されています',
+    ko: '카드가 이미 선택됨',
+    uk: 'Картки вже вибрані',
+    pl: 'Karty Już Wybrane',
+  },
+  cardsAlreadySelectedMessage: {
+    en: 'You have already selected a positive and negative card. Deselect one to choose another card.',
+    ka: 'თქვენ უკვე აირჩიეთ პოზიტიური და ნეგატიური ბარათი. გააუქმეთ ერთ-ერთის არჩევა სხვა ბარათის ასარჩევად.',
+    ru: 'Вы уже выбрали позитивную и негативную карту. Отмените один из выборов, чтобы выбрать другую карту.',
+    hy: 'Դուք արդեն ընտրել եք դրական և բացասական քարտ: Հանեք մեկը մեկ ուրիշ քարտ ընտրելու համար:',
+    tr: 'Zaten bir pozitif ve negatif kart seçtiniz. Başka bir kart seçmek için birinin seçimini kaldırın.',
+    az: 'Siz artıq müsbət və mənfi kart seçmisiniz. Başqa kart seçmək üçün birini ləğv edin.',
+    es: 'Ya ha seleccionado una carta positiva y negativa. Anule la selección de una para elegir otra carta.',
+    de: 'Sie haben bereits eine positive und negative Karte ausgewählt. Heben Sie die Auswahl einer Karte auf, um eine andere auszuwählen.',
+    fr: 'Vous avez déjà sélectionné une carte positive et négative. Désélectionnez-en une pour choisir une autre carte.',
+    pt: 'Você já selecionou um cartão positivo e negativo. Desmarque um para escolher outro cartão.',
+    id: 'Anda sudah memilih kartu positif dan negatif. Batalkan pilihan salah satu untuk memilih kartu lain.',
+    it: 'Hai già selezionato una carta positiva e negativa. Deseleziona una per sceglierne un\'altra.',
+    ar: 'لقد حددت بالفعل بطاقة إيجابية وسلبية. قم بإلغاء تحديد واحدة لاختيار بطاقة أخرى.',
+    hi: 'आपने पहले से ही एक सकारात्मक और नकारात्मक कार्ड चुना है। दूसरा कार्ड चुनने के लिए एक को अचयनित करें।',
+    zh: '您已经选择了积极和消极卡片。取消选择一个以选择另一张卡片。',
+    ja: 'すでにポジティブとネガティブのカードを選択しています。別のカードを選ぶには、1つの選択を解除してください。',
+    ko: '이미 긍정적인 카드와 부정적인 카드를 선택했습니다. 다른 카드를 선택하려면 하나를 선택 해제하세요.',
+    uk: 'Ви вже вибрали позитивну та негативну картку. Скасуйте вибір однієї, щоб вибрати іншу картку.',
+    pl: 'Już wybrałeś kartę pozytywną i negatywną. Odznacz jedną, aby wybrać inną kartę.',
+  },
+  errorTitle: {
+    en: 'Error',
+    ka: 'შეცდომა',
+    ru: 'Ошибка',
+    hy: 'Սխալ',
+    tr: 'Hata',
+    az: 'Xəta',
+    es: 'Error',
+    de: 'Fehler',
+    fr: 'Erreur',
+    pt: 'Erro',
+    id: 'Kesalahan',
+    it: 'Errore',
+    ar: 'خطأ',
+    hi: 'त्रुटि',
+    zh: '错误',
+    ja: 'エラー',
+    ko: '오류',
+    uk: 'Помилка',
+    pl: 'Błąd',
+  },
+  prepareDataError: {
+    en: 'Failed to prepare data for chat',
+    ka: 'ჩათისთვის მონაცემების მომზადება ვერ მოხერხდა',
+    ru: 'Не удалось подготовить данные для чата',
+    hy: 'Չհաջողվեց նախապատրաստել տվյալները զրույցի համար',
+    tr: 'Sohbet için veri hazırlanamadı',
+    az: 'Söhbət üçün məlumatları hazırlamaq alınmadı',
+    es: 'No se pudieron preparar los datos para el chat',
+    de: 'Daten für Chat konnten nicht vorbereitet werden',
+    fr: 'Échec de préparation des données pour le chat',
+    pt: 'Falha ao preparar dados para o chat',
+    id: 'Gagal menyiapkan data untuk obrolan',
+    it: 'Impossibile preparare i dati per la chat',
+    ar: 'فشل في إعداد البيانات للمحادثة',
+    hi: 'चैट के लिए डेटा तैयार करने में विफल',
+    zh: '无法为聊天准备数据',
+    ja: 'チャット用のデータの準備に失敗しました',
+    ko: '채팅용 데이터 준비 실패',
+    uk: 'Не вдалося підготувати дані для чату',
+    pl: 'Nie udało się przygotować danych do czatu',
+  },
+  startSession: {
+    en: 'Start Session',
+    ka: 'სესიის დაწყება',
+    ru: 'Начать сессию',
+    hy: 'Սկսել սեանսը',
+    tr: 'Oturumu Başlat',
+    az: 'Seansı başla',
+    es: 'Iniciar Sesión',
+    de: 'Sitzung starten',
+    fr: 'Commencer la Séance',
+    pt: 'Iniciar Sessão',
+    id: 'Mulai Sesi',
+    it: 'Inizia Sessione',
+    ar: 'بدء الجلسة',
+    hi: 'सत्र शुरू करें',
+    zh: '开始会话',
+    ja: 'セッションを開始',
+    ko: '세션 시작',
+    uk: 'Почати Сесію',
+    pl: 'Rozpocznij Sesję',
+  },
+};
 
 const cards = [
   { id: '1', uri: require('../../../assets/cards/positivenegative/1.jpg')},
@@ -48,6 +308,7 @@ interface Card {
 
 export default function MoodCardsScreen() {
   const { theme, isDark } = useTheme();
+  const { language } = useLanguage();
   const [positiveCard, setPositiveCard] = useState<Card | null>(null);
   const [negativeCard, setNegativeCard] = useState<Card | null>(null);
   const router = useRouter();
@@ -61,25 +322,10 @@ export default function MoodCardsScreen() {
   };
 
   const [loading, setLoading] = useState(false);
-  
-  // Function to get image path from asset
-  const getAssetPath = async (assetModule: any) => {
-    try {
-      // For local assets, we need to resolve the file path
-      // This is a simplification - in a real app you might need more complex logic
-      const info = await FileSystem.getInfoAsync(FileSystem.documentDirectory + `card-${Date.now()}.png`);
-      const localUri = info.exists ? info.uri : FileSystem.documentDirectory + `card-${Date.now()}.png`;
-      
-      return localUri;
-    } catch (error) {
-      console.error("Error getting asset path:", error);
-      return null;
-    }
-  };
 
   const handleContinue = async () => {
     if (!positiveCard || !negativeCard) {
-      Alert.alert('Выберите обе карты', 'Выберите одну позитивную и одну негативную карту');
+      Alert.alert(pick(T.selectBothTitle, language), pick(T.selectBothMessage, language));
       return;
     }
     
@@ -98,20 +344,18 @@ export default function MoodCardsScreen() {
 `;
 
       router.push({
-        pathname: '/(tabs)/chat',
+        pathname: '/screens/cards/therapy-chat',
         params: { 
-          starter: encodeURIComponent(starter),
-          context: 'mood_cards',
-          positive_emotion: `Карта #${positiveCardId}`,
-          negative_emotion: `Карта #${negativeCardId}`,
+          context: 'positive_negative',
           positive_card_id: positiveCardId,
           negative_card_id: negativeCardId,
-          show_card_images: 'true' // Flag to tell the chat to show the images
+          positiveCardImageUri: JSON.stringify(positiveCard.uri), // Pass positive card image
+          negativeCardImageUri: JSON.stringify(negativeCard.uri), // Pass negative card image
         },
       });
     } catch (error) {
       console.error("Error in handleContinue:", error);
-      Alert.alert("Ошибка", "Не удалось подготовить данные для чата");
+      Alert.alert(pick(T.errorTitle, language), pick(T.prepareDataError, language));
     } finally {
       setLoading(false);
     }
@@ -152,8 +396,15 @@ export default function MoodCardsScreen() {
       textAlign: 'center',
       flex: 1,
     },
-    placeholder: {
-      width: 40,
+    historyButton: {
+      padding: 10,
+      borderRadius: 10,
+      backgroundColor: theme.colors.background,
+      elevation: 1,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
     instructionsContainer: {
       paddingHorizontal: 20,
@@ -345,14 +596,19 @@ export default function MoodCardsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <FontAwesome5 name="arrow-left" size={18} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Карты настроения</Text>
-        <View style={styles.placeholder} />
+        <Text style={styles.headerTitle}>{pick(T.headerTitle, language)}</Text>
+        <TouchableOpacity 
+          onPress={() => router.push('/screens/cards/sessions-history')} 
+          style={styles.historyButton}
+        >
+          <MaterialCommunityIcons name="history" size={20} color={theme.colors.text} />
+        </TouchableOpacity>
       </View>
 
       {/* Instructions */}
       <View style={styles.instructionsContainer}>
-        <Text style={styles.title}>Выберите две карты</Text>
-        <Text style={styles.subtitle}>Выберите одну, которая вызывает у вас позитивные чувства, и одну, которая вызывает негативные эмоции</Text>
+        <Text style={styles.title}>{pick(T.selectTwoCards, language)}</Text>
+        <Text style={styles.subtitle}>{pick(T.subtitle, language)}</Text>
       </View>
 
       {/* Cards Grid */}
@@ -384,7 +640,7 @@ export default function MoodCardsScreen() {
                   } else if (!negativeCard) {
                     selectCard(item, 'negative');
                   } else {
-                    Alert.alert('Карты уже выбраны', 'Вы уже выбрали позитивную и негативную карту. Отмените один из выборов, чтобы выбрать другую карту.');
+                    Alert.alert(pick(T.cardsAlreadySelectedTitle, language), pick(T.cardsAlreadySelectedMessage, language));
                   }
                 }}
               >
@@ -400,12 +656,12 @@ export default function MoodCardsScreen() {
                 {/* Emotion Badge */}
                 {isPositive && (
                   <View style={[styles.emotionBadge, styles.positiveBadge]}>
-                    <Text style={styles.badgeText}>Позитив</Text>
+                    <Text style={styles.badgeText}>{pick(T.positive, language)}</Text>
                   </View>
                 )}
                 {isNegative && (
                   <View style={[styles.emotionBadge, styles.negativeBadge]}>
-                    <Text style={styles.badgeText}>Негатив</Text>
+                    <Text style={styles.badgeText}>{pick(T.negative, language)}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -427,7 +683,7 @@ export default function MoodCardsScreen() {
                       color={isPositive ? "#ffffff" : "#4CAF50"} 
                     />
                     <Text style={[styles.buttonText, isPositive && styles.activeButtonText]}>
-                      Позитив
+                      {pick(T.positive, language)}
                     </Text>
                   </TouchableOpacity>
                   
@@ -445,7 +701,7 @@ export default function MoodCardsScreen() {
                       color={isNegative ? "#ffffff" : "#F44336"} 
                     />
                     <Text style={[styles.buttonText, isNegative && styles.activeButtonText]}>
-                      Негатив
+                      {pick(T.negative, language)}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -471,7 +727,7 @@ export default function MoodCardsScreen() {
             ) : (
               <>
                 <FontAwesome5 name="comments" size={18} color="#ffffff" />
-                <Text style={styles.continueText}>Начать сессию</Text>
+                <Text style={styles.continueText}>{pick(T.startSession, language)}</Text>
               </>
             )}
           </TouchableOpacity>

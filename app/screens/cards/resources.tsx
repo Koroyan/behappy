@@ -1,20 +1,135 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-  StatusBar,
-  Alert,
-} from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useRouter } from 'expo-router';
+import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+    Alert,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+
+// Helper to pick translation
+const pick = <T extends Record<string, any>>(obj: T, lang: AppLanguage): string => {
+  return obj[lang] || obj.en || Object.values(obj)[0] || '';
+};
+
+// Multilingual translations
+const T = {
+  headerTitle: {
+    en: 'Resource Cards',
+    ka: 'რესურსების ბარათები',
+    ru: 'Карты ресурсов',
+    hy: 'Ռեսուրսների Քարտեր',
+    tr: 'Kaynak Kartları',
+    az: 'Resurs Kartları',
+    es: 'Cartas de Recursos',
+    de: 'Ressourcenkarten',
+    fr: 'Cartes de Ressources',
+    pt: 'Cartões de Recursos',
+    id: 'Kartu Sumber Daya',
+    it: 'Carte delle Risorse',
+    ar: 'بطاقات الموارد',
+    hi: 'संसाधन कार्ड',
+    zh: '资源卡片',
+    ja: 'リソースカード',
+    ko: '자원 카드',
+    uk: 'Ресурсні картки',
+    pl: 'Karty Zasobów',
+  },
+  subtitle: {
+    en: 'Choose a resource card to explore inner strength',
+    ka: 'აირჩიეთ რესურსის ბარათი შიდა ძალის შესასწავლად',
+    ru: 'Выберите карту ресурса для исследования внутренней силы',
+    hy: 'Ընտրեք ռեսուրսի քարտ ներքին ուժը ուսումնասիրելու համար',
+    tr: 'İç gücü keşfetmek için bir kaynak kartı seçin',
+    az: 'Daxili gücü öyrənmək üçün resurs kartı seçin',
+    es: 'Elija una carta de recurso para explorar la fuerza interior',
+    de: 'Wählen Sie eine Ressourcenkarte, um innere Stärke zu erforschen',
+    fr: 'Choisissez une carte de ressource pour explorer la force intérieure',
+    pt: 'Escolha um cartão de recurso para explorar a força interior',
+    id: 'Pilih kartu sumber daya untuk menjelajahi kekuatan batin',
+    it: 'Scegli una carta delle risorse per esplorare la forza interiore',
+    ar: 'اختر بطاقة موارد لاستكشاف القوة الداخلية',
+    hi: 'आंतरिक शक्ति का पता लगाने के लिए संसाधन कार्ड चुनें',
+    zh: '选择资源卡片探索内在力量',
+    ja: '内なる力を探求するためにリソースカードを選択してください',
+    ko: '내면의 힘을 탐구하기 위한 자원 카드 선택',
+    uk: 'Виберіть ресурсну картку для дослідження внутрішньої сили',
+    pl: 'Wybierz kartę zasobów, aby zbadać wewnętrzną siłę',
+  },
+  errorTitle: {
+    en: 'Error',
+    ka: 'შეცდომა',
+    ru: 'Ошибка',
+    hy: 'Սխալ',
+    tr: 'Hata',
+    az: 'Xəta',
+    es: 'Error',
+    de: 'Fehler',
+    fr: 'Erreur',
+    pt: 'Erro',
+    id: 'Kesalahan',
+    it: 'Errore',
+    ar: 'خطأ',
+    hi: 'त्रुटि',
+    zh: '错误',
+    ja: 'エラー',
+    ko: '오류',
+    uk: 'Помилка',
+    pl: 'Błąd',
+  },
+  selectCardError: {
+    en: 'Please select a card',
+    ka: 'გთხოვთ აირჩიოთ ბარათი',
+    ru: 'Пожалуйста, выберите карту',
+    hy: 'Խնդրում ենք ընտրել քարտ',
+    tr: 'Lütfen bir kart seçin',
+    az: 'Zəhmət olmasa kart seçin',
+    es: 'Por favor seleccione una carta',
+    de: 'Bitte wählen Sie eine Karte',
+    fr: 'Veuillez sélectionner une carte',
+    pt: 'Por favor selecione um cartão',
+    id: 'Silakan pilih kartu',
+    it: 'Si prega di selezionare una carta',
+    ar: 'الرجاء اختيار بطاقة',
+    hi: 'कृपया एक कार्ड चुनें',
+    zh: '请选择卡片',
+    ja: 'カードを選択してください',
+    ko: '카드를 선택하세요',
+    uk: 'Будь ласка, виберіть картку',
+    pl: 'Proszę wybrać kartę',
+  },
+  startConsultation: {
+    en: 'Start Consultation',
+    ka: 'კონსულტაციის დაწყება',
+    ru: 'Начать консультацию',
+    hy: 'Սկսել Խորհրդատվությունը',
+    tr: 'Danışmayı Başlat',
+    az: 'Məsləhətə başla',
+    es: 'Iniciar Consulta',
+    de: 'Beratung starten',
+    fr: 'Commencer la Consultation',
+    pt: 'Iniciar Consulta',
+    id: 'Mulai Konsultasi',
+    it: 'Inizia Consultazione',
+    ar: 'بدء الاستشارة',
+    hi: 'परामर्श शुरू करें',
+    zh: '开始咨询',
+    ja: '相談を開始',
+    ko: '상담 시작',
+    uk: 'Почати Консультацію',
+    pl: 'Rozpocznij Konsultację',
+  },
+};
 
 // Import resource cards from assets/cards/resources folder
 const resourceCards = [
@@ -43,6 +158,7 @@ const resourceCards = [
 
 export default function ResourceCardsScreen() {
   const { theme, isDark } = useTheme();
+  const { language } = useLanguage();
   const router = useRouter();
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const screenWidth = Dimensions.get('window').width;
@@ -54,17 +170,17 @@ export default function ResourceCardsScreen() {
 
   const handleStartConsultation = () => {
     if (!selectedCard) {
-      Alert.alert('Ошибка', 'Пожалуйста, выберите карту');
+      Alert.alert(pick(T.errorTitle, language), pick(T.selectCardError, language));
       return;
     }
 
-    // Navigate to chat with selected resource card
+    // Navigate to therapeutic chat with selected resource card
     router.push({
-      pathname: '/chat',
+      pathname: '/screens/cards/therapy-chat',
       params: {
-        context: 'resource_card',
+        context: 'resource',
         cardId: selectedCard.id,
-        cardType: 'resources'
+        cardImageUri: JSON.stringify(selectedCard.uri), // Pass image URI
       }
     });
   };
@@ -104,8 +220,15 @@ export default function ResourceCardsScreen() {
       textAlign: 'center',
       flex: 1,
     },
-    placeholder: {
-      width: 40,
+    historyButton: {
+      padding: 10,
+      borderRadius: 10,
+      backgroundColor: theme.colors.background,
+      elevation: 1,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
     instructionsContainer: {
       paddingHorizontal: 20,
@@ -255,14 +378,19 @@ export default function ResourceCardsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <FontAwesome5 name="arrow-left" size={18} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Карты ресурсов</Text>
-        <View style={styles.placeholder} />
+        <Text style={styles.headerTitle}>{pick(T.headerTitle, language)}</Text>
+        <TouchableOpacity 
+          onPress={() => router.push('/screens/cards/sessions-history')} 
+          style={styles.historyButton}
+        >
+          <MaterialCommunityIcons name="history" size={20} color={theme.colors.text} />
+        </TouchableOpacity>
       </View>
 
       {/* Instructions */}
       <View style={styles.instructionsContainer}>
         <Text style={styles.instructionText}>
-          Выберите карту ресурса для исследования внутренней силы
+          {pick(T.subtitle, language)}
         </Text>
       </View>
 
@@ -289,7 +417,7 @@ export default function ResourceCardsScreen() {
               style={styles.startButtonInner}
             >
               <FontAwesome5 name="comments" size={20} color="#ffffff" />
-              <Text style={styles.startButtonText}>Начать консультацию</Text>
+              <Text style={styles.startButtonText}>{pick(T.startConsultation, language)}</Text>
             </TouchableOpacity>
           </LinearGradient>
         </View>

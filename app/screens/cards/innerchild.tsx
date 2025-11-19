@@ -1,20 +1,135 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-  StatusBar,
-  Alert,
-} from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useRouter } from 'expo-router';
+import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+    Alert,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+
+// Helper to pick translation
+const pick = <T extends Record<string, any>>(obj: T, lang: AppLanguage): string => {
+  return obj[lang] || obj.en || Object.values(obj)[0] || '';
+};
+
+// Multilingual translations
+const T = {
+  headerTitle: {
+    en: 'Narrative Cards',
+    ka: 'ნარატივის ბარათები',
+    ru: 'Нарративные карты',
+    hy: 'Պատմողական Քարտեր',
+    tr: 'Anlatı Kartları',
+    az: 'Povest Kartları',
+    es: 'Cartas Narrativas',
+    de: 'Erzählkarten',
+    fr: 'Cartes Narratives',
+    pt: 'Cartões Narrativos',
+    id: 'Kartu Naratif',
+    it: 'Carte Narrative',
+    ar: 'بطاقات السرد',
+    hi: 'कथा कार्ड',
+    zh: '叙事卡片',
+    ja: 'ナラティブカード',
+    ko: '서사 카드',
+    uk: 'Наративні картки',
+    pl: 'Karty Narracyjne',
+  },
+  subtitle: {
+    en: 'Choose a card for narrative therapy',
+    ka: 'აირჩიეთ ბარათი ნარატივული თერაპიისთვის',
+    ru: 'Выберите карту для нарративной терапии',
+    hy: 'Ընտրեք քարտ պատմողական թերապիայի համար',
+    tr: 'Anlatı terapisi için bir kart seçin',
+    az: 'Povest terapiyası üçün kart seçin',
+    es: 'Elija una carta para terapia narrativa',
+    de: 'Wählen Sie eine Karte für narrative Therapie',
+    fr: 'Choisissez une carte pour la thérapie narrative',
+    pt: 'Escolha um cartão para terapia narrativa',
+    id: 'Pilih kartu untuk terapi naratif',
+    it: 'Scegli una carta per la terapia narrativa',
+    ar: 'اختر بطاقة للعلاج السردي',
+    hi: 'कथा चिकित्सा के लिए कार्ड चुनें',
+    zh: '选择叙事治疗卡片',
+    ja: 'ナラティブセラピーのカードを選択',
+    ko: '서사 치료를 위한 카드 선택',
+    uk: 'Виберіть картку для наративної терапії',
+    pl: 'Wybierz kartę do terapii narracyjnej',
+  },
+  errorTitle: {
+    en: 'Error',
+    ka: 'შეცდომა',
+    ru: 'Ошибка',
+    hy: 'Սխալ',
+    tr: 'Hata',
+    az: 'Xəta',
+    es: 'Error',
+    de: 'Fehler',
+    fr: 'Erreur',
+    pt: 'Erro',
+    id: 'Kesalahan',
+    it: 'Errore',
+    ar: 'خطأ',
+    hi: 'त्रुटि',
+    zh: '错误',
+    ja: 'エラー',
+    ko: '오류',
+    uk: 'Помилка',
+    pl: 'Błąd',
+  },
+  selectCardError: {
+    en: 'Please select a card',
+    ka: 'გთხოვთ აირჩიოთ ბარათი',
+    ru: 'Пожалуйста, выберите карту',
+    hy: 'Խնդրում ենք ընտրել քարտ',
+    tr: 'Lütfen bir kart seçin',
+    az: 'Zəhmət olmasa kart seçin',
+    es: 'Por favor seleccione una carta',
+    de: 'Bitte wählen Sie eine Karte',
+    fr: 'Veuillez sélectionner une carte',
+    pt: 'Por favor selecione um cartão',
+    id: 'Silakan pilih kartu',
+    it: 'Si prega di selezionare una carta',
+    ar: 'الرجاء اختيار بطاقة',
+    hi: 'कृपया एक कार्ड चुनें',
+    zh: '请选择卡片',
+    ja: 'カードを選択してください',
+    ko: '카드를 선택하세요',
+    uk: 'Будь ласка, виберіть картку',
+    pl: 'Proszę wybrać kartę',
+  },
+  startNarrativeTherapy: {
+    en: 'Start Narrative Therapy',
+    ka: 'ნარატივული თერაპიის დაწყება',
+    ru: 'Начать нарративную терапию',
+    hy: 'Սկսել Պատմողական Թերապիան',
+    tr: 'Anlatı Terapisini Başlat',
+    az: 'Povest Terapiyasına başla',
+    es: 'Iniciar Terapia Narrativa',
+    de: 'Narrative Therapie starten',
+    fr: 'Commencer la Thérapie Narrative',
+    pt: 'Iniciar Terapia Narrativa',
+    id: 'Mulai Terapi Naratif',
+    it: 'Inizia Terapia Narrativa',
+    ar: 'بدء العلاج السردي',
+    hi: 'कथा चिकित्सा शुरू करें',
+    zh: '开始叙事治疗',
+    ja: 'ナラティブセラピーを開始',
+    ko: '서사 치료 시작',
+    uk: 'Почати Наративну Терапію',
+    pl: 'Rozpocznij Terapię Narracyjną',
+  },
+};
 
 // Import resource cards from assets/cards/narrative folder
 const resourceCards = [
@@ -43,6 +158,7 @@ const resourceCards = [
 
 export default function InnerChildCardsScreen() {
   const { theme, isDark } = useTheme();
+  const { language } = useLanguage();
   const router = useRouter();
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const screenWidth = Dimensions.get('window').width;
@@ -54,17 +170,17 @@ export default function InnerChildCardsScreen() {
 
   const handleStartConsultation = () => {
     if (!selectedCard) {
-      Alert.alert('Ошибка', 'Пожалуйста, выберите карту');
+      Alert.alert(pick(T.errorTitle, language), pick(T.selectCardError, language));
       return;
     }
 
-    // Navigate to chat with selected inner child card
+    // Navigate to therapeutic chat with selected narrative card
     router.push({
-      pathname: '/chat',
+      pathname: '/screens/cards/therapy-chat',
       params: {
-        context: 'narrative_card',
+        context: 'narrative',
         cardId: selectedCard.id,
-        cardType: 'narrative'
+        cardImageUri: JSON.stringify(selectedCard.uri), // Pass image URI
       }
     });
   };
@@ -104,8 +220,15 @@ export default function InnerChildCardsScreen() {
       textAlign: 'center',
       flex: 1,
     },
-    placeholder: {
-      width: 40,
+    historyButton: {
+      padding: 10,
+      borderRadius: 10,
+      backgroundColor: theme.colors.background,
+      elevation: 1,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
     instructionsContainer: {
       paddingHorizontal: 20,
@@ -264,14 +387,19 @@ export default function InnerChildCardsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <FontAwesome5 name="arrow-left" size={18} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Нарративные карты</Text>
-        <View style={styles.placeholder} />
+        <Text style={styles.headerTitle}>{pick(T.headerTitle, language)}</Text>
+        <TouchableOpacity 
+          onPress={() => router.push('/screens/cards/sessions-history')} 
+          style={styles.historyButton}
+        >
+          <MaterialCommunityIcons name="history" size={20} color={theme.colors.text} />
+        </TouchableOpacity>
       </View>
 
       {/* Instructions */}
       <View style={styles.instructionsContainer}>
         <Text style={styles.instructionText}>
-          Выберите карту для нарративной терапии
+          {pick(T.subtitle, language)}
         </Text>
       </View>
 
@@ -298,7 +426,7 @@ export default function InnerChildCardsScreen() {
               style={styles.startButtonInner}
             >
               <FontAwesome5 name="comments" size={20} color="#ffffff" />
-              <Text style={styles.startButtonText}>Начать нарративную терапию</Text>
+              <Text style={styles.startButtonText}>{pick(T.startNarrativeTherapy, language)}</Text>
             </TouchableOpacity>
           </LinearGradient>
         </View>

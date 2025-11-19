@@ -1,7 +1,6 @@
-// Converted to CommonJS for Vercel / Node compatibility (ESM import caused failures on remote build)
-require('dotenv').config();
+import 'dotenv/config';
 
-module.exports = {
+export default {
   expo: {
     name: "beHappy",
     slug: "beHappy",
@@ -32,10 +31,10 @@ module.exports = {
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/splash-icon.png",
-          imageWidth: 200,
-          resizeMode: "contain",
-          backgroundColor: "#ffffff"
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
         }
       ]
     ],

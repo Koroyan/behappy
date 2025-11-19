@@ -54,7 +54,7 @@ const AIAssistantScreen = () => {
           id: 'cbt-main',
           title: 'КПТ Терапия',
           description: 'Когнитивно-поведенческая терапия для работы с мыслями',
-          route: '/screens/cbt',
+          route: '/screens/anulia',
           icon: 'psychology',
           color: ['#667eea', '#764ba2']
         },
@@ -155,7 +155,7 @@ const AIAssistantScreen = () => {
             id: 'cbt-main',
             title: 'КПТ Терапия',
             description: 'Когнитивно-поведенческая терапия для работы с мыслями',
-            route: '/screens/cbt/index',
+            route: '/screens/anulia',
             icon: 'psychology',
             color: ['#667eea', '#764ba2']
           },

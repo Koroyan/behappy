@@ -294,7 +294,7 @@ const ArtTherapyAIChat = forwardRef<ArtTherapyAIChatRef, ArtTherapyAIChatProps>(
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  Alert,
-  SafeAreaView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import { useRouter } from 'expo-router';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const cards = [
   { id: '1', uri: require('../../../assets/cards/card1.png') },
@@ -85,24 +85,14 @@ export default function MoodCardsScreen() {
       const positiveCardId = positiveCard.id;
       const negativeCardId = negativeCard.id;
 
-      const starter = `
-Пользователь выбрал две карты:
-🟢 ${positiveCard.label} (позитивное чувство) - карточка #${positiveCardId}
-🔴 ${negativeCard.label} (негативное чувство) - карточка #${negativeCardId}
-
-Пожалуйста, помогите мне понять и исследовать эти эмоции. Карты представляют визуальные образы, которые резонируют с этими эмоциями.
-`;
-
       router.push({
-        pathname: '/(tabs)/chat',
+        pathname: '/screens/cards/therapy-chat',
         params: { 
-          starter: encodeURIComponent(starter),
-          context: 'mood_cards',
-          positive_emotion: positiveCard.label,
-          negative_emotion: negativeCard.label,
+          context: 'positive_negative',
           positive_card_id: positiveCardId,
           negative_card_id: negativeCardId,
-          show_card_images: 'true' // Flag to tell the chat to show the images
+          positiveCardImageUri: JSON.stringify(positiveCard.uri), // Pass positive card image
+          negativeCardImageUri: JSON.stringify(negativeCard.uri), // Pass negative card image
         },
       });
     } catch (error) {
