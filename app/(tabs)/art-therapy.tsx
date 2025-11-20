@@ -1,5 +1,6 @@
 import ArtTherapyScreen from '@/components/ArtTherapyScreen';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import PurchaseService from '@/services/purchase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -8,10 +9,10 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 
 // Error boundary component for art therapy screen
 class ArtTherapyErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; isDark: boolean; themeColors: any },
   { hasError: boolean }
 > {
-  constructor(props: { children: React.ReactNode }) {
+  constructor(props: { children: React.ReactNode; isDark: boolean; themeColors: any }) {
     super(props);
     this.state = { hasError: false };
   }
@@ -26,22 +27,23 @@ class ArtTherapyErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
+      const { isDark, themeColors } = this.props;
       return (
         <LinearGradient
-          colors={['#667eea', '#764ba2', '#f093fb']}
+          colors={isDark ? ['#1a1a2e', '#16213e', '#0f3460'] : ['#667eea', '#764ba2', '#f093fb']}
           style={styles.errorContainer}
         >
-          <View style={styles.errorCard}>
+          <View style={[styles.errorCard, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.15)' }]}>
             <View style={styles.errorIconContainer}>
               <Text style={styles.errorIcon}>🎨</Text>
             </View>
-            <Text style={styles.errorTitle}>Art Therapy</Text>
-            <Text style={styles.errorMessage}>
+            <Text style={[styles.errorTitle, { color: themeColors.text }]}>Art Therapy</Text>
+            <Text style={[styles.errorMessage, { color: themeColors.textSecondary }]}>
               Something magical went wrong. Let's restart this creative journey!
             </Text>
             <View style={styles.loadingWrapper}>
-              <ActivityIndicator size="large" color="#ffffff" />
-              <Text style={styles.loadingText}>Restoring creativity...</Text>
+              <ActivityIndicator size="large" color={themeColors.primary} />
+              <Text style={[styles.loadingText, { color: themeColors.textMuted }]}>Restoring creativity...</Text>
             </View>
           </View>
         </LinearGradient>
@@ -57,7 +59,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   errorCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 24,
     padding: 32,
     margin: 20,
@@ -87,13 +88,11 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#ffffff',
     marginBottom: 12,
     textAlign: 'center',
   },
   errorMessage: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
@@ -104,13 +103,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 12,
     fontWeight: '500',
   },
-  // Purchase gate styles
+  // Purchase gate styles - now using theme colors dynamically
   lockCard: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
     borderRadius: 20,
     padding: 24,
     width: '85%',
@@ -124,17 +121,14 @@ const styles = StyleSheet.create({
   lockTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
     marginBottom: 8,
   },
   lockText: {
     fontSize: 14,
-    color: '#374151',
     textAlign: 'center',
     marginBottom: 16,
   },
   payBtn: {
-    backgroundColor: '#111827',
     borderRadius: 14,
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -149,6 +143,7 @@ const styles = StyleSheet.create({
 export default function ArtTherapyPage() {
   const router = useRouter();
   const { language } = useLanguage();
+  const { theme, isDark } = useTheme();
   const [loading, setLoading] = useState(true);
   const [unlocked, setUnlocked] = useState<boolean>(false);
 
@@ -230,21 +225,21 @@ export default function ArtTherapyPage() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' }}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   if (!unlocked) {
     return (
-      <LinearGradient colors={["#667eea", "#764ba2", "#f093fb"]} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <View style={styles.lockCard}>
-          <Text style={styles.lockTitle}>{pick(t.unlockTitle as any, language)}</Text>
-          <Text style={styles.lockText}>{pick(t.unlockText as any, language)}</Text>
+      <LinearGradient colors={isDark ? ["#1a1a2e", "#16213e", "#0f3460"] : ["#667eea", "#764ba2", "#f093fb"]} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={[styles.lockCard, { backgroundColor: theme.colors.card }]}>
+          <Text style={[styles.lockTitle, { color: theme.colors.text }]}>{pick(t.unlockTitle as any, language)}</Text>
+          <Text style={[styles.lockText, { color: theme.colors.textSecondary }]}>{pick(t.unlockText as any, language)}</Text>
           <TouchableOpacity
             onPress={() => router.push({ pathname: '/purchase', params: { product: 'art-therapy', amount: '50', currency: 'GEL', returnTo: '/art-therapy' } })}
-            style={styles.payBtn}
+            style={[styles.payBtn, { backgroundColor: theme.colors.primary }]}
             activeOpacity={0.9}
           >
             <Text style={styles.payBtnText}>{pick(t.unlockBtn as any, language)}</Text>
@@ -255,7 +250,7 @@ export default function ArtTherapyPage() {
   }
 
   return (
-    <ArtTherapyErrorBoundary>
+    <ArtTherapyErrorBoundary isDark={isDark} themeColors={theme.colors}>
       <ArtTherapyScreen />
     </ArtTherapyErrorBoundary>
   );

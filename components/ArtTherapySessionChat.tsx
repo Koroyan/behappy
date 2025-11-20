@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
 // Removed expo-speech: using OpenAI TTS via service instead
 import ArtTherapyProgramManager, { ART_THERAPY_SESSIONS, SessionProgress } from '../services/artTherapyProgram';
 import artTherapyService, { ArtTherapyResponse, ChatMessage } from '../services/artTherapyService';
@@ -31,6 +32,8 @@ interface MessageBubbleProps {
   message: ChatMessage;
   isUser: boolean;
   language: AppLanguage;
+  theme: any;
+  isDark: boolean;
 }
 
 // Localized strings for the chat UI
@@ -65,7 +68,7 @@ const T = {
 
 const pick = (map: Record<string, string>, lang: AppLanguage) => map[lang] ?? map.en;
 
-const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUser, language }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUser, language, theme, isDark }) => {
   const hasImage = message.imageUri || message.imageBase64;
   const [speaking, setSpeaking] = useState(false);
   
@@ -78,7 +81,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUse
 
   return (
     <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.aiMessage]}>
-      <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.aiBubble]}>
+      <View style={[
+        styles.messageBubble, 
+        isUser ? [styles.userBubble, { backgroundColor: isDark ? '#3b82f6' : '#000000' }] : [styles.aiBubble, { backgroundColor: theme.colors.card }]
+      ]}>
         {hasImage && imageSource && (
           <View style={styles.imageContainer}>
             <Image 
@@ -91,7 +97,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUse
         
         {message.content && (
           <>
-            <Text style={[styles.messageText, isUser ? styles.userText : styles.aiText]}>
+            <Text style={[
+              styles.messageText, 
+              isUser ? styles.userText : [styles.aiText, { color: theme.colors.text }]
+            ]}>
               {message.content}
             </Text>
             {!isUser && !!message.content && (
@@ -118,7 +127,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUse
           </>
         )}
         
-        <Text style={[styles.messageTime, isUser ? styles.userTime : styles.aiTime]}>
+        <Text style={[
+          styles.messageTime, 
+          isUser ? styles.userTime : [styles.aiTime, { color: theme.colors.textMuted }]
+        ]}>
           {new Date(message.timestamp).toLocaleTimeString([], { 
             hour: '2-digit', 
             minute: '2-digit' 
@@ -133,6 +145,7 @@ export default function ArtTherapySessionChat() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const router = useRouter();
   const { language } = useLanguage();
+  const { theme, isDark } = useTheme();
   
   // State management
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -439,11 +452,7 @@ export default function ArtTherapySessionChat() {
 
   const getHeaderTitle = () => {
     if (!currentSession) return '';
-  return language === 'ka'
-    ? currentSession.title.ka
-    : language === 'ru'
-      ? ((currentSession.title as any)?.ru ?? currentSession.title.en)
-      : currentSession.title.en;
+    return ((currentSession.title as any)[language] ?? currentSession.title.en);
   };
 
   // Voice: start/stop recording (push-to-talk)
@@ -700,19 +709,19 @@ export default function ArtTherapySessionChat() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.colors.background} />
       {/* Session accent bar */}
       {currentSession && (
         <View style={{ height: 3, backgroundColor: currentSession.color }} />
       )}
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>←</Text>
+          <Text style={[styles.backButtonText, { color: theme.colors.text }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{getHeaderTitle()}</Text>
         <View style={styles.headerRight}>
           {isSessionComplete && (
             <View style={[styles.completeBadge, currentSession ? { backgroundColor: currentSession.color } : null]}>
@@ -728,9 +737,9 @@ export default function ArtTherapySessionChat() {
         data={messages.filter(m => !(m.role === 'assistant' && !m.content && !m.imageUri && !m.imageBase64))}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <MessageBubble message={item} isUser={item.role === 'user'} language={language as AppLanguage} />
+          <MessageBubble message={item} isUser={item.role === 'user'} language={language as AppLanguage} theme={theme} isDark={isDark} />
         )}
-        style={styles.messagesList}
+        style={[styles.messagesList, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={scrollToBottom}
@@ -746,13 +755,13 @@ export default function ArtTherapySessionChat() {
 
       {/* Read-only Notice */}
       {readOnly && (
-        <View style={styles.readonlyBanner}>
-          <Text style={styles.readonlyText}>{pick(T.sessionCompletedTitle, language as AppLanguage)} — {pick(T.readOnlyMsg, language as AppLanguage)}</Text>
+        <View style={[styles.readonlyBanner, { backgroundColor: isDark ? theme.colors.surface : '#F5F5F5' }]}>
+          <Text style={[styles.readonlyText, { color: theme.colors.textSecondary }]}>{pick(T.sessionCompletedTitle, language as AppLanguage)} — {pick(T.readOnlyMsg, language as AppLanguage)}</Text>
         </View>
       )}
 
       {readOnly && currentSession && (
-        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 8, backgroundColor: theme.colors.background }}>
           <TouchableOpacity
             style={{
               backgroundColor: currentSession.color,
@@ -780,18 +789,18 @@ export default function ArtTherapySessionChat() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
           <TouchableOpacity style={[styles.imageButton, readOnly && styles.disabledButton]} onPress={handleImagePicker} disabled={readOnly}>
             <Text style={styles.imageButtonText}>📷</Text>
           </TouchableOpacity>
           
           <TextInput
             ref={inputRef}
-            style={styles.textInput}
+            style={[styles.textInput, { backgroundColor: isDark ? theme.colors.card : '#F5F5F5', color: theme.colors.text }]}
             value={inputText}
             onChangeText={setInputText}
             placeholder={pick(T.inputPlaceholder, language as AppLanguage)}
-            placeholderTextColor="#999999"
+            placeholderTextColor={theme.colors.textMuted}
             multiline
             maxLength={1000}
             onSubmitEditing={() => (readOnly ? undefined : handleSendMessage())}
@@ -800,7 +809,7 @@ export default function ArtTherapySessionChat() {
           />
           {/* Mic button: push-to-talk */}
           <TouchableOpacity
-            style={[styles.micButton, isRecording && styles.micButtonRecording]}
+            style={[styles.micButton, isRecording && [styles.micButtonRecording, { backgroundColor: isDark ? '#ff4444' : '#ff0000' }]]}
             onPressIn={startRecording}
             onPressOut={stopRecording}
             disabled={readOnly}
@@ -808,13 +817,17 @@ export default function ArtTherapySessionChat() {
             <Text style={styles.imageButtonText}>{isRecording ? '⏺️' : '🎤'}</Text>
           </TouchableOpacity>
           {isRecording && (
-            <Text style={styles.recordingText}>
+            <Text style={[styles.recordingText, { color: theme.colors.error || '#ff0000' }]}>
               {pick(T.recording, language as AppLanguage)}
             </Text>
           )}
           
           <TouchableOpacity 
-            style={[styles.sendButton, currentSession ? { backgroundColor: currentSession.color } : null, (!inputText.trim() || readOnly) && styles.sendButtonDisabled]} 
+            style={[
+              styles.sendButton, 
+              currentSession ? { backgroundColor: currentSession.color } : { backgroundColor: theme.colors.primary }, 
+              (!inputText.trim() || readOnly) && [styles.sendButtonDisabled, { backgroundColor: isDark ? '#333' : '#E5E5E5' }]
+            ]} 
             onPress={() => (readOnly ? undefined : handleSendMessage())}
             disabled={!inputText.trim() || readOnly}
           >
@@ -829,7 +842,6 @@ export default function ArtTherapySessionChat() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB', // softer app background
   },
   header: {
     flexDirection: 'row',
@@ -838,9 +850,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
   },
   backButton: {
     width: 40,
@@ -852,13 +862,11 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: '#000000',
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000000',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 20,
@@ -873,7 +881,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -886,16 +893,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666666',
   },
   messagesList: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
   messagesContent: {
     paddingVertical: 20,
@@ -916,10 +920,8 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   userBubble: {
-    backgroundColor: '#1F2937', // slate-800
   },
   aiBubble: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -1014,23 +1016,19 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#F3F4F6',
     borderRadius: 20,
     fontSize: 16,
-    color: '#111827',
     textAlignVertical: 'center',
   },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#111827', // near-black instead of pure black
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
   },
   sendButtonDisabled: {
-    backgroundColor: '#D1D5DB', // gray-300
   },
   sendButtonText: {
     fontSize: 18,
@@ -1038,14 +1036,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   readonlyBanner: {
-    backgroundColor: '#111827',
     paddingHorizontal: 16,
     paddingVertical: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   readonlyText: {
-    color: '#FFFFFF',
     fontSize: 12,
   },
   disabledButton: {

@@ -1,24 +1,24 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  Platform,
-  StatusBar,
-  TextInput,
+  ActivityIndicator,
+  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
-  Dimensions,
-  ActivityIndicator,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { generateAIChatResponse } from '../../services/localAI';
 
 const { width, height } = Dimensions.get('window');
@@ -201,7 +201,7 @@ const AIAssistantScreen = () => {
           
           <View style={[
             styles.messageBubble,
-            isUser ? [styles.userBubble, { backgroundColor: theme.colors.primary }] : [styles.assistantBubble, { backgroundColor: theme.colors.card }]
+            isUser ? [styles.userBubble, { backgroundColor: isDark ? '#3b82f6' : '#000000' }] : [styles.assistantBubble, { backgroundColor: theme.colors.card }]
           ]}>
             <Text style={[
               styles.messageText,

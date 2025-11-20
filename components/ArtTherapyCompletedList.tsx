@@ -1,4 +1,5 @@
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import ArtTherapyProgramManager, { ART_THERAPY_SESSIONS, SessionProgress } from '@/services/artTherapyProgram';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -29,6 +30,7 @@ const previewText = (s?: string) => {
 
 export default function ArtTherapyCompletedList() {
   const { language } = useLanguage();
+  const { theme, isDark } = useTheme();
   const router = useRouter();
   const [items, setItems] = useState<CompletedItem[]>([]);
   const [activeSummary, setActiveSummary] = useState<CompletedItem | null>(null);
@@ -69,6 +71,14 @@ export default function ArtTherapyCompletedList() {
       summaryTitle: 'სესიის შეჯამება',
       close: 'დახურვა',
     },
+    en: {
+      header: 'Completed Sessions',
+      view: 'View',
+      open: 'Open Chat',
+      empty: 'No completed sessions yet',
+      summaryTitle: 'Session Summary',
+      close: 'Close',
+    },
     ru: {
       header: 'Завершённые сеансы',
       view: 'Просмотр',
@@ -77,48 +87,170 @@ export default function ArtTherapyCompletedList() {
       summaryTitle: 'Итоги сеанса',
       close: 'Закрыть',
     },
-    en: {
-      header: 'Completed Sessions',
-      view: 'View',
-      open: 'Open Chat',
-      empty: 'No completed sessions yet',
-      summaryTitle: 'Session Summary',
-      close: 'Close',
+    hy: {
+      header: 'Ավարտված Սեանսներ',
+      view: 'Դիտել',
+      open: 'Բացել Չատը',
+      empty: 'Դեռ ավարտված սեանսներ չկան',
+      summaryTitle: 'Սեանսի Ամփոփում',
+      close: 'Փակել',
+    },
+    tr: {
+      header: 'Tamamlanan Seanslar',
+      view: 'Görüntüle',
+      open: 'Sohbeti Aç',
+      empty: 'Henüz tamamlanan seans yok',
+      summaryTitle: 'Seans Özeti',
+      close: 'Kapat',
+    },
+    az: {
+      header: 'Tamamlanmış Seanslar',
+      view: 'Bax',
+      open: 'Söhbəti Aç',
+      empty: 'Hələ tamamlanmış seanslar yoxdur',
+      summaryTitle: 'Seans Xülasəsi',
+      close: 'Bağla',
+    },
+    es: {
+      header: 'Sesiones Completadas',
+      view: 'Ver',
+      open: 'Abrir Chat',
+      empty: 'Aún no hay sesiones completadas',
+      summaryTitle: 'Resumen de Sesión',
+      close: 'Cerrar',
+    },
+    de: {
+      header: 'Abgeschlossene Sitzungen',
+      view: 'Ansehen',
+      open: 'Chat Öffnen',
+      empty: 'Noch keine abgeschlossenen Sitzungen',
+      summaryTitle: 'Sitzungszusammenfassung',
+      close: 'Schließen',
+    },
+    fr: {
+      header: 'Sessions Terminées',
+      view: 'Voir',
+      open: 'Ouvrir le Chat',
+      empty: 'Aucune session terminée pour le moment',
+      summaryTitle: 'Résumé de Session',
+      close: 'Fermer',
+    },
+    pt: {
+      header: 'Sessões Concluídas',
+      view: 'Ver',
+      open: 'Abrir Chat',
+      empty: 'Ainda não há sessões concluídas',
+      summaryTitle: 'Resumo da Sessão',
+      close: 'Fechar',
+    },
+    ar: {
+      header: 'الجلسات المكتملة',
+      view: 'عرض',
+      open: 'فتح الدردشة',
+      empty: 'لا توجد جلسات مكتملة بعد',
+      summaryTitle: 'ملخص الجلسة',
+      close: 'إغلاق',
+    },
+    id: {
+      header: 'Sesi Selesai',
+      view: 'Lihat',
+      open: 'Buka Chat',
+      empty: 'Belum ada sesi yang selesai',
+      summaryTitle: 'Ringkasan Sesi',
+      close: 'Tutup',
+    },
+    it: {
+      header: 'Sessioni Completate',
+      view: 'Vedi',
+      open: 'Apri Chat',
+      empty: 'Nessuna sessione completata ancora',
+      summaryTitle: 'Riepilogo Sessione',
+      close: 'Chiudi',
+    },
+    ja: {
+      header: '完了したセッション',
+      view: '表示',
+      open: 'チャットを開く',
+      empty: 'まだ完了したセッションはありません',
+      summaryTitle: 'セッションの概要',
+      close: '閉じる',
+    },
+    zh: {
+      header: '已完成的会话',
+      view: '查看',
+      open: '打开聊天',
+      empty: '还没有完成的会话',
+      summaryTitle: '会话摘要',
+      close: '关闭',
+    },
+    hi: {
+      header: 'पूर्ण सत्र',
+      view: 'देखें',
+      open: 'चैट खोलें',
+      empty: 'अभी तक कोई पूर्ण सत्र नहीं',
+      summaryTitle: 'सत्र सारांश',
+      close: 'बंद करें',
+    },
+    ko: {
+      header: '완료된 세션',
+      view: '보기',
+      open: '채팅 열기',
+      empty: '아직 완료된 세션이 없습니다',
+      summaryTitle: '세션 요약',
+      close: '닫기',
+    },
+    uk: {
+      header: 'Завершені Сеанси',
+      view: 'Перегляд',
+      open: 'Відкрити Чат',
+      empty: 'Поки немає завершених сеансів',
+      summaryTitle: 'Підсумки Сеансу',
+      close: 'Закрити',
+    },
+    pl: {
+      header: 'Zakończone Sesje',
+      view: 'Zobacz',
+      open: 'Otwórz Chat',
+      empty: 'Brak zakończonych sesji',
+      summaryTitle: 'Podsumowanie Sesji',
+      close: 'Zamknij',
     }
   }), []);
 
-  const lang = language === 'ka' ? 'ka' : language === 'ru' ? 'ru' : 'en';
+  const lang = ['ka', 'en', 'ru', 'hy', 'tr', 'az', 'es', 'de', 'fr', 'pt', 'ar', 'id', 'it', 'ja', 'zh', 'hi', 'ko', 'uk', 'pl'].includes(language) 
+    ? language 
+    : 'en';
 
   if (items.length === 0) {
     return (
       <View style={styles.emptyWrap}>
-        <Text style={styles.emptyText}>{t[lang].empty}</Text>
+        <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>{t[lang].empty}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{t[lang].header}</Text>
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t[lang].header}</Text>
       {items.map((it) => (
-        <View key={it.id} style={styles.card}>
-          <LinearGradient colors={[`${it.color}1A`, '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.cardBg} />
+        <View key={it.id} style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <LinearGradient colors={isDark ? [`${it.color}30`, theme.colors.card] : [`${it.color}1A`, '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.cardBg} />
           <View style={styles.row}>
-            <View style={[styles.iconWrap, { borderColor: it.color }]}>
+            <View style={[styles.iconWrap, { borderColor: it.color, backgroundColor: theme.colors.surface }]}>
               <Text style={styles.icon}>{it.icon}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.title} numberOfLines={1}>{lang === 'ka' ? it.title.ka : lang === 'ru' ? (it.title.ru ?? it.title.en) : it.title.en}</Text>
-              <Text style={styles.meta} numberOfLines={1}>{formatDate(it.completedAt)}</Text>
+              <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>{((it.title as any)[lang] ?? it.title.en)}</Text>
+              <Text style={[styles.meta, { color: theme.colors.textSecondary }]} numberOfLines={1}>{formatDate(it.completedAt)}</Text>
             </View>
           </View>
           {it.sessionSummary ? (
-            <Text style={styles.preview} numberOfLines={2}>{previewText(it.sessionSummary)}</Text>
+            <Text style={[styles.preview, { color: theme.colors.textSecondary }]} numberOfLines={2}>{previewText(it.sessionSummary)}</Text>
           ) : null}
           <View style={styles.actions}>
             {it.sessionSummary ? (
-              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setActiveSummary(it)}>
-                <Text style={styles.secondaryText}>{t[lang].view}</Text>
+              <TouchableOpacity style={[styles.secondaryBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]} onPress={() => setActiveSummary(it)}>
+                <Text style={[styles.secondaryText, { color: theme.colors.text }]}>{t[lang].view}</Text>
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: it.color }]} onPress={() => router.push({ pathname: '/art-therapy-session', params: { sessionId: String(it.id) } })}>
@@ -130,21 +262,21 @@ export default function ArtTherapyCompletedList() {
 
       <Modal visible={!!activeSummary} animationType="slide" transparent onRequestClose={() => setActiveSummary(null)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t[lang].summaryTitle}</Text>
+          <View style={[styles.modalCard, { backgroundColor: theme.colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t[lang].summaryTitle}</Text>
               <TouchableOpacity onPress={() => setActiveSummary(null)}>
-                <Text style={styles.modalClose}>{t[lang].close}</Text>
+                <Text style={[styles.modalClose, { color: theme.colors.primary }]}>{t[lang].close}</Text>
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalBody}>
               {activeSummary ? (
                 <>
-                  <Text style={styles.modalSessionTitle}>{lang === 'ka' ? activeSummary.title.ka : lang === 'ru' ? (activeSummary.title.ru ?? activeSummary.title.en) : activeSummary.title.en}</Text>
+                  <Text style={[styles.modalSessionTitle, { color: theme.colors.text }]}>{((activeSummary.title as any)[lang] ?? activeSummary.title.en)}</Text>
                   {activeSummary.completedAt ? (
-                    <Text style={styles.modalMeta}>{formatDate(activeSummary.completedAt)}</Text>
+                    <Text style={[styles.modalMeta, { color: theme.colors.textSecondary }]}>{formatDate(activeSummary.completedAt)}</Text>
                   ) : null}
-                  <Text style={styles.modalSummary}>{activeSummary.sessionSummary}</Text>
+                  <Text style={[styles.modalSummary, { color: theme.colors.text }]}>{activeSummary.sessionSummary}</Text>
                 </>
               ) : null}
             </ScrollView>
@@ -157,29 +289,29 @@ export default function ArtTherapyCompletedList() {
 
 const styles = StyleSheet.create({
   section: { marginTop: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 8 },
   emptyWrap: { paddingVertical: 8 },
-  emptyText: { color: '#6B7280' },
-  card: { position: 'relative', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 14, padding: 14, marginBottom: 12, overflow: 'hidden' },
+  emptyText: {},
+  card: { position: 'relative', borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 12, overflow: 'hidden' },
   cardBg: { ...StyleSheet.absoluteFillObject },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  iconWrap: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', marginRight: 10 },
+  iconWrap: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   icon: { fontSize: 22 },
-  title: { fontSize: 15, fontWeight: '800', color: '#111827' },
-  meta: { marginTop: 2, fontSize: 12, color: '#6B7280' },
-  preview: { marginTop: 6, color: '#374151' },
+  title: { fontSize: 15, fontWeight: '800' },
+  meta: { marginTop: 2, fontSize: 12 },
+  preview: { marginTop: 6 },
   actions: { marginTop: 10, flexDirection: 'row', justifyContent: 'flex-end' },
-  secondaryBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8, backgroundColor: '#FFFFFF' },
-  secondaryText: { color: '#111827', fontWeight: '700' },
+  secondaryBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, marginRight: 8 },
+  secondaryText: { fontWeight: '700' },
   primaryBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
   primaryText: { color: '#FFFFFF', fontWeight: '800' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: '80%', paddingBottom: Platform.OS === 'ios' ? 24 : 16 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
-  modalClose: { color: '#111827', fontWeight: '700' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalCard: { borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: '80%', paddingBottom: Platform.OS === 'ios' ? 24 : 16 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, borderBottomWidth: 1 },
+  modalTitle: { fontSize: 16, fontWeight: '800' },
+  modalClose: { fontWeight: '700' },
   modalBody: { paddingHorizontal: 16, paddingTop: 12 },
-  modalSessionTitle: { fontSize: 15, fontWeight: '800', color: '#111827' },
-  modalMeta: { marginTop: 4, fontSize: 12, color: '#6B7280' },
+  modalSessionTitle: { fontSize: 15, fontWeight: '800' },
+  modalMeta: { marginTop: 4, fontSize: 12 },
   modalSummary: { marginTop: 12, color: '#232323', lineHeight: 20, paddingBottom: 18 },
 });

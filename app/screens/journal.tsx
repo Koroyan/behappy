@@ -401,7 +401,7 @@ export default function JournalScreen() {
       color: 'rgba(255, 255, 255, 0.9)',
     },
     quickWriteButton: {
-      backgroundColor: theme.colors.primary,
+      backgroundColor: isDark ? '#3b82f6' : '#000000',
       borderRadius: 16,
       padding: 16,
       flexDirection: 'row',
@@ -565,7 +565,7 @@ export default function JournalScreen() {
       borderColor: theme.colors.border,
     },
     saveButton: {
-      backgroundColor: theme.colors.primary,
+      backgroundColor: isDark ? '#3b82f6' : '#000000',
     },
     buttonText: {
       fontSize: 16,

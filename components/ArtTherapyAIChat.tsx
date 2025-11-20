@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  ActivityIndicator,
-  Image,
-  Dimensions,
-  Platform
-} from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { forwardRef, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
 
 interface Message {
   id: string;
@@ -233,7 +233,7 @@ const ArtTherapyAIChat = forwardRef<ArtTherapyAIChatRef, ArtTherapyAIChatProps>(
               style={[
                 styles.message,
                 msg.isUser
-                  ? [styles.userMessage, { backgroundColor: theme.colors.primary }]
+                  ? [styles.userMessage, { backgroundColor: isDark ? '#3b82f6' : '#000000' }]
                   : [styles.aiMessage, { backgroundColor: isDark ? '#2A2A2A' : '#F0F0F0' }],
               ]}
             >

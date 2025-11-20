@@ -2,6 +2,7 @@ import { Dimensions, StyleSheet } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
+// Keep original TherapyColors for backward compatibility
 export const TherapyColors = {
   // Primary therapeutic colors
   primary: '#6B73FF',

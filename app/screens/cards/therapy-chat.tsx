@@ -1258,7 +1258,7 @@ export default function CardTherapyChatScreen() {
       shadowRadius: 8,
     },
     userBubble: {
-      backgroundColor: theme.colors.primary,
+      backgroundColor: isDark ? '#3b82f6' : '#000000',
       borderBottomRightRadius: 6,
     },
     aiBubble: {

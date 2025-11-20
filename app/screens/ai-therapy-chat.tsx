@@ -1,4 +1,5 @@
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -36,6 +37,7 @@ import { TherapyColors, therapyStyles } from '../../styles/therapyStyles';
 
 const AITherapyChatScreen: React.FC = () => {
   const { language } = useLanguage();
+  const { theme, isDark } = useTheme();
   const pick = (obj: Record<string, string>, lang: AppLanguage) => obj[lang] ?? obj.en;
   const t = {
     headerStatuses: {
@@ -696,15 +698,15 @@ const AITherapyChatScreen: React.FC = () => {
   });
 
   return (
-  <SafeAreaView style={therapyStyles.safeArea} edges={['top','bottom']}>
+  <SafeAreaView style={[therapyStyles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top','bottom']}>
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
         <LinearGradient
-          colors={[TherapyColors.background, '#FFFFFF']}
-          style={therapyStyles.container}
+          colors={isDark ? [theme.colors.background, theme.colors.surface] : [TherapyColors.background, '#FFFFFF']}
+          style={[therapyStyles.container, { backgroundColor: theme.colors.background }]}
         >
           {/* Header */}
           <View style={{
@@ -714,14 +716,14 @@ const AITherapyChatScreen: React.FC = () => {
             paddingHorizontal: 16,
             paddingVertical: 12,
             borderBottomWidth: 1,
-            borderBottomColor: '#E1E8ED',
+            borderBottomColor: isDark ? theme.colors.border : '#E1E8ED',
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 }}>
               <View style={{
                 width: 40,
                 height: 40,
                 borderRadius: 20,
-                backgroundColor: TherapyColors.primary,
+                backgroundColor: theme.colors.accent,
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginRight: 12,
@@ -729,8 +731,8 @@ const AITherapyChatScreen: React.FC = () => {
                 <Text style={{ color: '#FFFFFF', fontSize: 18 }}>🌸</Text>
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={therapyStyles.subtitle} numberOfLines={1} ellipsizeMode="tail">Dr. Sophia Chen, PhD, LCSW</Text>
-                <Text style={therapyStyles.caption} numberOfLines={1} ellipsizeMode="tail">
+                <Text style={[therapyStyles.subtitle, { color: theme.colors.text }]} numberOfLines={1} ellipsizeMode="tail">Dr. Sophia Chen, PhD, LCSW</Text>
+                <Text style={[therapyStyles.caption, { color: theme.colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">
                   {isLoading 
                     ? pick(t.headerStatuses.analyzing as any, language)
                     : isOpenAIConnected 
@@ -746,12 +748,12 @@ const AITherapyChatScreen: React.FC = () => {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: 'rgba(255, 59, 92, 0.12)',
+                backgroundColor: isDark ? 'rgba(231, 76, 60, 0.2)' : 'rgba(255, 59, 92, 0.12)',
                 paddingHorizontal: 14,
                 paddingVertical: 8,
                 borderRadius: 20,
                 borderWidth: 1.5,
-                borderColor: 'rgba(255, 59, 92, 0.3)',
+                borderColor: isDark ? 'rgba(231, 76, 60, 0.4)' : 'rgba(255, 59, 92, 0.3)',
                 shadowColor: '#FF3B5C',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.15,
@@ -781,7 +783,7 @@ const AITherapyChatScreen: React.FC = () => {
           <Animated.View style={[{ flex: 1 }, animatedContainer]}>
             <ScrollView
               ref={scrollViewRef}
-              style={therapyStyles.chatMessagesContainer}
+              style={[therapyStyles.chatMessagesContainer, { backgroundColor: theme.colors.background }]}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}
             >
@@ -809,11 +811,11 @@ const AITherapyChatScreen: React.FC = () => {
 
           {/* Input area - always above keyboard and navigation bar */}
           <View style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: theme.colors.card,
             borderTopWidth: 1,
-            borderTopColor: '#E1E8ED',
+            borderTopColor: theme.colors.border,
             paddingBottom: isKeyboardVisible ? 10 : 75, // Less padding when keyboard is visible
-            shadowColor: '#000',
+            shadowColor: theme.colors.shadow,
             shadowOffset: { width: 0, height: -2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
@@ -828,7 +830,7 @@ const AITherapyChatScreen: React.FC = () => {
               <TextInput
                 style={{
                   flex: 1,
-                  backgroundColor: '#F5F8FA',
+                  backgroundColor: isDark ? theme.colors.surface : '#F5F8FA',
                   borderRadius: 20,
                   paddingHorizontal: 16,
                   paddingVertical: 12,
@@ -837,12 +839,12 @@ const AITherapyChatScreen: React.FC = () => {
                   maxHeight: 150,
                   fontSize: 16,
                   lineHeight: 22,
-                  color: '#1A1A1A',
+                  color: theme.colors.text,
                 }}
                 value={inputText}
                 onChangeText={setInputText}
                 placeholder={isFirstMessage ? pick(t.inputPlaceholderFirst as any, language) : pick(t.inputPlaceholderNext as any, language)}
-                placeholderTextColor="#A0AEC0"
+                placeholderTextColor={theme.colors.textMuted}
                 multiline
                 maxLength={1000}
                 onSubmitEditing={handleSendMessage}
@@ -859,7 +861,7 @@ const AITherapyChatScreen: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: 8,
-                  shadowColor: '#000',
+                  shadowColor: theme.colors.shadow,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.2,
                   shadowRadius: 3,
@@ -876,7 +878,7 @@ const AITherapyChatScreen: React.FC = () => {
                   width: 44,
                   height: 44,
                   borderRadius: 22,
-                  backgroundColor: TherapyColors.healing,
+                  backgroundColor: theme.colors.accent,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: (!inputText.trim() || isLoading) ? 0.4 : 1,

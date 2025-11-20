@@ -1,4 +1,5 @@
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +28,8 @@ interface SessionCardProps {
   isCompleted: boolean;
   onPress: () => void;
   language: string;
+  theme: any;
+  isDark: boolean;
 }
 
 const T = {
@@ -105,7 +108,7 @@ const T = {
 
 const pick = (obj: Record<string, string>, lang: string) => (obj as any)[lang] ?? obj.en;
 
-const SessionCard: React.FC<SessionCardProps> = ({ session, isUnlocked, isCompleted, onPress, language }) => {
+const SessionCard: React.FC<SessionCardProps> = ({ session, isUnlocked, isCompleted, onPress, language, theme, isDark }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -140,7 +143,8 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, isUnlocked, isComple
       <TouchableOpacity
         style={[
           styles.sessionCard,
-          isCompleted && styles.completedCard,
+          { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
+          isCompleted && [styles.completedCard, { borderColor: theme.colors.primary }],
           !isUnlocked && styles.lockedCard,
         ]}
         onPress={isUnlocked ? onPress : undefined}
@@ -151,43 +155,44 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, isUnlocked, isComple
       >
         <View style={styles.sessionCardContent}>
           <View style={styles.sessionHeader}>
-            <Text style={styles.sessionTitle}>
+            <Text style={[styles.sessionTitle, { color: theme.colors.text }]}>
               {((session.title as any)[language] ?? session.title.en) as string}
             </Text>
             <View style={[
               styles.sessionStatus,
-              isCompleted && styles.completedStatus,
-              isUnlocked && !isCompleted && styles.unlockedStatus,
-              !isUnlocked && styles.lockedStatus,
+              isCompleted && [styles.completedStatus, { backgroundColor: theme.colors.primary }],
+              isUnlocked && !isCompleted && [styles.unlockedStatus, { backgroundColor: isDark ? theme.colors.surface : '#F5F5F5' }],
+              !isUnlocked && [styles.lockedStatus, { backgroundColor: isDark ? theme.colors.background : '#F9F9F9' }],
             ]}>
               <Text style={[
                 styles.statusText,
                 isCompleted && styles.completedText,
-                isUnlocked && !isCompleted && styles.unlockedText,
-                !isUnlocked && styles.lockedText,
+                isUnlocked && !isCompleted && [styles.unlockedText, { color: theme.colors.text }],
+                !isUnlocked && [styles.lockedText, { color: theme.colors.textMuted }],
               ]}>
                 {getStatusText()}
               </Text>
             </View>
           </View>
           
-          <Text style={styles.sessionDescription}>
+          <Text style={[styles.sessionDescription, { color: theme.colors.textSecondary }]}>
             {((session.description as any)[language] ?? session.description.en) as string}
           </Text>
           
           <View style={styles.sessionFooter}>
-            <Text style={styles.sessionDuration}>~15 {pick(T.units.min as any, language)}</Text>
+            <Text style={[styles.sessionDuration, { color: theme.colors.textMuted }]}>~15 {pick(T.units.min as any, language)}</Text>
             <TouchableOpacity
               style={[
                 styles.sessionButton,
-                !isUnlocked && styles.sessionButtonDisabled,
+                { backgroundColor: theme.colors.primary },
+                !isUnlocked && [styles.sessionButtonDisabled, { backgroundColor: isDark ? '#333' : '#E0E0E0' }],
               ]}
               onPress={isUnlocked ? onPress : undefined}
               disabled={!isUnlocked}
             >
               <Text style={[
                 styles.sessionButtonText,
-                !isUnlocked && styles.sessionButtonTextDisabled,
+                !isUnlocked && [styles.sessionButtonTextDisabled, { color: theme.colors.textMuted }],
               ]}>
                 {getButtonText()}
               </Text>
@@ -202,6 +207,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, isUnlocked, isComple
 export default function ArtTherapyScreen() {
   const router = useRouter();
   const { language } = useLanguage();
+  const { theme, isDark } = useTheme();
   const [sessions, setSessions] = useState<ArtTherapySession[]>([]);
   const [completedSessions, setCompletedSessions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -273,20 +279,20 @@ export default function ArtTherapyScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#000000" />
-        <Text style={styles.loadingText}>{pick(T.loading as any, language)}</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.colors.background} />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{pick(T.loading as any, language)}</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadSessions}>
+      <View style={[styles.errorContainer, { backgroundColor: theme.colors.background }]}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.colors.background} />
+        <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>{error}</Text>
+        <TouchableOpacity style={[styles.retryButton, { backgroundColor: theme.colors.primary }]} onPress={loadSessions}>
           <Text style={styles.retryButtonText}>{pick(T.retry as any, language)}</Text>
         </TouchableOpacity>
       </View>
@@ -294,25 +300,26 @@ export default function ArtTherapyScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.colors.background} />
       
       {/* Clean Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>{getTitle()}</Text>
-          <View style={styles.headerStats}>
-            <Text style={styles.statsText}>{`${completionPercentage}% ${pick(T.percentComplete as any, language)}`}</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{getTitle()}</Text>
+          <View style={[styles.headerStats, { backgroundColor: isDark ? theme.colors.card : '#F5F5F5' }]}>
+            <Text style={[styles.statsText, { color: theme.colors.textSecondary }]}>{`${completionPercentage}% ${pick(T.percentComplete as any, language)}`}</Text>
           </View>
         </View>
         
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
+          <View style={[styles.progressBar, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]}>
             <Animated.View 
               style={[
                 styles.progressFill, 
                 { 
+                  backgroundColor: theme.colors.primary,
                   width: progressAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: ['0%', '100%'],
@@ -326,17 +333,17 @@ export default function ArtTherapyScreen() {
 
       {/* Sessions (current only) */}
       <ScrollView
-        style={styles.scrollView}
+        style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.sessionList}
         showsVerticalScrollIndicator={false}
       >
         {/* Completion Card */}
         {completionPercentage === 100 && (
-          <View style={styles.completionCard}>
-            <Text style={styles.completionTitle}>{pick(T.completeBanner.congrats as any, language)}</Text>
-            <Text style={styles.completionSubtitle}>{pick(T.completeBanner.allDone as any, language)}</Text>
+          <View style={[styles.completionCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.completionTitle, { color: theme.colors.text }]}>{pick(T.completeBanner.congrats as any, language)}</Text>
+            <Text style={[styles.completionSubtitle, { color: theme.colors.textSecondary }]}>{pick(T.completeBanner.allDone as any, language)}</Text>
             <TouchableOpacity
-              style={styles.celebrationButton}
+              style={[styles.celebrationButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)}
             >
               <Text style={styles.celebrationButtonText}>{pick(T.completeBanner.continue as any, language)}</Text>
@@ -351,31 +358,31 @@ export default function ArtTherapyScreen() {
           const hasNextLocked = currentIndex >= 0 && currentIndex + 1 < sessions.length;
           if (!current) return null;
           return (
-            <View style={styles.heroCard}>
+            <View style={[styles.heroCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <LinearGradient
-                colors={[`${current.color || '#111827'}26`, '#FFFFFF']}
+                colors={isDark ? [`${current.color || '#111827'}40`, theme.colors.card] : [`${current.color || '#111827'}26`, '#FFFFFF']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.heroBg}
               />
               <View style={styles.heroHeader}>
-                <View style={[styles.heroIconWrap, { borderColor: current.color }]}>
+                <View style={[styles.heroIconWrap, { borderColor: current.color, backgroundColor: theme.colors.surface }]}>
                   <Text style={styles.heroIcon}>{current.icon}</Text>
                 </View>
                 <View style={styles.heroMeta}>
-                  <Text style={styles.heroTitle} numberOfLines={2}>
+                  <Text style={[styles.heroTitle, { color: theme.colors.text }]} numberOfLines={2}>
                     {((current.title as any)[language] ?? current.title.en) as string}
                   </Text>
-                  <Text style={styles.heroSub} numberOfLines={1}>
+                  <Text style={[styles.heroSub, { color: theme.colors.textSecondary }]} numberOfLines={1}>
                     ~{current.estimatedDuration} {pick(T.units.min as any, language)} · {((current.theme as any)[language] ?? current.theme.en) as string}
                   </Text>
                 </View>
               </View>
-              <Text style={styles.heroDesc}>
+              <Text style={[styles.heroDesc, { color: theme.colors.textSecondary }]}>
                 {((current.description as any)[language] ?? current.description.en) as string}
               </Text>
               <TouchableOpacity
-                style={[styles.heroButton, { backgroundColor: current.color || '#111827' }]}
+                style={[styles.heroButton, { backgroundColor: current.color || theme.colors.primary }]}
                 onPress={() => handleSessionPress(current)}
                 activeOpacity={0.9}
               >
@@ -383,11 +390,11 @@ export default function ArtTherapyScreen() {
               </TouchableOpacity>
 
               {hasNextLocked && (
-                <View style={styles.lockedNotice}>
+                <View style={[styles.lockedNotice, { borderColor: theme.colors.border, backgroundColor: isDark ? theme.colors.surface : '#FAFAFA' }]}>
                   <Text style={styles.lockedEmoji}>🔒</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.lockedTitle}>{pick(T.nextLocked.title as any, language)}</Text>
-                    <Text style={styles.lockedHintText}>{pick(T.nextLocked.hint as any, language)}</Text>
+                    <Text style={[styles.lockedTitle, { color: theme.colors.text }]}>{pick(T.nextLocked.title as any, language)}</Text>
+                    <Text style={[styles.lockedHintText, { color: theme.colors.textSecondary }]}>{pick(T.nextLocked.hint as any, language)}</Text>
                   </View>
                 </View>
               )}
@@ -396,10 +403,10 @@ export default function ArtTherapyScreen() {
         })()}
 
         {/* Program marketing hint */}
-        <View style={styles.marketingCard}>
-          <Text style={styles.marketingTitle}>{pick(T.marketing.title as any, language)}</Text>
-          <Text style={styles.marketingText}>{pick(T.marketing.p1 as any, language)}</Text>
-          <Text style={styles.marketingText}>{pick(T.marketing.p2 as any, language)}</Text>
+        <View style={[styles.marketingCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <Text style={[styles.marketingTitle, { color: theme.colors.text }]}>{pick(T.marketing.title as any, language)}</Text>
+          <Text style={[styles.marketingText, { color: theme.colors.textSecondary }]}>{pick(T.marketing.p1 as any, language)}</Text>
+          <Text style={[styles.marketingText, { color: theme.colors.textSecondary }]}>{pick(T.marketing.p2 as any, language)}</Text>
         </View>
 
         {/* Completed sessions history */}
@@ -412,15 +419,12 @@ export default function ArtTherapyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   header: {
-    backgroundColor: '#FFFFFF',
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
   },
   headerContent: {
     flexDirection: 'row',
@@ -431,10 +435,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000000',
   },
   headerStats: {
-    backgroundColor: '#F5F5F5',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -442,58 +444,51 @@ const styles = StyleSheet.create({
   statsText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666666',
   },
   progressContainer: {
     marginTop: 5,
   },
   progressBar: {
     height: 3,
-    backgroundColor: '#E0E0E0',
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#000000',
     borderRadius: 2,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   sessionList: {
     padding: 20,
   },
-  marketingCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 16, padding: 16, marginBottom: 16 },
-  marketingTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 6 },
-  marketingText: { color: '#374151', lineHeight: 20, marginTop: 2 },
+  marketingCard: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 16 },
+  marketingTitle: { fontSize: 16, fontWeight: '800', marginBottom: 6 },
+  marketingText: { lineHeight: 20, marginTop: 2 },
   // New hero styles
   heroCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     padding: 18,
     marginBottom: 16,
     overflow: 'hidden',
   },
   heroBg: { ...StyleSheet.absoluteFillObject },
   heroHeader: { flexDirection: 'row', alignItems: 'center' },
-  heroIconWrap: { width: 54, height: 54, borderRadius: 27, borderWidth: 2, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  heroIconWrap: { width: 54, height: 54, borderRadius: 27, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   heroIcon: { fontSize: 28 },
   heroMeta: { flex: 1 },
-  heroTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
-  heroSub: { marginTop: 4, color: '#6B7280', fontWeight: '600' },
-  heroDesc: { marginTop: 12, color: '#374151', lineHeight: 20 },
+  heroTitle: { fontSize: 20, fontWeight: '800' },
+  heroSub: { marginTop: 4, fontWeight: '600' },
+  heroDesc: { marginTop: 12, lineHeight: 20 },
   heroButton: { marginTop: 14, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   heroButtonText: { color: '#FFFFFF', fontWeight: '800' },
-  lockedNotice: { marginTop: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#FAFAFA', borderRadius: 12, padding: 12 },
+  lockedNotice: { marginTop: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, padding: 12 },
   lockedEmoji: { fontSize: 20, marginRight: 10 },
-  lockedTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  lockedHintText: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  lockedTitle: { fontSize: 14, fontWeight: '700' },
+  lockedHintText: { fontSize: 12, marginTop: 2 },
   sessionCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 16,
     shadowColor: '#000000',
@@ -505,10 +500,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
   },
   completedCard: {
-    borderColor: '#000000',
     borderWidth: 2,
   },
   lockedCard: {
@@ -526,7 +519,6 @@ const styles = StyleSheet.create({
   sessionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000000',
     flex: 1,
   },
   sessionStatus: {
@@ -536,13 +528,10 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   completedStatus: {
-    backgroundColor: '#000000',
   },
   unlockedStatus: {
-    backgroundColor: '#F5F5F5',
   },
   lockedStatus: {
-    backgroundColor: '#F9F9F9',
   },
   statusText: {
     fontSize: 12,
@@ -552,14 +541,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   unlockedText: {
-    color: '#333333',
   },
   lockedText: {
-    color: '#999999',
   },
   sessionDescription: {
     fontSize: 14,
-    color: '#666666',
     lineHeight: 20,
     marginBottom: 16,
   },
@@ -570,16 +556,13 @@ const styles = StyleSheet.create({
   },
   sessionDuration: {
     fontSize: 12,
-    color: '#999999',
   },
   sessionButton: {
-    backgroundColor: '#000000',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
   },
   sessionButtonDisabled: {
-    backgroundColor: '#E0E0E0',
   },
   sessionButtonText: {
     color: '#FFFFFF',
@@ -587,32 +570,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sessionButtonTextDisabled: {
-    color: '#999999',
   },
   completionCard: {
-    backgroundColor: '#F8F9FA',
     borderRadius: 16,
     padding: 24,
     marginBottom: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E9ECEF',
   },
   completionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000000',
     marginBottom: 8,
     textAlign: 'center',
   },
   completionSubtitle: {
     fontSize: 14,
-    color: '#666666',
     textAlign: 'center',
     marginBottom: 20,
   },
   celebrationButton: {
-    backgroundColor: '#000000',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
@@ -626,28 +603,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666666',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 40,
   },
   errorText: {
     fontSize: 16,
-    color: '#666666',
     textAlign: 'center',
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#000000',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
