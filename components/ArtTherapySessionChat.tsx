@@ -71,46 +71,59 @@ const T = {
 
 const pick = (map: Record<string, string>, lang: AppLanguage) => map[lang] ?? map.en;
 
-const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUser, language, theme, isDark }) => {
-  const hasImage = message.imageUri || message.imageBase64;
-  const [speaking, setSpeaking] = useState(false);
-  
-  let imageSource = message.imageUri;
-  if (!imageSource && message.imageBase64) {
-    imageSource = message.imageBase64.startsWith('data:')
-      ? message.imageBase64
-      : `data:image/jpeg;base64,${message.imageBase64}`;
+const isMeaningfulImage = (value?: string | null) => {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return false;
+  // Base64 placeholders sometimes end with comma only
+  if (trimmed.startsWith('data:')) {
+    return trimmed.length > 'data:image/jpeg;base64,'.length + 10;
   }
+  return true;
+};
+
+const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUser, language, theme, isDark }) => {
+  const [speaking, setSpeaking] = useState(false);
+
+  let imageSource: string | null = null;
+  if (isMeaningfulImage(message.imageUri)) {
+    imageSource = message.imageUri!.trim();
+  } else if (isMeaningfulImage(message.imageBase64)) {
+    const base = message.imageBase64!.trim();
+    imageSource = base.startsWith('data:') ? base : `data:image/jpeg;base64,${base}`;
+  }
+  const hasImage = Boolean(imageSource);
+
+  const bubbleStyles = isUser
+    ? [styles.messageBubble, styles.userBubble, { backgroundColor: isDark ? '#3b82f6' : '#000000' }]
+    : [styles.messageBubble, styles.aiBubble, { backgroundColor: theme.colors.card }];
 
   return (
     <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.aiMessage]}>
-      <View style={[
-        styles.messageBubble, 
-        isUser ? [styles.userBubble, { backgroundColor: isDark ? '#3b82f6' : '#000000' }] : [styles.aiBubble, { backgroundColor: theme.colors.card }]
-      ]}>
+      <View style={bubbleStyles}>
         {hasImage && imageSource && (
           <View style={styles.imageContainer}>
-            <Image 
-              source={{ uri: imageSource }} 
+            <Image
+              source={{ uri: imageSource }}
               style={styles.messageImage}
               resizeMode="cover"
             />
           </View>
         )}
-        
+
         {message.content && (
           <>
             <Text style={[
-              styles.messageText, 
+              styles.messageText,
               isUser ? styles.userText : [styles.aiText, { color: theme.colors.text }]
             ]}>
               {message.content}
             </Text>
-            {!isUser && !!message.content && (
+            {!isUser && (
               <View style={styles.ttsRow}>
                 <TouchableOpacity
                   onPress={async () => {
-                    if (speaking) return; // simple guard; no stop mid-play for now
+                    if (speaking) return;
                     try {
                       setSpeaking(true);
                       await artTherapyService.speakTextTTS(message.content!, language as AppLanguage);
@@ -129,20 +142,22 @@ const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUse
             )}
           </>
         )}
-        
+
         <Text style={[
-          styles.messageTime, 
+          styles.messageTime,
           isUser ? styles.userTime : [styles.aiTime, { color: theme.colors.textMuted }]
         ]}>
-          {new Date(message.timestamp).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+          {new Date(message.timestamp).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
           })}
         </Text>
       </View>
     </View>
   );
 });
+
+MessageBubble.displayName = 'MessageBubble';
 
 export default function ArtTherapySessionChat() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
@@ -372,7 +387,9 @@ export default function ArtTherapySessionChat() {
       );
 
       // Finalize assistant message with clinical data
-      setMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: response.response_text, clinicalData: response } : m));
+  setMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: response.response_text, clinicalData: response } : m));
+  // Ensure UI scrolls to the finalized message immediately
+  scrollToBottom();
 
       // Persist AI message and phase progression
       if (currentSession) {
@@ -666,7 +683,9 @@ export default function ArtTherapySessionChat() {
       );
 
       // Finalize AI message with full text and clinical data
-      setMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: response.response_text, clinicalData: response } : m));
+  setMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: response.response_text, clinicalData: response } : m));
+  // Ensure UI scrolls to the finalized message immediately
+  scrollToBottom();
 
       // Speak via OpenAI TTS now that text is visible
       if (response.response_text) {

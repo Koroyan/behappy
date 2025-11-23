@@ -830,9 +830,37 @@ class ArtTherapyProgramManager {
       const currentProgress = await this.getProgress();
       currentProgress.set(sessionId, progress);
 
-      const obj: Record<number, SessionProgress> = {};
+      // Sanitize progress to avoid circular references (Web Blobs, Window, etc.)
+      const obj: Record<number, any> = {};
       currentProgress.forEach((value, key) => {
-        obj[key] = value;
+        // Convert Dates to ISO strings and keep only serializable fields for chatHistory
+        const sanitized: any = {
+          sessionId: value.sessionId,
+          completed: !!value.completed,
+          phase: value.phase,
+          startedAt: value.startedAt ? (value.startedAt instanceof Date ? value.startedAt.toISOString() : value.startedAt) : undefined,
+          completedAt: value.completedAt ? (value.completedAt instanceof Date ? value.completedAt.toISOString() : value.completedAt) : undefined,
+          firstDrawingUri: value.firstDrawingUri,
+          secondDrawingUri: value.secondDrawingUri,
+          emotionalJourney: value.emotionalJourney,
+          clinicalSummary: value.clinicalSummary,
+          // Normalize chatHistory so it contains only plain serializable values
+          chatHistory: Array.isArray(value.chatHistory)
+            ? value.chatHistory.map((m: any) => ({
+                id: m?.id,
+                role: m?.role,
+                content: typeof m?.content === 'string' ? m.content : (m?.content ? String(m.content) : ''),
+                // timestamps as ISO strings
+                timestamp: m?.timestamp ? (m.timestamp instanceof Date ? m.timestamp.toISOString() : (typeof m.timestamp === 'string' ? m.timestamp : new Date(m.timestamp).toISOString())) : undefined,
+                imageUri: typeof m?.imageUri === 'string' ? m.imageUri : undefined,
+                imageBase64: typeof m?.imageBase64 === 'string' ? m.imageBase64 : undefined,
+                // clinicalData can be large but usually serializable; include as-is but guard against functions/circulars by JSON round-trip attempt
+                clinicalData: m?.clinicalData ? m.clinicalData : undefined,
+              }))
+            : [],
+        };
+
+        obj[key] = sanitized;
       });
 
       await AsyncStorage.setItem(this.storageKey, JSON.stringify(obj));
