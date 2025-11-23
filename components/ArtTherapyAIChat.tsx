@@ -1,5 +1,5 @@
+import CommonSendButton from '@/components/CommonSendButton';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import {
@@ -11,7 +11,6 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View
 } from 'react-native';
 
@@ -284,13 +283,11 @@ const ArtTherapyAIChat = forwardRef<ArtTherapyAIChatRef, ArtTherapyAIChatProps>(
           maxLength={1000}
           onSubmitEditing={Platform.OS === 'ios' ? undefined : handleSendMessage}
         />
-        <TouchableOpacity
-          style={[styles.sendButton, { backgroundColor: theme.colors.primary }]}
+        <CommonSendButton
           onPress={handleSendMessage}
           disabled={!inputMessage.trim() || isSending}
-        >
-          <Ionicons name="send" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
+          loading={isSending}
+        />
       </View>
     </View>
   );

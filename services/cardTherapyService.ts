@@ -110,6 +110,7 @@ const CONTEXT_MESSAGES = {
 class CardTherapyService {
   private apiKey: string;
   private promptId: string = 'pmpt_690f8a73181481968bdf18821d56058203765a60aea147e6'; // Replace with your actual prompt ID
+  private version: string = '3';
 
   constructor() {
     this.apiKey = Constants.expoConfig?.extra?.OPENAI_API_KEY 
@@ -181,7 +182,7 @@ class CardTherapyService {
       const requestBody = {
         prompt: {
           id: this.promptId,
-          version: '2',
+          version: this.version,
         },
         input: [
           {
@@ -265,7 +266,7 @@ class CardTherapyService {
           body: JSON.stringify({
             prompt: {
               id: this.promptId,
-              version: '2',
+              version: this.version,
             },
             input: input,
             max_output_tokens: 1500,
@@ -311,7 +312,7 @@ class CardTherapyService {
         body: JSON.stringify({
           prompt: {
             id: this.promptId,
-            version: '2',
+            version: this.version,
           },
           input: input,
           max_output_tokens: 1500,
@@ -401,7 +402,7 @@ class CardTherapyService {
         body: JSON.stringify({
           prompt: {
             id: this.promptId,
-            version: '2',
+            version: this.version,
           },
           input: input,
           max_output_tokens: 3000, // Higher limit for summary

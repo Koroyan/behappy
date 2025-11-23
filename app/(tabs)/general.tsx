@@ -1,10 +1,11 @@
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  Dimensions,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -15,15 +16,7 @@ import {
   View,
 } from 'react-native';
 
-interface SettingsItem {
-  id: string;
-  title: string;
-  subtitle?: string;
-  icon: string;
-  type: 'toggle' | 'action' | 'info';
-  value?: boolean;
-  color: string;
-}
+const { width } = Dimensions.get('window');
 
 export default function GeneralScreen() {
   const { theme, isDark, toggleTheme } = useTheme();
@@ -31,426 +24,638 @@ export default function GeneralScreen() {
   const { language, setLanguage } = useLanguage();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  // Safe translation picker with English fallback
   const pick = (obj: Record<string, string>): string => obj[language] ?? obj.en;
 
-  // Localized strings
   const t = {
-    heroTitle: {
-      en: 'Your wellbeing, in focus',
-      ru: 'Ваше благополучие — в фокусе',
-      ka: 'შენი კეთილდღეობა — ფოკუსში',
-      es: 'Tu bienestar, en foco',
-      de: 'Dein Wohlbefinden im Fokus',
-      fr: 'Votre bien‑être au centre',
-      pt: 'Seu bem‑estar em foco',
-      ar: 'رفاهيتك في بؤرة الاهتمام',
-      id: 'Kesejahteraan Anda, menjadi fokus',
-      ja: 'あなたのウェルビーイングにフォーカス',
-      zh: '关注你的身心健康',
-      tr: 'İyiliğiniz odakta',
-      it: 'Il tuo benessere al centro',
-      hi: 'आपका कल्याण केंद्र में',
-      uk: 'Ваше благополуччя — у фокусі',
-      pl: 'Twoje samopoczucie w centrum'
-    },
+    appName: 'BeHappy',
     heroSubtitle: {
-      en: 'Pick a direction and start now',
-      ru: 'Выберите направление и начните прямо сейчас',
-      ka: 'აირჩიე მიმართულება და დაიწყე ახლა',
-      es: 'Elige un rumbo y empieza ahora',
-      de: 'Wähle eine Richtung und starte jetzt',
-      fr: 'Choisissez une voie et commencez maintenant',
-      pt: 'Escolha um caminho e comece agora',
-      ar: 'اختر اتجاهًا وابدأ الآن',
-      id: 'Pilih arah dan mulai sekarang',
-      ja: '方向を選んで今すぐ始めよう',
-      zh: '选择方向，立即开始',
-      tr: 'Bir yön seç ve şimdi başla',
-      it: 'Scegli una direzione e inizia ora',
-      hi: 'दिशा चुनें और अभी शुरू करें',
-      uk: 'Обирайте напрям і починайте вже зараз',
-      pl: 'Wybierz kierunek i zacznij teraz'
+      en: 'Your personal mental health companion',
+      ru: 'Ваш персональный помощник в заботе о психическом здоровье',
+      ka: 'შენი პირადი ფსიქიკური ჯანმრთელობის თანამგზავრი',
+      hy: 'Ձեր անձնական հոգեկան առողջության ուղեկիցը',
+      tr: 'Kişisel ruh sağlığı arkadaşınız',
+      az: 'Şəxsi psixi sağlamlıq yoldaşınız',
+      es: 'Tu compañero personal de salud mental',
+      de: 'Dein persönlicher Begleiter für mentale Gesundheit',
+      fr: 'Votre compagnon personnel en santé mentale',
+      pt: 'Seu companheiro pessoal de saúde mental',
+      ar: 'رفيقك الشخصي للصحة النفسية',
+      id: 'Pendamping kesehatan mental pribadi Anda',
+      it: 'Il tuo compagno personale per la salute mentale',
+      ja: 'あなた専用のメンタルヘルスコンパニオン',
+      zh: '您的个人心理健康伙伴',
+      hi: 'आपका व्यक्तिगत मानसिक स्वास्थ्य साथी',
+      ko: '당신의 개인 정신 건강 동반자',
+      uk: 'Ваш особистий помічник у піклуванні про психічне здоров\'я',
+      pl: 'Twój osobisty towarzysz zdrowia psychicznego'
+    },
+    quickAccess: {
+      en: 'Quick Access',
+      ru: 'Быстрый доступ',
+      ka: 'სწრაფი წვდომა',
+      hy: 'Արագ մուտք',
+      tr: 'Hızlı Erişim',
+      az: 'Sürətli giriş',
+      es: 'Acceso rápido',
+      de: 'Schnellzugriff',
+      fr: 'Accès rapide',
+      pt: 'Acesso rápido',
+      ar: 'الوصول السريع',
+      id: 'Akses Cepat',
+      it: 'Accesso rapido',
+      ja: 'クイックアクセス',
+      zh: '快速访问',
+      hi: 'त्वरित पहुँच',
+      ko: '빠른 접근',
+      uk: 'Швидкий доступ',
+      pl: 'Szybki dostęp'
     },
     settings: {
-      en: 'Settings', ru: 'Настройки', ka: 'პარამეტრები', es: 'Ajustes', de: 'Einstellungen', fr: 'Paramètres', pt: 'Configurações', ar: 'الإعدادات', id: 'Pengaturan', ja: '設定', zh: '设置', tr: 'Ayarlar', it: 'Impostazioni', hi: 'सेटिंग्स', uk: 'Налаштування', pl: 'Ustawienia'
+      en: 'Settings',
+      ru: 'Настройки',
+      ka: 'პარამეტრები',
+      hy: 'Կարգավորումներ',
+      tr: 'Ayarlar',
+      az: 'Tənzimləmələr',
+      es: 'Ajustes',
+      de: 'Einstellungen',
+      fr: 'Paramètres',
+      pt: 'Configurações',
+      ar: 'الإعدادات',
+      id: 'Pengaturan',
+      it: 'Impostazioni',
+      ja: '設定',
+      zh: '设置',
+      hi: 'सेटिंग्स',
+      ko: '설정',
+      uk: 'Налаштування',
+      pl: 'Ustawienia'
     },
-    interfaceLanguage: {
-      en: 'Interface language', ru: 'Язык интерфейса', ka: 'ინტერფეისის ენა', es: 'Idioma de la interfaz', de: 'Sprache der Oberfläche', fr: "Langue de l'interface", pt: 'Idioma da interface', ar: 'لغة الواجهة', id: 'Bahasa antarmuka', ja: 'インターフェースの言語', zh: '界面语言', tr: 'Arayüz dili', it: "Lingua dell'interfaccia", hi: 'इंटरफेस भाषा', uk: 'Мова інтерфейсу', pl: 'Język interfejsu'
+    language: {
+      en: 'Language',
+      ru: 'Язык',
+      ka: 'ენა',
+      hy: 'Լեզու',
+      tr: 'Dil',
+      az: 'Dil',
+      es: 'Idioma',
+      de: 'Sprache',
+      fr: 'Langue',
+      pt: 'Idioma',
+      ar: 'اللغة',
+      id: 'Bahasa',
+      it: 'Lingua',
+      ja: '言語',
+      zh: '语言',
+      hi: 'भाषा',
+      ko: '언어',
+      uk: 'Мова',
+      pl: 'Język'
     },
-    langHint: {
-      en: 'Pick your preferred language — it applies across the app',
-      ru: 'Выберите удобный язык — настройка применяется ко всему приложению',
-      ka: 'აირჩიე სასურველი ენა — მოქმედებს მთელ აპში',
-      es: 'Elige tu idioma preferido: se aplica a toda la app',
-      de: 'Wähle deine bevorzugte Sprache – gilt in der ganzen App',
-      fr: 'Choisissez votre langue — appliquée dans toute l’app',
-      pt: 'Escolha o idioma preferido — vale para todo o app',
-      ar: 'اختر لغتك المفضلة — تُطبَّق على التطبيق كاملًا',
-      id: 'Pilih bahasa pilihan Anda — berlaku di seluruh aplikasi',
-      ja: 'お好みの言語を選択 — アプリ全体に反映されます',
-      zh: '选择偏好语言——应用全局生效',
-      tr: 'Tercih edilen dili seç — tüm uygulamada geçerli',
-      it: 'Scegli la lingua preferita — si applica all’intera app',
-      hi: 'अपनी पसंदीदा भाषा चुनें — पूरी ऐप में लागू',
-      uk: 'Оберіть мову — діє в усій апці',
-      pl: 'Wybierz preferowany język — dotyczy całej aplikacji'
+    selectLanguage: {
+      en: 'Select your preferred language',
+      ru: 'Выберите предпочтительный язык',
+      ka: 'აირჩიე სასურველი ენა',
+      hy: 'Ընտրեք ձեր նախընտրած լեզուն',
+      tr: 'Tercih ettiğiniz dili seçin',
+      az: 'Üstün tutduğunuz dili seçin',
+      es: 'Selecciona tu idioma preferido',
+      de: 'Wähle deine bevorzugte Sprache',
+      fr: 'Sélectionnez votre langue préférée',
+      pt: 'Selecione seu idioma preferido',
+      ar: 'حدد لغتك المفضلة',
+      id: 'Pilih bahasa pilihan Anda',
+      it: 'Seleziona la tua lingua preferita',
+      ja: '優先言語を選択してください',
+      zh: '选择您的首选语言',
+      hi: 'अपनी पसंदीदा भाषा चुनें',
+      ko: '선호하는 언어를 선택하세요',
+      uk: 'Оберіть бажану мову',
+      pl: 'Wybierz preferowany język'
     },
-    featureTitles: {
-      art: {
-        en: 'Art Therapy', ru: 'Арт-терапия', ka: 'არტ თერაპია', es: 'Arteterapia', de: 'Kunsttherapie', fr: 'Art‑thérapie', pt: 'Arteterapia', ar: 'العلاج بالفن', id: 'Terapi Seni', ja: 'アートセラピー', zh: '艺术治疗', tr: 'Sanat terapisi', it: 'Arteterapia', hi: 'आर्ट थेरेपी', uk: 'Арт‑терапія', pl: 'Terapia sztuką'
-      },
-      cards: {
-        en: 'Cards Therapy', ru: 'Терапия карточками', ka: 'ბარათების თერაპია', es: 'Terapia con cartas', de: 'Kartentherapie', fr: 'Thérapie par cartes', pt: 'Terapia com cartas', ar: 'علاج البطاقات', id: 'Terapi Kartu', ja: 'カード療法', zh: '卡片疗法', tr: 'Kart terapisi', it: 'Terapia con carte', hi: 'कार्ड थेरेपी', uk: 'Терапія картками', pl: 'Terapia kartami'
-      },
-      chat: {
-        en: 'AI Assistant', ru: 'ИИ‑ассистент', ka: 'AI ასისტენტი', es: 'Asistente IA', de: 'KI‑Assistent', fr: 'Assistant IA', pt: 'Assistente IA', ar: 'مساعد الذكاء الاصطناعي', id: 'Asisten AI', ja: 'AIアシスタント', zh: 'AI 助手', tr: 'YZ Asistan', it: 'Assistente IA', hi: 'एआई सहायक', uk: 'AI‑асистент', pl: 'Asystent AI'
-      }
+    artTherapy: {
+      en: 'Art Therapy',
+      ru: 'Арт-терапия',
+      ka: 'არტ თერაპია',
+      hy: 'Արվեստի թերապիա',
+      tr: 'Sanat terapisi',
+      az: 'İncəsənət terapiyası',
+      es: 'Arteterapia',
+      de: 'Kunsttherapie',
+      fr: 'Art-thérapie',
+      pt: 'Arteterapia',
+      ar: 'العلاج بالفن',
+      id: 'Terapi Seni',
+      it: 'Arteterapia',
+      ja: 'アートセラピー',
+      zh: '艺术治疗',
+      hi: 'आर्ट थेरेपी',
+      ko: '아트 테라피',
+      uk: 'Арт-терапія',
+      pl: 'Terapia sztuką'
     },
-    featureSubtitles: {
-      art: {
-        en: 'Creative practices for emotions', ru: 'Творческие практики для эмоций', ka: 'ემოციებისთვის შემოქმედებითი პრაქტიკები', es: 'Prácticas creativas para las emociones', de: 'Kreative Übungen für Emotionen', fr: 'Pratiques créatives pour les émotions', pt: 'Práticas criativas para emoções', ar: 'ممارسات إبداعية للمشاعر', id: 'Praktik kreatif untuk emosi', ja: '感情のための創造的な実践', zh: '情绪创作练习', tr: 'Duygular için yaratıcı pratikler', it: 'Pratiche creative per le emozioni', hi: 'भावनाओं के लिए रचनात्मक अभ्यास', uk: 'Творчі практики для емоцій', pl: 'Kreatywne praktyki dla emocji'
-      },
-      cards: {
-        en: 'Gentle cognitive insights', ru: 'Мягкие когнитивные инсайты', ka: 'რბილი კოგნიტიური ხედვები', es: 'Ideas cognitivas suaves', de: 'Sanfte kognitive Einsichten', fr: 'Aperçus cognitifs doux', pt: 'Percepções cognitivas suaves', ar: 'رؤى معرفية لطيفة', id: 'Wawasan kognitif lembut', ja: 'やさしい認知の気づき', zh: '温和的认知洞察', tr: 'Nazik bilişsel içgörüler', it: 'Intuizioni cognitive delicate', hi: 'सौम्य संज्ञानात्मक अंतर्दृष्टि', uk: 'М’які когнітивні інсайти', pl: 'Łagodne wglądy poznawcze'
-      },
-      chat: {
-        en: 'Personal therapeutic chat', ru: 'Личный терапевтический чат', ka: 'პირადი თერაპიული ჩატი', es: 'Chat terapéutico personal', de: 'Persönlicher Therapie‑Chat', fr: 'Chat thérapeutique personnel', pt: 'Bate‑papo terapêutico pessoal', ar: 'دردشة علاجية شخصية', id: 'Obrolan terapeutik pribadi', ja: '個人的なセラピー チャット', zh: '个性化治疗聊天', tr: 'Kişisel terapötik sohbet', it: 'Chat terapeutica personale', hi: 'व्यक्तिगत चिकित्सीय चैट', uk: 'Особистий терапевтичний чат', pl: 'Osobisty czat terapeutyczny'
-      }
+    artDesc: {
+      en: 'Express through creativity',
+      ru: 'Выражайте себя через творчество',
+      ka: 'გამოხატე შენი თავი შემოქმედებით',
+      hy: 'Արտահայտեք ձեր էությունը ստեղծագործության միջոցով',
+      tr: 'Yaratıcılıkla kendinizi ifade edin',
+      az: 'Yaradıcılıq vasitəsilə özünüzü ifadə edin',
+      es: 'Exprésate a través de la creatividad',
+      de: 'Drücke dich kreativ aus',
+      fr: 'Exprimez-vous par la créativité',
+      pt: 'Expresse-se através da criatividade',
+      ar: 'عبر عن نفسك من خلال الإبداع',
+      id: 'Ekspresikan melalui kreativitas',
+      it: 'Esprimi te stesso attraverso la creatività',
+      ja: '創造性を通じて表現する',
+      zh: '通过创造力表达自己',
+      hi: 'रचनात्मकता के माध्यम से अभिव्यक्त करें',
+      ko: '창의성으로 표현하세요',
+      uk: 'Виражайте себе через творчість',
+      pl: 'Wyrażaj siebie przez kreatywność'
+    },
+    cardTherapy: {
+      en: 'Card Therapy',
+      ru: 'Терапия карточками',
+      ka: 'ბარათების თერაპია',
+      hy: 'Քարտերով թերապիա',
+      tr: 'Kart terapisi',
+      az: 'Kart terapiyası',
+      es: 'Terapia con cartas',
+      de: 'Kartentherapie',
+      fr: 'Thérapie par cartes',
+      pt: 'Terapia com cartas',
+      ar: 'علاج البطاقات',
+      id: 'Terapi Kartu',
+      it: 'Terapia con carte',
+      ja: 'カード療法',
+      zh: '卡片疗法',
+      hi: 'कार्ड थेरेपी',
+      ko: '카드 테라피',
+      uk: 'Терапія картками',
+      pl: 'Terapia kartami'
+    },
+    cardDesc: {
+      en: 'Discover insights with cards',
+      ru: 'Открывайте инсайты с помощью карт',
+      ka: 'აღმოაჩინე შეხედულებები ბარათებით',
+      hy: 'Բացահայտեք պատկերացումներ քարտերով',
+      tr: 'Kartlarla içgörüler keşfedin',
+      az: 'Kartlarla fikirlər kəşf edin',
+      es: 'Descubre perspectivas con cartas',
+      de: 'Entdecke Einsichten mit Karten',
+      fr: 'Découvrez des perspectives avec des cartes',
+      pt: 'Descubra insights com cartas',
+      ar: 'اكتشف رؤى باستخدام البطاقات',
+      id: 'Temukan wawasan dengan kartu',
+      it: 'Scopri intuizioni con le carte',
+      ja: 'カードで洞察を発見',
+      zh: '用卡片发现见解',
+      hi: 'कार्ड के साथ अंतर्दृष्टि खोजें',
+      ko: '카드로 통찰력을 발견하세요',
+      uk: 'Відкрийте інсайти за допомогою карт',
+      pl: 'Odkryj spostrzeżenia za pomocą kart'
+    },
+    aiAssistant: {
+      en: 'AI Assistant',
+      ru: 'ИИ-ассистент',
+      ka: 'AI ასისტენტი',
+      hy: 'ԱԻ օգնական',
+      tr: 'YZ Asistan',
+      az: 'Sİ Assistent',
+      es: 'Asistente IA',
+      de: 'KI-Assistent',
+      fr: 'Assistant IA',
+      pt: 'Assistente IA',
+      ar: 'مساعد الذكاء الاصطناعي',
+      id: 'Asisten AI',
+      it: 'Assistente IA',
+      ja: 'AIアシスタント',
+      zh: 'AI 助手',
+      hi: 'एआई सहायक',
+      ko: 'AI 어시스턴트',
+      uk: 'AI-асистент',
+      pl: 'Asystent AI'
+    },
+    aiDesc: {
+      en: 'Chat with support anytime',
+      ru: 'Общайтесь с поддержкой в любое время',
+      ka: 'ისაუბრე მხარდაჭერასთან ნებისმიერ დროს',
+      hy: 'Զրուցեք աջակցության հետ ցանկացած ժամանակ',
+      tr: 'İstediğiniz zaman destekle sohbet edin',
+      az: 'İstənilən vaxt dəstəklə söhbət edin',
+      es: 'Chatea con soporte en cualquier momento',
+      de: 'Chatte jederzeit mit Support',
+      fr: 'Discutez avec le support à tout moment',
+      pt: 'Converse com o suporte a qualquer momento',
+      ar: 'تحدث مع الدعم في أي وقت',
+      id: 'Ngobrol dengan dukungan kapan saja',
+      it: 'Chatta con il supporto in qualsiasi momento',
+      ja: 'いつでもサポートとチャット',
+      zh: '随时与支持聊天',
+      hi: 'किसी भी समय समर्थन के साथ चैट करें',
+      ko: '언제든지 지원팀과 채팅하세요',
+      uk: 'Спілкуйтеся з підтримкою в будь-який час',
+      pl: 'Czatuj ze wsparciem w dowolnym momencie'
     },
     darkMode: {
-      title: { en: 'Dark mode', ru: 'Темная тема', ka: 'ბნელი თემა', es: 'Tema oscuro', de: 'Dunkles Thema', fr: 'Thème sombre', pt: 'Tema escuro', ar: 'الوضع الداكن', id: 'Mode gelap', ja: 'ダークテーマ', zh: '深色主题', tr: 'Karanlık tema', it: 'Tema scuro', hi: 'डार्क मोड', uk: 'Темна тема', pl: 'Tryb ciemny' },
-      subtitle: { en: 'Toggle appearance', ru: 'Переключить тему', ka: 'გარეგნობის გადართვა', es: 'Cambiar apariencia', de: 'Darstellung umschalten', fr: 
-        "Changer l’apparence", pt: 'Alternar aparência', ar: 'تبديل المظهر', id: 'Ubah tampilan', ja: '外観を切り替え', zh: '切换外观', tr: 'Görünümü değiştir', it: 'Cambia aspetto', hi: 'रूप बदलें', uk: 'Змінити вигляд', pl: 'Przełącz wygląd' }
+      en: 'Dark Mode',
+      ru: 'Темная тема',
+      ka: 'ბნელი თემა',
+      hy: 'Մուգ թեմա',
+      tr: 'Karanlık tema',
+      az: 'Tünd mövzu',
+      es: 'Tema oscuro',
+      de: 'Dunkles Thema',
+      fr: 'Thème sombre',
+      pt: 'Tema escuro',
+      ar: 'الوضع الداكن',
+      id: 'Mode gelap',
+      it: 'Tema scuro',
+      ja: 'ダークテーマ',
+      zh: '深色主题',
+      hi: 'डार्क मोड',
+      ko: '다크 모드',
+      uk: 'Темна тема',
+      pl: 'Tryb ciemny'
     },
     notifications: {
-      title: { en: 'Notifications', ru: 'Уведомления', ka: 'შეტყობინებები', es: 'Notificaciones', de: 'Benachrichtigungen', fr: 'Notifications', pt: 'Notificações', ar: 'الإشعارات', id: 'Notifikasi', ja: '通知', zh: '通知', tr: 'Bildirimler', it: 'Notifiche', hi: 'सूचनाएँ', uk: 'Сповіщення', pl: 'Powiadomienia' },
-      subtitle: { en: 'Reminders and updates', ru: 'Напоминания и обновления', ka: 'შეხსენებები და განახლებები', es: 'Recordatorios y actualizaciones', de: 'Erinnerungen und Updates', fr: 'Rappels et mises à jour', pt: 'Lembretes e atualizações', ar: 'تذكيرات وتحديثات', id: 'Pengingat dan pembaruan', ja: 'リマインダーと更新', zh: '提醒和更新', tr: 'Hatırlatmalar ve güncellemeler', it: 'Promemoria e aggiornamenti', hi: 'रिमाइंडर और अपडेट', uk: 'Нагадування та оновлення', pl: 'Przypomnienia i aktualizacje' }
+      en: 'Notifications',
+      ru: 'Уведомления',
+      ka: 'შეტყობინებები',
+      hy: 'Ծանուցումներ',
+      tr: 'Bildirimler',
+      az: 'Bildirişlər',
+      es: 'Notificaciones',
+      de: 'Benachrichtigungen',
+      fr: 'Notifications',
+      pt: 'Notificações',
+      ar: 'الإشعارات',
+      id: 'Notifikasi',
+      it: 'Notifiche',
+      ja: '通知',
+      zh: '通知',
+      hi: 'सूचनाएँ',
+      ko: '알림',
+      uk: 'Сповіщення',
+      pl: 'Powiadomienia'
+    },
+    notificationsDesc: {
+      en: 'Daily reminders and updates',
+      ru: 'Ежедневные напоминания и обновления',
+      ka: 'ყოველდღიური შეხსენებები და განახლებები',
+      hy: 'Առօրյա հիշեցումներ և թարմացումներ',
+      tr: 'Günlük hatırlatmalar ve güncellemeler',
+      az: 'Gündəlik xatırlatmalar və yeniləmələr',
+      es: 'Recordatorios y actualizaciones diarias',
+      de: 'Tägliche Erinnerungen und Updates',
+      fr: 'Rappels et mises à jour quotidiens',
+      pt: 'Lembretes e atualizações diários',
+      ar: 'تذكيرات وتحديثات يومية',
+      id: 'Pengingat dan pembaruan harian',
+      it: 'Promemoria e aggiornamenti giornalieri',
+      ja: '毎日のリマインダーと更新',
+      zh: '每日提醒和更新',
+      hi: 'दैनिक रिमाइंडर और अपडेट',
+      ko: '일일 알림 및 업데이트',
+      uk: 'Щоденні нагадування та оновлення',
+      pl: 'Codzienne przypomnienia i aktualizacje'
     }
-  } as const;
+  };
 
-  // Feature cards for core experiences (localized)
   const features = [
     {
       id: 'art',
-      title: pick(t.featureTitles.art),
-      subtitle: pick(t.featureSubtitles.art),
-      icon: 'paint-brush',
-      gradient: ['#60A5FA', '#8B5CF6'],
+      title: pick(t.artTherapy),
+      subtitle: pick(t.artDesc),
+      icon: 'palette',
+      iconLib: 'MaterialCommunityIcons',
+      gradient: ['#667eea', '#764ba2'] as const,
       route: '/art-therapy-safe',
     },
     {
       id: 'cards',
-      title: pick(t.featureTitles.cards),
-      subtitle: pick(t.featureSubtitles.cards),
-      icon: 'th-large',
-      gradient: ['#34D399', '#10B981'],
+      title: pick(t.cardTherapy),
+      subtitle: pick(t.cardDesc),
+      icon: 'cards',
+      iconLib: 'MaterialCommunityIcons',
+      gradient: ['#f093fb', '#f5576c'] as const,
       route: '/screens/cards',
     },
     {
       id: 'chat',
-      title: pick(t.featureTitles.chat),
-      subtitle: pick(t.featureSubtitles.chat),
-      icon: 'comments',
-      gradient: ['#F59E0B', '#F97316'],
+      title: pick(t.aiAssistant),
+      subtitle: pick(t.aiDesc),
+      icon: 'robot',
+      iconLib: 'MaterialCommunityIcons',
+      gradient: ['#4facfe', '#00f2fe'] as const,
       route: '/screens/ai-assistant',
-    },
-  ] as const;
-
-  const settingsItems: SettingsItem[] = [
-    {
-      id: 'darkMode',
-      title: pick(t.darkMode.title),
-      subtitle: pick(t.darkMode.subtitle),
-      icon: isDark ? 'sun' : 'moon',
-      type: 'toggle',
-      value: isDark,
-      color: '#4A4A4A',
-    },
-    {
-      id: 'notifications',
-      title: pick(t.notifications.title),
-      subtitle: pick(t.notifications.subtitle),
-      icon: 'bell',
-      type: 'toggle',
-      value: notificationsEnabled,
-      color: '#FF6B6B',
     },
   ];
 
-  const handleSettingPress = (item: SettingsItem) => {
-    switch (item.id) {
-      case 'darkMode':
-        toggleTheme();
-        break;
-      case 'notifications':
-        setNotificationsEnabled(!notificationsEnabled);
-        break;
-      default:
-        break;
-    }
+  const languageNames: Record<AppLanguage, string> = {
+    en: 'English',
+    ka: 'ქართული',
+    ru: 'Русский',
+    hy: 'Հայերեն',
+    tr: 'Türkçe',
+    az: 'Azərbaycan',
+    es: 'Español',
+    de: 'Deutsch',
+    fr: 'Français',
+    pt: 'Português',
+    ar: 'العربية',
+    id: 'Indonesia',
+    it: 'Italiano',
+    ja: '日本語',
+    zh: '中文',
+    hi: 'हिन्दी',
+    ko: '한국어',
+    uk: 'Українська',
+    pl: 'Polski'
   };
 
-  const styles = createStyles(theme);
-
-  const renderSettingItem = (item: SettingsItem) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.settingItem}
-      onPress={() => handleSettingPress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.settingLeft}>
-        <View style={[styles.settingIcon, { backgroundColor: item.color }]}>
-          <FontAwesome5 name={item.icon as any} size={20} color="white" />
-        </View>
-        <View style={styles.settingText}>
-          <Text style={styles.settingTitle}>{item.title}</Text>
-          {item.subtitle && <Text style={styles.settingSubtitle}>{item.subtitle}</Text>}
-        </View>
-      </View>
-      <View style={styles.settingRight}>
-        {item.type === 'toggle' ? (
-          <Switch
-            value={!!item.value}
-            onValueChange={() => handleSettingPress(item)}
-            trackColor={{ false: theme.colors.border, true: theme.colors.accent }}
-            thumbColor="#ffffff"
-          />
-        ) : (
-          <FontAwesome5 name="chevron-right" size={14} color={theme.colors.textMuted} />
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+  const allLanguages: AppLanguage[] = [
+    'en', 'ka', 'ru', 'hy', 'tr', 'az', 'es', 'de', 'fr', 'pt', 'id', 'it', 'ar', 'hi', 'zh', 'ja', 'ko', 'uk', 'pl'
+  ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.background} />
 
-      {/* Hero */}
-      <LinearGradient
-        colors={isDark ? ['#0B1020', '#0F172A'] : ['#E0E7FF', '#EEF2FF']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.hero}
-      >
-        <View style={styles.heroContent}>
-          <Text style={styles.heroEyebrow}>BeHappy</Text>
-          <Text style={styles.heroTitle}>{pick(t.heroTitle)}</Text>
-          <Text style={styles.heroSubtitle}>{pick(t.heroSubtitle)}</Text>
-        </View>
-      </LinearGradient>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <LinearGradient
+          colors={isDark ? ['#1a1a2e', '#16213e'] : ['#e0e7ff', '#f0f4ff']}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <Text style={[styles.appName, { color: theme.colors.primary }]}>{t.appName}</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
+              {pick(t.heroSubtitle)}
+            </Text>
+          </View>
+        </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Featured shortcuts */}
-        <View style={styles.featuresSection}>
-          {features.map((f) => (
-            <TouchableOpacity
-              key={f.id}
-              onPress={() => router.push(f.route as any)}
-              activeOpacity={0.9}
-              style={styles.featureCard}
-            >
-              <LinearGradient colors={f.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.featureGradient}>
-                <View style={styles.featureHeader}>
-                  <View style={styles.featureIconWrap}>
-                    <FontAwesome5 name={f.icon as any} size={18} color="#fff" />
+        {/* Quick Access */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{pick(t.quickAccess)}</Text>
+          <View style={styles.featuresGrid}>
+            {features.map((feature) => (
+              <TouchableOpacity
+                key={feature.id}
+                style={styles.featureCard}
+                onPress={() => router.push(feature.route as any)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={feature.gradient}
+                  style={styles.featureGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.featureIconContainer}>
+                    <MaterialCommunityIcons name={feature.icon as any} size={32} color="#fff" />
                   </View>
-                  <FontAwesome5 name="chevron-right" size={14} color="#fff" />
-                </View>
-                <Text style={styles.featureTitle}>{f.title}</Text>
-                <Text style={styles.featureSubtitle}>{f.subtitle}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
+                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                  <Text style={styles.featureSubtitle}>{feature.subtitle}</Text>
+                  <View style={styles.featureArrow}>
+                    <FontAwesome5 name="arrow-right" size={14} color="rgba(255,255,255,0.7)" />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Settings */}
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>{pick(t.settings)}</Text>
-          {settingsItems.map(renderSettingItem)}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{pick(t.settings)}</Text>
+          
+          {/* Dark Mode */}
+          <View style={[styles.settingCard, { backgroundColor: theme.colors.card }]}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#1e3a8a' : '#3b82f6' }]}>
+                <FontAwesome5 name={isDark ? 'moon' : 'sun'} size={18} color="#fff" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.colors.text }]}>{pick(t.darkMode)}</Text>
+              </View>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+
+          {/* Notifications */}
+          <View style={[styles.settingCard, { backgroundColor: theme.colors.card }]}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIconContainer, { backgroundColor: '#f59e0b' }]}>
+                <FontAwesome5 name="bell" size={18} color="#fff" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.colors.text }]}>{pick(t.notifications)}</Text>
+                <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
+                  {pick(t.notificationsDesc)}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={setNotificationsEnabled}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
         </View>
 
-        {/* Language & Region */}
-        <View style={styles.languageSection}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm, gap: theme.spacing.sm }}>
-            <FontAwesome5 name="globe" size={18} color={theme.colors.accent} />
-            <Text style={styles.sectionTitle}>{pick(t.interfaceLanguage)}</Text>
+        {/* Language Selection */}
+        <View style={styles.section}>
+          <View style={styles.languageHeader}>
+            <FontAwesome5 name="globe" size={20} color={theme.colors.primary} />
+            <Text style={[styles.sectionTitle, { color: theme.colors.text, marginBottom: 0, marginLeft: 8 }]}>
+              {pick(t.language)}
+            </Text>
           </View>
-          <View style={styles.langChipsRow}>
-            {([
-              'en','ka','ru','hy','tr','az','es','de','fr','pt','id','it','ar','hi','zh','ja','ko','uk','pl'
-            ] as AppLanguage[]).map((lng) => {
-              const active = language === lng;
+          <Text style={[styles.languageHint, { color: theme.colors.textSecondary }]}>
+            {pick(t.selectLanguage)}
+          </Text>
+          
+          <View style={styles.languageGrid}>
+            {allLanguages.map((lng) => {
+              const isActive = language === lng;
               return (
                 <TouchableOpacity
                   key={lng}
                   onPress={() => setLanguage(lng)}
-                  activeOpacity={0.8}
                   style={[
-                    styles.langChip,
+                    styles.languageChip,
                     {
-                      backgroundColor: active ? theme.colors.accent : theme.colors.surface,
-                      borderColor: active ? theme.colors.accent : theme.colors.border,
+                      backgroundColor: isActive ? theme.colors.accent : theme.colors.card,
+                      borderColor: isActive ? theme.colors.accent : theme.colors.border,
                     },
                   ]}
+                  activeOpacity={0.7}
                 >
-                  <Text style={{ color: active ? '#fff' : theme.colors.text, fontWeight: '700' }}>{lng.toUpperCase()}</Text>
+                  <Text
+                    style={[
+                      styles.languageChipText,
+                      { color: isActive ? '#ffffff' : theme.colors.text },
+                    ]}
+                  >
+                    {languageNames[lng]}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
-          <Text style={styles.langHint}>{pick(t.langHint)}</Text>
         </View>
 
-        <View style={{ height: 80 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const createStyles = (theme: any) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
-  hero: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
+  scrollContent: {
+    paddingBottom: 20,
   },
-  heroContent: {
-    gap: 4,
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  heroEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.accent,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+  headerContent: {
+    gap: 8,
   },
-  heroTitle: {
-    fontSize: theme.typography.h2.fontSize,
-    fontWeight: '700',
-    color: theme.colors.text,
+  appName: {
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
-  heroSubtitle: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
+  headerSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
   },
-  scrollContainer: {
-    paddingHorizontal: theme.spacing.lg,
-  },
-  featuresSection: {
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
-    gap: theme.spacing.md,
-  },
-  featureCard: {
-    borderRadius: theme.borderRadius.lg || 16,
-    overflow: 'hidden',
-    ...theme.shadows.md,
-  },
-  featureGradient: {
-    padding: theme.spacing.lg,
-  },
-  featureHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm,
-  },
-  featureIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureTitle: {
-    fontSize: theme.typography.h3.fontSize,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  featureSubtitle: {
-    fontSize: theme.typography.caption.fontSize,
-    color: 'rgba(255,255,255,0.9)',
-  },
-  settingsSection: {
-    marginBottom: theme.spacing.lg,
-  },
-  languageSection: {
-    marginBottom: theme.spacing.xl,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-    ...theme.shadows.sm,
-  },
-  langChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  langChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  langHint: {
-    marginTop: theme.spacing.sm,
-    color: theme.colors.textSecondary,
-    fontSize: theme.typography.caption.fontSize,
+  section: {
+    paddingHorizontal: 20,
+    marginTop: 24,
   },
   sectionTitle: {
-    fontSize: theme.typography.h3.fontSize,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 16,
   },
-  settingItem: {
+  featuresGrid: {
+    gap: 16,
+  },
+  featureCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  featureGradient: {
+    padding: 20,
+    minHeight: 140,
+    justifyContent: 'space-between',
+  },
+  featureIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featureTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+    marginTop: 12,
+  },
+  featureSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 4,
+  },
+  featureArrow: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+  },
+  settingCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    ...theme.shadows.sm,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
+  settingIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
-    marginRight: theme.spacing.md,
+    alignItems: 'center',
   },
-  settingText: {
+  settingTextContainer: {
+    marginLeft: 14,
     flex: 1,
   },
   settingTitle: {
-    fontSize: theme.typography.body.fontSize,
-    fontWeight: '500',
-    color: theme.colors.text,
-    marginBottom: 2,
+    fontSize: 16,
+    fontWeight: '600',
   },
   settingSubtitle: {
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.textSecondary,
-    lineHeight: 16,
+    fontSize: 13,
+    marginTop: 2,
   },
-  settingRight: {
-    marginLeft: theme.spacing.sm,
+  languageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  languageHint: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  languageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  languageChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  languageChipText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

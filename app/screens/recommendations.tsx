@@ -1,3 +1,4 @@
+import CommonHeader from '@/components/CommonHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ClinicalAssessmentEngine } from '@/services/clinicalAssessment';
@@ -349,12 +350,7 @@ export default function RecommendationsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <FontAwesome5 name="arrow-left" size={20} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t.title}</Text>
-        </View>
+        <CommonHeader title={t.title} />
         
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.accent} />
@@ -368,12 +364,7 @@ export default function RecommendationsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome5 name="arrow-left" size={20} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t.title}</Text>
-      </View>
+      <CommonHeader title={t.title} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {testResult && (

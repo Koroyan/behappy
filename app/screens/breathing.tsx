@@ -1,3 +1,4 @@
+import CommonHeader from '@/components/CommonHeader';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -216,13 +217,7 @@ export default function BreathingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <FontAwesome5 name="arrow-left" size={18} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{pick(T.headerTitle as any)}</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <CommonHeader title={pick(T.headerTitle as any)} />
 
       {!isActive && currentPhase === 'ready' ? (
         <View style={styles.patternContainer}>

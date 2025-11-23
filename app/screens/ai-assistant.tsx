@@ -1,3 +1,5 @@
+import CommonHeader from '@/components/CommonHeader';
+import CommonSendButton from '@/components/CommonSendButton';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -259,33 +261,15 @@ const AIAssistantScreen = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.colors.card }]}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <View style={[styles.headerAvatar, { backgroundColor: theme.colors.primary }]}>
-            <MaterialIcons name="psychology" size={24} color="#fff" />
-          </View>
-          <View>
-            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-              ИИ-Ассистент
-            </Text>
-            <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
-              Ваш помощник по ментальному здоровью
-            </Text>
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.infoButton}>
-          <Ionicons name="information-circle-outline" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-      </View>
+      <CommonHeader 
+        title="ИИ-Ассистент"
+        subtitle="Ваш помощник по ментальному здоровью"
+        rightActions={
+          <TouchableOpacity style={styles.infoButton}>
+            <Ionicons name="information-circle-outline" size={22} color={theme.colors.text} />
+          </TouchableOpacity>
+        }
+      />
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -350,15 +334,11 @@ const AIAssistantScreen = () => {
             maxLength={1000}
             editable={!isLoading}
           />
-          <TouchableOpacity
-            style={[styles.sendButton, { 
-              backgroundColor: inputText.trim() ? theme.colors.primary : theme.colors.textSecondary 
-            }]}
+          <CommonSendButton
             onPress={() => sendMessage(inputText)}
             disabled={!inputText.trim() || isLoading}
-          >
-            <Ionicons name="send" size={20} color="#fff" />
-          </TouchableOpacity>
+            loading={isLoading}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

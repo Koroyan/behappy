@@ -1,3 +1,4 @@
+import CommonHeader from '@/components/CommonHeader';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { sendMessageToGPT } from '@/services/gptApi';
@@ -614,14 +615,10 @@ export default function JournalScreen() {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={cancelWriting}>
-            <FontAwesome5 name="times" size={20} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {currentPrompt ? pick(currentPrompt.title as any, language) : pick({ en: 'Free writing', ru: 'Свободная запись' } as any, language)}
-          </Text>
-        </View>
+        <CommonHeader 
+          title={currentPrompt ? pick(currentPrompt.title as any, language) : pick({ en: 'Free writing', ka: 'თავისუფალი წერა', ru: 'Свободная запись' } as any, language)}
+          onBack={cancelWriting}
+        />
 
         <KeyboardAvoidingView 
           style={{ flex: 1 }} 
@@ -700,12 +697,30 @@ export default function JournalScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome5 name="arrow-left" size={20} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{pick(t.headerTitle as any, language)}</Text>
-      </View>
+      <CommonHeader 
+        title={pick(t.headerTitle as any, language)}
+        subtitle={pick({ 
+          ka: 'თქვენი აზრები და გრძნობები', 
+          en: 'Your thoughts and feelings', 
+          ru: 'Ваши мысли и чувства',
+          hy: 'Ձեր մտքերը և զգացմունքները',
+          tr: 'Düşünceleriniz ve duygularınız',
+          az: 'Düşüncələriniz və hissləriniz',
+          es: 'Tus pensamientos y sentimientos',
+          de: 'Ihre Gedanken und Gefühle',
+          fr: 'Vos pensées et sentiments',
+          pt: 'Seus pensamentos e sentimentos',
+          id: 'Pikiran dan perasaan Anda',
+          it: 'I tuoi pensieri e sentimenti',
+          ar: 'أفكارك ومشاعرك',
+          hi: 'आपके विचार और भावनाएं',
+          zh: '您的想法和感受',
+          ja: 'あなたの思考と感情',
+          ko: '당신의 생각과 감정',
+          uk: 'Ваші думки та почуття',
+          pl: 'Twoje myśli i uczucia'
+        } as any, language)}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.welcomeCard}>

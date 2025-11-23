@@ -1,3 +1,6 @@
+import CommonHeader from '@/components/CommonHeader';
+import CommonSendButton from '@/components/CommonSendButton';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -117,10 +120,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUse
                       setSpeaking(false);
                     }
                   }}
-                  style={styles.ttsBtn}
+                  style={[styles.ttsBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6' }]}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.ttsBtnText}>{speaking ? '⏹️' : '🔊'}</Text>
+                  <FontAwesome5 name={speaking ? 'stop' : 'volume-up'} size={14} color={isDark ? '#fff' : '#111827'} />
                 </TouchableOpacity>
               </View>
             )}
@@ -717,19 +720,17 @@ export default function ArtTherapySessionChat() {
       )}
       
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={[styles.backButtonText, { color: theme.colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{getHeaderTitle()}</Text>
-        <View style={styles.headerRight}>
-          {isSessionComplete && (
-            <View style={[styles.completeBadge, currentSession ? { backgroundColor: currentSession.color } : null]}>
+      <CommonHeader 
+        title={getHeaderTitle()}
+        subtitle={isSessionComplete ? pick(T.sessionCompletedTitle, language as AppLanguage) : undefined}
+        rightActions={
+          isSessionComplete && currentSession ? (
+            <View style={[styles.completeBadge, { backgroundColor: currentSession.color }]}>
               <Text style={styles.completeBadgeText}>✓</Text>
             </View>
-          )}
-        </View>
-      </View>
+          ) : undefined
+        }
+      />
 
       {/* Messages */}
       <FlatList
@@ -790,8 +791,16 @@ export default function ArtTherapySessionChat() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
-          <TouchableOpacity style={[styles.imageButton, readOnly && styles.disabledButton]} onPress={handleImagePicker} disabled={readOnly}>
-            <Text style={styles.imageButtonText}>📷</Text>
+          <TouchableOpacity 
+            style={[
+              styles.imageButton, 
+              { backgroundColor: readOnly ? (isDark ? 'rgba(255,255,255,0.05)' : '#E5E7EB') : (isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB') },
+              readOnly && styles.disabledButton
+            ]} 
+            onPress={handleImagePicker} 
+            disabled={readOnly}
+          >
+            <FontAwesome5 name="image" size={18} color={readOnly ? '#999' : (isDark ? '#fff' : '#000')} />
           </TouchableOpacity>
           
           <TextInput
@@ -809,12 +818,16 @@ export default function ArtTherapySessionChat() {
           />
           {/* Mic button: push-to-talk */}
           <TouchableOpacity
-            style={[styles.micButton, isRecording && [styles.micButtonRecording, { backgroundColor: isDark ? '#ff4444' : '#ff0000' }]]}
+            style={[
+              styles.micButton, 
+              { backgroundColor: isRecording ? (isDark ? '#ff4444' : '#ff0000') : (readOnly ? (isDark ? 'rgba(255,255,255,0.05)' : '#E5E7EB') : (isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB')) },
+              isRecording && styles.micButtonRecording
+            ]}
             onPressIn={startRecording}
             onPressOut={stopRecording}
             disabled={readOnly}
           >
-            <Text style={styles.imageButtonText}>{isRecording ? '⏺️' : '🎤'}</Text>
+            <FontAwesome5 name={isRecording ? 'circle' : 'microphone'} size={18} color={isRecording ? '#fff' : (readOnly ? '#999' : (isDark ? '#fff' : '#000'))} solid={isRecording} />
           </TouchableOpacity>
           {isRecording && (
             <Text style={[styles.recordingText, { color: theme.colors.error || '#ff0000' }]}>
@@ -822,17 +835,12 @@ export default function ArtTherapySessionChat() {
             </Text>
           )}
           
-          <TouchableOpacity 
-            style={[
-              styles.sendButton, 
-              currentSession ? { backgroundColor: currentSession.color } : { backgroundColor: theme.colors.primary }, 
-              (!inputText.trim() || readOnly) && [styles.sendButtonDisabled, { backgroundColor: isDark ? '#333' : '#E5E5E5' }]
-            ]} 
-            onPress={() => (readOnly ? undefined : handleSendMessage())}
+          <CommonSendButton 
+            onPress={handleSendMessage}
             disabled={!inputText.trim() || readOnly}
-          >
-            <Text style={styles.sendButtonText}>{readOnly ? '🔒' : '→'}</Text>
-          </TouchableOpacity>
+            loading={isTyping}
+            icon={readOnly ? 'lock' : 'paper-plane'}
+          />
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -974,19 +982,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-  },
-  imageButtonText: {
-    fontSize: 20,
   },
   micButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
@@ -1053,13 +1056,8 @@ const styles = StyleSheet.create({
   },
   ttsBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F3F4F6',
     borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 6,
-  },
-  ttsBtnText: {
-    color: '#111827',
-    fontWeight: '700',
   },
 });

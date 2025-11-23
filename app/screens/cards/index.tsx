@@ -1,3 +1,4 @@
+import CommonHeader from '@/components/CommonHeader';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -227,19 +228,17 @@ export default function CardsMainScreen() {
         backgroundColor={theme.colors.background} 
       />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <FontAwesome5 name="arrow-left" size={18} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{pick(T.headerTitle, language)}</Text>
-        <TouchableOpacity 
-          onPress={() => router.push('/screens/cards/sessions-history')} 
-          style={styles.historyButton}
-        >
-          <MaterialCommunityIcons name="history" size={20} color={theme.colors.text} />
-        </TouchableOpacity>
-      </View>
+      <CommonHeader 
+        title={pick(T.headerTitle, language)}
+        rightActions={
+          <TouchableOpacity 
+            onPress={() => router.push('/screens/cards/sessions-history')} 
+            style={styles.historyButton}
+          >
+            <MaterialCommunityIcons name="history" size={20} color={theme.colors.text} />
+          </TouchableOpacity>
+        }
+      />
 
       {/* Instructions */}
       <View style={styles.instructionsContainer}>

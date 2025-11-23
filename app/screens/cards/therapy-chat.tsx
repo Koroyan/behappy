@@ -1,3 +1,4 @@
+import CommonSendButton from '@/components/CommonSendButton';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cardSessionStorage, OngoingCardSession } from '@/services/cardSessionStorage';
@@ -1567,13 +1568,11 @@ export default function CardTherapyChatScreen() {
               multiline
               editable={!isLoading}
             />
-            <TouchableOpacity
-              style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
+            <CommonSendButton
               onPress={handleSendMessage}
               disabled={!inputText.trim() || isLoading}
-            >
-              <FontAwesome5 name="paper-plane" size={18} color="#ffffff" />
-            </TouchableOpacity>
+              loading={isLoading}
+            />
           </View>
         ) : (
           <View style={styles.sessionClosedOverlay}>
