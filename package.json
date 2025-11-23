@@ -2,6 +2,7 @@
   "name": "behappy",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "homepage": "https://koroyan.github.io/behappy",
   "scripts": {
     "start": "expo start",
     "start:server": "node ./server/realtime-session.js",
@@ -12,8 +13,9 @@
     "web": "expo start --web",
     "build:web": "npx expo export -p web",
     "preview:web": "npx serve dist",
-    "lint": "expo lint",
-    "deploy": "vercel --prod"
+    "predeploy": "npm run build:web",
+    "deploy": "gh-pages -d dist",
+    "lint": "expo lint"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -29,8 +31,8 @@
     "babel-plugin-dotenv-import": "^3.0.1",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
-  "dotenv": "^17.2.1",
-  "expo": "~54.0.0",
+    "dotenv": "^17.2.1",
+    "expo": "~54.0.0",
     "expo-av": "~16.0.7",
     "expo-blur": "~15.0.7",
     "expo-constants": "~18.0.10",
@@ -84,6 +86,7 @@
     "@types/react": "^19.2.2",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
+    "gh-pages": "^6.3.0",
     "typescript": "~5.8.3"
   },
   "private": true
