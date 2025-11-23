@@ -1,6 +1,6 @@
-import 'dotenv/config';
+require('dotenv').config();
 
-export default {
+module.exports = {
   expo: {
     name: "beHappy",
     slug: "beHappy",
@@ -23,8 +23,7 @@ export default {
     web: {
       bundler: "metro",
       output: "static",
-      favicon: "./assets/images/favicon.png",
-      template: "./web/index.html"
+      favicon: "./assets/images/favicon.png"
     },
     plugins: [
       "expo-router",
