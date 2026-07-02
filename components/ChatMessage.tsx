@@ -226,9 +226,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             }}>
               {cmPick(({
                 grounding: { en: 'Grounding', ru: 'Заземление', ka: 'დამყარება', hy: 'Հիմնում', tr: 'Dengeleme', az: 'Zəmin', es: 'Arraigo', de: 'Erdung', fr: 'Ancrage', pt: 'Aterramento', id: 'Pemijakan', it: 'Radicamento', ar: 'تأريض', hi: 'ग्राउंडिंग', zh: '入地', ja: 'グラウンディング', ko: '안정', uk: 'Заземлення', pl: 'Uziemienie' },
-                gentle:    { en: 'Gentle Support', ru: 'Мягкая поддержка', ka: 'თბილი მხარდაჭერა', hy: 'Նուրբ Աջakцутyun', tr: 'Nazik Destek', az: 'Yumşaq Dəstək', es: 'Apoyo Suave', de: 'Sanfte Unterstützung', fr: 'Soutien Doux', pt: 'Apoio Gentil', id: 'Dukungan Lembut', it: 'Supporto Gentile', ar: 'دعم لطيف', hi: 'कोमल सहारा', zh: '温柔支持', ja: '優しいサポート', ko: '부드러운 지원', uk: "М'яка підтримка", pl: 'Delikatne Wsparcie' },
-                uplifting: { en: 'Uplifting', ru: 'Воодушевляющее', ka: 'გამახალისებელი', hy: 'Ոգelnatnyun', tr: 'Yükseltici', az: 'Ruhlandırıcı', es: 'Elevador', de: 'Aufmunternd', fr: 'Édifiant', pt: 'Elevador', id: 'Membangkitkan', it: 'Edificante', ar: 'رافع', hi: 'उत्साहवर्धक', zh: '振奋', ja: '高揚感', ko: '업리프팅', uk: 'Підбадьорливе', pl: 'Wzniosły' },
-                empowering: { en: 'Empowering', ru: 'Укрепляющее', ka: 'გაძლიერება', hy: 'Oozhegorcyun', tr: 'Güçlendirici', az: 'Gücləndirc', es: 'Potenciador', de: 'Stärkend', fr: 'Autonomisant', pt: 'Empoderador', id: 'Memberdayakan', it: 'Potenziante', ar: 'تمكيني', hi: 'सशक्तिकरण', zh: '赋能', ja: 'エンパワーメント', ko: '역량강화', uk: 'Надихаюче', pl: 'Wzmacniający' },
+                gentle:    { en: 'Gentle Support', ru: 'Мягкая поддержка', ka: 'თბილი მხარდაჭერა', hy: 'Նուրբ աջակցություն', tr: 'Nazik Destek', az: 'Yumşaq Dəstək', es: 'Apoyo Suave', de: 'Sanfte Unterstützung', fr: 'Soutien Doux', pt: 'Apoio Gentil', id: 'Dukungan Lembut', it: 'Supporto Gentile', ar: 'دعم لطيف', hi: 'कोमल सहारा', zh: '温柔支持', ja: '優しいサポート', ko: '부드러운 지원', uk: "М'яка підтримка", pl: 'Delikatne Wsparcie' },
+                uplifting: { en: 'Uplifting', ru: 'Воодушевляющее', ka: 'გამახალისებელი', hy: 'Ոգեշնչող', tr: 'Yükseltici', az: 'Ruhlandırıcı', es: 'Elevador', de: 'Aufmunternd', fr: 'Édifiant', pt: 'Elevador', id: 'Membangkitkan', it: 'Edificante', ar: 'رافع', hi: 'उत्साहवर्धक', zh: '振奋', ja: '高揚感', ko: '업리프팅', uk: 'Підбадьорливе', pl: 'Wzniosły' },
+                empowering: { en: 'Empowering', ru: 'Укрепляющее', ka: 'გაძლიერება', hy: 'Ուժեղացնող', tr: 'Güçlendirici', az: 'Gücləndirici', es: 'Potenciador', de: 'Stärkend', fr: 'Autonomisant', pt: 'Empoderador', id: 'Memberdayakan', it: 'Potenziante', ar: 'تمكيني', hi: 'सशक्तिकरण', zh: '赋能', ja: 'エンパワーメント', ko: '역량강화', uk: 'Надихаюче', pl: 'Wzmacniający' },
               } as Record<string, Record<string,string>>)[aiResponse.motivational_message.tone] || { en: aiResponse.motivational_message.tone }, language)}
             </Text>
           </View>
@@ -240,7 +240,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             fontWeight: '500',
             letterSpacing: 0.2,
           }}>
-            "{aiResponse.motivational_message.short_quote}"
+            {`"${aiResponse.motivational_message.short_quote}"`}
           </Text>
           {aiResponse.motivational_message.psychological_basis && (
             <Text style={{
@@ -249,7 +249,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               marginTop: 6,
               fontWeight: '500',
             }}>
-              {`${cmPick({ en: 'Based on', ru: 'Основано на', ka: 'დაფუძნებულია', hy: 'Հիmnvaд', tr: 'Dayandığı', az: 'Əsaslanır', es: 'Basado en', de: 'Basierend auf', fr: 'Basé sur', pt: 'Baseado em', id: 'Berdasarkan', it: 'Basato su', ar: 'مستند إلى', hi: 'आधारित', zh: '基于', ja: '基づく：', ko: '기반으로', uk: 'Засноване на', pl: 'Na podstawie' } as Record<string,string>, language)} ${aiResponse.motivational_message.psychological_basis}`}
+              {`${cmPick({ en: 'Based on', ru: 'Основано на', ka: 'დაფუძნებულია', hy: 'Հիմնված է', tr: 'Dayandığı', az: 'Əsaslanır', es: 'Basado en', de: 'Basierend auf', fr: 'Basé sur', pt: 'Baseado em', id: 'Berdasarkan', it: 'Basato su', ar: 'مستند إلى', hi: 'आधारित', zh: '基于', ja: '基づく：', ko: '기반으로', uk: 'Засноване на', pl: 'Na podstawie' } as Record<string,string>, language)} ${aiResponse.motivational_message.psychological_basis}`}
             </Text>
           )}
         </View>

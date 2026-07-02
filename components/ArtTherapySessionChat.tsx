@@ -7,19 +7,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
@@ -198,6 +198,74 @@ const isMeaningfulImage = (value?: string | null) => {
   }
   return true;
 };
+
+const pickWebImageAsset = (): Promise<any | null> => new Promise((resolve, reject) => {
+  if (typeof document === 'undefined') {
+    reject(new Error('Image selection is not available in this environment'));
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.style.display = 'none';
+
+  let settled = false;
+  const cleanup = () => {
+    input.onchange = null;
+    input.oncancel = null;
+    setTimeout(() => {
+      if (input.parentNode) {
+        input.parentNode.removeChild(input);
+      }
+    }, 0);
+  };
+
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (!file) {
+      if (!settled) {
+        settled = true;
+        resolve(null);
+      }
+      cleanup();
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      if (!settled) {
+        settled = true;
+        reject(new Error('Failed to read selected image'));
+      }
+      cleanup();
+    };
+    reader.onload = () => {
+      if (!settled) {
+        settled = true;
+        resolve({
+          uri: String(reader.result),
+          type: 'image',
+          fileName: file.name,
+          mimeType: file.type,
+        });
+      }
+      cleanup();
+    };
+    reader.readAsDataURL(file);
+  };
+
+  input.oncancel = () => {
+    if (!settled) {
+      settled = true;
+      resolve(null);
+    }
+    cleanup();
+  };
+
+  document.body.appendChild(input);
+  input.click();
+});
 
 const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUser, language, theme, isDark }) => {
   const [speaking, setSpeaking] = useState(false);
@@ -591,7 +659,9 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content: outgoingText,
-      apiOnlyContent: !outgoingText && imageBase64 ? pick(T.imageOnlyApiInstruction, language as AppLanguage) : undefined,
+      apiOnlyContent: !outgoingText && imageBase64
+        ? 'An image was uploaded without text. Before guiding the art therapy session, apply the image eligibility rules and continue only if it clearly appears to be hand-made artwork created by the client for this session.'
+        : undefined,
       timestamp: new Date(),
       role: 'user',
       imageUri,
@@ -661,17 +731,16 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
       );
 
       if (imageBase64 && !outgoingText) {
-        response = {
-          ...response,
-          response_text: pick(T.imageReflectionQuestion, language as AppLanguage),
-          ...(isModifiedImageUpload ? {
+        if (isModifiedImageUpload) {
+          response = {
+            ...response,
             session_phase: 1 as const,
             phase_complete: false,
             session_complete: false,
             required_input: 'text' as const,
             action: 'analyze_second_drawing' as const,
-          } : {}),
-        };
+          };
+        }
       }
 
       if (requestedClose) {
@@ -795,6 +864,17 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
           );
           return;
         }
+      }
+
+      if (Platform.OS === 'web') {
+        const asset = await pickWebImageAsset();
+        if (!asset) return;
+
+        const prepared = await artTherapyService.prepareImageForAPI(asset);
+        setLastImage(prepared);
+        await handleSendMessage(prepared.displayUri, prepared.base64);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({

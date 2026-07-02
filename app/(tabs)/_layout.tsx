@@ -14,8 +14,8 @@ const BOTTOM_INSET = Platform.OS === 'ios' ? 34 : 16;
 
 const TAB_LABELS: Record<string, Record<string, string>> = {
   home:    { en:'Home', ru:'Главная', ka:'მთავარი', hy:'Հիմնական', tr:'Ana Sayfa', az:'Əsas', es:'Inicio', de:'Startseite', fr:'Accueil', pt:'Início', id:'Beranda', it:'Home', ar:'الرئيسية', hi:'होम', zh:'首页', ja:'ホーム', ko:'홈', uk:'Головна', pl:'Strona główna' },
-  therapy: { en:'AI Therapy', ru:'AI Терапия', ka:'AI თერაპია', hy:'ԱԻ թերապիա', tr:'AI Terapi', az:'AI Terapiya', es:'Terapia IA', de:'KI-Therapie', fr:'Thérapie IA', pt:'Terapia IA', id:'Terapi AI', it:'Terapia AI', ar:'العلاج AI', hi:'AI थेरेपी', zh:'AI治疗', ja:'AIセラピー', ko:'AI 치료', uk:'AI Терапія', pl:'Terapia AI' },
-  art:     { en:'Art Therapy', ru:'Арт Терапия', ka:'არт თერაპია', hy:'Արվեստի թերապիա', tr:'Sanat Terapi', az:'Art Terapiya', es:'Arteterapia', de:'Kunsttherapie', fr:'Art-thérapie', pt:'Arteterapia', id:'Terapi Seni', it:'Arte Terapia', ar:'العلاج بالفن', hi:'कला चिकित्सा', zh:'艺术治疗', ja:'芸術療法', ko:'미술 치료', uk:'Арт Терапія', pl:'Arteterapia' },
+  therapy: { en:'AI Therapy', ru:'AI Терапия', ka:'AI თერაპია', hy:'ԱԻ թերապիա', tr:'AI Terapi', az:'AI Terapiya', es:'Terapia IA', de:'KI-Therapie', fr:'Thérapie IA', pt:'Terapia IA', id:'Terapi AI', it:'Terapia AI', ar:'العلاج بالذكاء الاصطناعي', hi:'AI थेरेपी', zh:'AI治疗', ja:'AIセラピー', ko:'AI 치료', uk:'AI Терапія', pl:'Terapia AI' },
+  art:     { en:'Art Therapy', ru:'Арт Терапия', ka:'არტ თერაპია', hy:'Արվեստի թերապիա', tr:'Sanat Terapi', az:'Art Terapiya', es:'Arteterapia', de:'Kunsttherapie', fr:'Art-thérapie', pt:'Arteterapia', id:'Terapi Seni', it:'Arte Terapia', ar:'العلاج بالفن', hi:'कला चिकित्सा', zh:'艺术治疗', ja:'芸術療法', ko:'미술 치료', uk:'Арт Терапія', pl:'Arteterapia' },
   profile: { en:'Profile', ru:'Профиль', ka:'პროფილი', hy:'Կարգավորումներ', tr:'Profil', az:'Profil', es:'Perfil', de:'Profil', fr:'Profil', pt:'Perfil', id:'Profil', it:'Profilo', ar:'الملف الشخصي', hi:'प्रोफ़ाइल', zh:'个人资料', ja:'プロフィール', ko:'프로필', uk:'Профіль', pl:'Profil' },
 };
 

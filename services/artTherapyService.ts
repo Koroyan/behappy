@@ -75,7 +75,7 @@ export interface ChatMessage {
 class ArtTherapyService {
   private apiKey: string;
   private promptId: string = 'pmpt_690baa7920308196a2d94f41d4be76be0bd44ed1840b1049';
-  private promptVersion: string = '17';
+  private promptVersion: string = '18';
   private baseURL: string = 'https://api.openai.com/v1';
 
   constructor() {
@@ -127,7 +127,7 @@ class ArtTherapyService {
     extraContext?: string
   ): string {
     const imageOnlyInstruction = hasImageOnlyMessage
-      ? '\nThe latest user message contains only an image. Treat it as the client\'s art therapy artwork. Do not ask them to upload or describe the image again.'
+      ? '\nThe latest user message contains only an image. First determine whether it clearly appears to be the client\'s own hand-made artwork for this art therapy session. If it is an ordinary photo, selfie, screenshot, digital/generated character, document, object, room, person, pet, food, landscape, or otherwise not clearly hand-made artwork, politely reject it without psychological interpretation and ask for a hand-made drawing or painting. If it is ambiguous, ask the client to confirm whether they made it by hand for this session.'
       : '';
 
     return `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${languageName}, Phase: ${currentPhase}. CRITICAL: You MUST respond in ${languageName} language for ALL text, including response_text, phase_summary, session_summary, next_steps, and any question. Do NOT respond in English unless Language is English.${imageOnlyInstruction} Respond with valid JSON matching the ArtTherapyResponse schema.]` + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '');

@@ -27,20 +27,10 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="art-therapy-session" options={{ headerShown: false }} />
-          
-          {/* Anulia Chat */}
-          <Stack.Screen name="screens/anulia" options={{ headerShown: false }} />
-
-          <Stack.Screen name="screens/problems" options={{ headerShown: false }} />
           <Stack.Screen name="screens/session-history" options={{ headerShown: false }} />
 
-        
           {/* Other Screens */}
           <Stack.Screen name="screens/meditation" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/mindfulness" options={{ headerShown: false }} />
-          
-          {/* Art Therapy Module Screens (removed legacy non-existent routes). Use `art-therapy-session` instead. */}
-          
 
           <Stack.Screen name="screens/cards/index" options={{ headerShown: false }} />
           <Stack.Screen name="screens/cards/emotion" options={{ headerShown: false }} />
@@ -52,13 +42,9 @@ export default function RootLayout() {
 
 
           {/* Other Screens */}
-          <Stack.Screen name="screens/curses" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/tests" options={{ headerShown: false }} />
           <Stack.Screen name="screens/journal" options={{ headerShown: false }} />
           <Stack.Screen name="screens/breathing" options={{ headerShown: false }} />
           <Stack.Screen name="screens/recommendations" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/test-history" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/wellness-tracker" options={{ headerShown: false }} />
           <Stack.Screen name="screens/ai-assistant" options={{ headerShown: false }} />
 
           <Stack.Screen name="+not-found" />
