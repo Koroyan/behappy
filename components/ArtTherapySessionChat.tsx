@@ -7,25 +7,25 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 // Removed expo-speech: using OpenAI TTS via service instead
-import ArtTherapyProgramManager, { ART_THERAPY_SESSIONS, SessionProgress } from '../services/artTherapyProgram';
+import ArtTherapyProgramManager, { SessionProgress } from '../services/artTherapyProgramNew';
 import artTherapyService, { ArtTherapyResponse, ChatMessage } from '../services/artTherapyService';
 import TypingIndicator from './TypingIndicator';
 
@@ -59,6 +59,59 @@ const T = {
   safariNoAudio: { en: 'This Safari version does not support audio recording.', ka: 'Safari-ის ამ ვერსიას არ აქვს ხმოვანი ჩაწერის მხარდაჭერა.', ru: 'Эта версия Safari не поддерживает запись аудио.', hy: 'Safari-ի այս տարբերակն աուդիո չի ձայնագրում։', tr: 'Bu Safari sürümü ses kaydını desteklemiyor.', az: 'Bu Safari versiyası audio yazmanı dəstəkləmir.', es: 'Esta versión de Safari no admite grabación de audio.', de: 'Diese Safari-Version unterstützt keine Audioaufnahme.', fr: 'Cette version de Safari ne prend pas en charge l’enregistrement audio.', pt: 'Esta versão do Safari não suporta gravação de áudio.', id: 'Versi Safari ini tidak mendukung perekaman audio.', it: 'Questa versione di Safari non supporta la registrazione audio.', ar: 'هذا الإصدار من Safari لا يدعم تسجيل الصوت.', hi: 'इस Safari संस्करण में ऑडियो रिकॉर्डिंग समर्थित नहीं है।', zh: '此版本的 Safari 不支持录音。', ja: 'このバージョンのSafariは音声録音をサポートしていません。', ko: '이 Safari 버전은 오디오 녹음을 지원하지 않습니다.', uk: 'Ця версія Safari не підтримує запис аудіо.', pl: 'Ta wersja Safari nie obsługuje nagrywania dźwięku.' },
   imagePickFailed: { en: 'Failed to select image', ka: 'სურათის არჩევა ვერ მოხერხდა', ru: 'Не удалось выбрать изображение', hy: 'Չհաջողվեց ընտրել պատկերը', tr: 'Görüntü seçilemedi', az: 'Şəkil seçmək mümkün olmadı', es: 'No se pudo seleccionar la imagen', de: 'Bild konnte nicht ausgewählt werden', fr: 'Échec de la sélection de l’image', pt: 'Falha ao selecionar a imagem', id: 'Gagal memilih gambar', it: 'Impossibile selezionare l’immagine', ar: 'تعذر اختيار الصورة', hi: 'छवि का चयन विफल', zh: '选择图片失败', ja: '画像を選択できませんでした', ko: '이미지를 선택하지 못했습니다', uk: 'Не вдалося вибрати зображення', pl: 'Nie udało się wybrać obrazu' },
   failedToSend: { en: 'Failed to send message. Please try again.', ka: 'გაგზავნა ვერ მოხერხდა. სცადეთ თავიდან.', ru: 'Не удалось отправить сообщение. Повторите попытку.', hy: 'Չհաջողվեց ուղարկել հաղորդագրությունը։ Կրկին փորձեք։', tr: 'Mesaj gönderilemedi. Lütfen tekrar deneyin.', az: 'Mesaj göndərilə bilmədi. Zəhmət olmasa yenidən cəhd edin.', es: 'No se pudo enviar el mensaje. Inténtalo de nuevo.', de: 'Nachricht konnte nicht gesendet werden. Bitte versuche es erneut.', fr: 'Échec de l’envoi du message. Veuillez réessayer.', pt: 'Falha ao enviar a mensagem. Tente novamente.', id: 'Gagal mengirim pesan. Silakan coba lagi.', it: 'Invio del messaggio non riuscito. Riprova.', ar: 'فشل إرسال الرسالة. حاول مرة أخرى.', hi: 'संदेश भेजने में विफल। कृपया पुनः प्रयास करें।', zh: '发送消息失败。请重试。', ja: 'メッセージを送信できませんでした。もう一度お試しください。', ko: '메시지 전송에 실패했습니다. 다시 시도해 주세요.', uk: 'Не вдалося надіслати повідомлення. Повторіть спробу.', pl: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.' },
+  imageOnlyApiInstruction: {
+    en: 'I uploaded my artwork image without text. Please look at the image and guide this art therapy session in English.',
+    ka: 'სურათი ტექსტის გარეშე ავტვირთე. გთხოვ, შეხედო ამ ნამუშევარს და არტ-თერაპიის სესია ქართულად წარმართო.',
+    ru: 'Я загрузил(а) изображение своей работы без текста. Пожалуйста, посмотрите на изображение и ведите арт-терапевтическую сессию на русском языке.',
+    hy: 'Ես վերբեռնել եմ իմ ստեղծած նկարը առանց տեքստի։ Խնդրում եմ նայեք պատկերին և արտ-թերապիայի սեանսը վարեք հայերեն։',
+    tr: 'Sanat çalışmamın görselini metinsiz yükledim. Lütfen görsele bakın ve bu sanat terapisi seansını Türkçe yönetin.',
+    az: 'Mətnsiz olaraq rəsmimin şəklini yüklədim. Zəhmət olmasa şəkilə baxın və bu art-terapiya sessiyasını azərbaycanca aparın.',
+    es: 'Subí la imagen de mi obra sin texto. Por favor mira la imagen y guía esta sesión de arteterapia en español.',
+    de: 'Ich habe mein Kunstbild ohne Text hochgeladen. Bitte sieh dir das Bild an und leite diese Kunsttherapie-Sitzung auf Deutsch.',
+    fr: 'J’ai téléversé l’image de mon œuvre sans texte. Merci de regarder l’image et de guider cette séance d’art-thérapie en français.',
+    pt: 'Enviei a imagem do meu trabalho artístico sem texto. Por favor, observe a imagem e conduza esta sessão de arteterapia em português.',
+    id: 'Saya mengunggah gambar karya seni saya tanpa teks. Tolong lihat gambarnya dan pandu sesi terapi seni ini dalam bahasa Indonesia.',
+    it: 'Ho caricato l’immagine del mio lavoro artistico senza testo. Per favore guarda l’immagine e guida questa sessione di arteterapia in italiano.',
+    ar: 'رفعت صورة عملي الفني من دون نص. من فضلك انظر إلى الصورة وقد هذه الجلسة العلاجية بالفن باللغة العربية.',
+    hi: 'मैंने अपनी कलाकृति की छवि बिना पाठ के अपलोड की है। कृपया छवि देखें और इस आर्ट थेरेपी सत्र को हिंदी में संचालित करें।',
+    zh: '我上传了一张没有文字说明的作品图片。请查看图片，并用中文引导这次艺术治疗会话。',
+    ja: 'テキストなしで自分の作品画像をアップロードしました。画像を見て、このアートセラピーのセッションを日本語で進めてください。',
+    ko: '텍스트 없이 제 작품 이미지를 업로드했습니다. 이미지를 보고 이 미술 치료 세션을 한국어로 이끌어 주세요.',
+    uk: 'Я завантажив/завантажила зображення своєї роботи без тексту. Будь ласка, подивіться на зображення і ведіть цю арт-терапевтичну сесію українською.',
+    pl: 'Przesłałem/przesłałam obraz mojej pracy bez tekstu. Proszę spójrz na obraz i poprowadź tę sesję arteterapii po polsku.',
+  },
+  imageReflectionQuestion: {
+    en: 'When you look at this image right now, what do you feel? While you were creating it, what did you feel - was that different from now?',
+    ka: 'როცა ახლა ამ სურათს უყურებთ, რას გრძნობთ? მისი შექმნის დროს რას გრძნობდით - ეს განსხვავდება იმგან, რასაც ახლა გრძნობთ?',
+    ru: 'Когда вы сейчас смотрите на это изображение, что вы чувствуете? Что вы чувствовали во время создания - отличается ли это от того, что вы чувствуете сейчас?',
+    hy: 'Երբ հիմա նայում եք այս պատկերին, ի՞նչ եք զգում։ Ստեղծելու պահին ի՞նչ էիք զգում. դա տարբերվո՞ւմ է նրանից, ինչ հիմա եք զգում։',
+    tr: 'Şu anda bu görsele baktığınızda ne hissediyorsunuz? Onu oluştururken ne hissetmiştiniz - bu şu andakinden farklı mı?',
+    az: 'İndi bu şəkilə baxanda nə hiss edirsiniz? Onu yaradarkən nə hiss edirdiniz - bu indiki hissdən fərqlənirmi?',
+    es: 'Cuando miras esta imagen ahora, ¿qué sientes? Mientras la creabas, ¿qué sentías? ¿Era diferente de lo que sientes ahora?',
+    de: 'Wenn du dieses Bild jetzt ansiehst, was fühlst du? Was hast du beim Gestalten gefühlt - war das anders als jetzt?',
+    fr: 'Quand vous regardez cette image maintenant, que ressentez-vous ? Pendant que vous la créiez, que ressentiez-vous - est-ce différent de maintenant ?',
+    pt: 'Quando você olha para esta imagem agora, o que sente? Enquanto a criava, o que sentia - isso é diferente de agora?',
+    id: 'Saat Anda melihat gambar ini sekarang, apa yang Anda rasakan? Saat membuatnya, apa yang Anda rasakan - apakah berbeda dari sekarang?',
+    it: 'Quando guardi questa immagine adesso, cosa senti? Mentre la creavi, cosa sentivi - era diverso da ora?',
+    ar: 'عندما تنظر إلى هذه الصورة الآن، ماذا تشعر؟ أثناء إنشائها، ماذا كنت تشعر - وهل يختلف ذلك عما تشعر به الآن؟',
+    hi: 'जब आप अभी इस छवि को देखते हैं, तो आप क्या महसूस करते हैं? इसे बनाते समय आप क्या महसूस कर रहे थे - क्या वह अभी से अलग था?',
+    zh: '当你现在看着这张图像时，你有什么感受？创作它的时候你有什么感受？这和现在不同吗？',
+    ja: '今この画像を見て、何を感じますか？制作していたときは何を感じていましたか。今とは違いますか？',
+    ko: '지금 이 이미지를 볼 때 무엇이 느껴지나요? 만들고 있을 때는 무엇을 느꼈나요? 지금과 달랐나요?',
+    uk: 'Коли ви зараз дивитеся на це зображення, що відчуваєте? Що ви відчували під час створення - чи це відрізняється від теперішнього?',
+    pl: 'Kiedy patrzysz teraz na ten obraz, co czujesz? Co czułeś/czułaś podczas jego tworzenia - czy to różni się od tego, co czujesz teraz?',
+  },
+  fallbackSessionSummary: { en: 'During this session, you explored your artwork and noticed the feelings that appeared while looking at it. The session closed with a clearer, calmer awareness of your inner experience.', ka: 'ამ სესიაში თქვენ შეისწავლეთ თქვენი ნამუშევარი და შეამჩნიეთ ის განცდები, რომლებიც მისი ყურებისას გამოჩნდა. სესია დასრულდა თქვენი შინაგანი გამოცდილების უფრო მშვიდი და გაცნობიერებული ხედვით.', ru: 'В этой сессии вы исследовали свою работу и заметили чувства, которые возникали при взгляде на неё. Сессия завершилась более ясным и спокойным осознанием внутреннего переживания.', hy: 'Այս սեսիայի ընթացքում դուք ուսումնասիրեցիք ձեր նկարը և նկատեցիք այն զգացումները, որոնք առաջացան դիտելիս։ Սեսիան ավարտվեց ձեր ներքին փորձառության ավելի հանգիստ և գիտակցված դիտումով։' },
+  endSession: { en: 'End Session', ka: 'სესიის დასრულება', ru: 'Завершить сессию', hy: 'Ավարտել սեանսը', tr: 'Oturumu bitir', az: 'Sessiyanı bitir', es: 'Terminar sesión', de: 'Sitzung beenden', fr: 'Terminer la séance', pt: 'Encerrar sessão', id: 'Akhiri sesi', it: 'Termina sessione', ar: 'إنهاء الجلسة', hi: 'सत्र समाप्त करें', zh: '结束会话', ja: 'セッション終了', ko: '세션 종료', uk: 'Завершити сесію', pl: 'Zakończ sesję' },
+  endSessionTitle: { en: 'End this session?', ka: 'დავასრულოთ სესია?', ru: 'Завершить сессию?', hy: 'Ավարտե՞լ սեանսը', tr: 'Oturum bitsin mi?', az: 'Sessiya bitsin?', es: '¿Terminar esta sesión?', de: 'Diese Sitzung beenden?', fr: 'Terminer cette séance ?', pt: 'Encerrar esta sessão?', id: 'Akhiri sesi ini?', it: 'Terminare questa sessione?', ar: 'هل تريد إنهاء هذه الجلسة؟', hi: 'यह सत्र समाप्त करें?', zh: '结束本次会话？', ja: 'このセッションを終了しますか？', ko: '이 세션을 종료할까요?', uk: 'Завершити цю сесію?', pl: 'Zakończyć tę sesję?' },
+  endSessionMessage: { en: 'Would you like to close this art therapy session now and receive a summary?', ka: 'გსურთ ახლა დაასრულოთ ეს არტ-თერაპიის სესია და მიიღოთ შეჯამება?', ru: 'Хотите завершить эту арт-терапевтическую сессию сейчас и получить резюме?', hy: 'Ցանկանու՞մ եք հիմա ավարտել այս արտ-թերապիայի սեանսը և ստանալ ամփոփում։', tr: 'Bu sanat terapisi oturumunu şimdi kapatıp özet almak ister misiniz?', az: 'Bu art-terapiya sessiyasını indi bitirib xülasə almaq istəyirsiniz?', es: '¿Quieres cerrar esta sesión de arteterapia ahora y recibir un resumen?', de: 'Möchtest du diese Kunsttherapie-Sitzung jetzt beenden und eine Zusammenfassung erhalten?', fr: 'Voulez-vous terminer cette séance d’art-thérapie maintenant et recevoir un résumé ?', pt: 'Deseja encerrar esta sessão de arteterapia agora e receber um resumo?', id: 'Apakah Anda ingin mengakhiri sesi terapi seni ini sekarang dan menerima ringkasan?', it: 'Vuoi chiudere ora questa sessione di arteterapia e ricevere un riepilogo?', ar: 'هل تريد إنهاء جلسة العلاج بالفن الآن والحصول على ملخص؟', hi: 'क्या आप यह आर्ट थेरेपी सत्र अभी समाप्त करके सारांश पाना चाहते हैं?', zh: '你想现在结束这次艺术治疗会话并获取总结吗？', ja: 'このアートセラピーセッションを今終了して要約を受け取りますか？', ko: '이 미술 치료 세션을 지금 종료하고 요약을 받을까요?', uk: 'Хочете завершити цю арт-терапевтичну сесію зараз і отримати підсумок?', pl: 'Czy chcesz teraz zakończyć tę sesję arteterapii i otrzymać podsumowanie?' },
+  endSessionUserMessage: { en: 'I would like to end the session now.', ka: 'ახლა მინდა სესიის დასრულება.', ru: 'Я хочу завершить сессию сейчас.', hy: 'Ես ուզում եմ հիմա ավարտել սեանսը։', tr: 'Oturumu şimdi bitirmek istiyorum.', az: 'Sessiyanı indi bitirmək istəyirəm.', es: 'Me gustaría terminar la sesión ahora.', de: 'Ich möchte die Sitzung jetzt beenden.', fr: 'Je voudrais terminer la séance maintenant.', pt: 'Gostaria de encerrar a sessão agora.', id: 'Saya ingin mengakhiri sesi sekarang.', it: 'Vorrei terminare la sessione ora.', ar: 'أود إنهاء الجلسة الآن.', hi: 'मैं अब सत्र समाप्त करना चाहता/चाहती हूँ।', zh: '我想现在结束会话。', ja: '今このセッションを終了したいです。', ko: '이제 세션을 종료하고 싶습니다.', uk: 'Я хочу завершити сесію зараз.', pl: 'Chcę teraz zakończyć sesję.' },
+  sessionSummaryLabel: { en: 'Session summary', ka: 'სესიის შეჯამება', ru: 'Резюме сессии', hy: 'Սեանսի ամփոփում', tr: 'Oturum özeti', az: 'Sessiya xülasəsi', es: 'Resumen de la sesión', de: 'Sitzungszusammenfassung', fr: 'Résumé de la séance', pt: 'Resumo da sessão', id: 'Ringkasan sesi', it: 'Riepilogo della sessione', ar: 'ملخص الجلسة', hi: 'सत्र सारांश', zh: '会话总结', ja: 'セッション要約', ko: '세션 요약', uk: 'Підсумок сесії', pl: 'Podsumowanie sesji' },
+  generatingSummary: { en: 'Generating session summary...', ka: 'სესიის შეჯამება მზადდება...', ru: 'Готовим резюме сеанса...', hy: 'Պատրաստվում է սեանսի ամփոփումը...', tr: 'Oturum özeti hazırlanıyor...', az: 'Sessiya xülasəsi hazırlanır...', es: 'Generando resumen de la sesión...', de: 'Sitzungszusammenfassung wird erstellt...', fr: 'Génération du résumé de séance...', pt: 'Gerando resumo da sessão...', id: 'Membuat ringkasan sesi...', it: 'Generazione del riepilogo della sessione...', ar: 'جارٍ إنشاء ملخص الجلسة...', hi: 'सत्र सारांश तैयार हो रहा है...', zh: '正在生成会话总结...', ja: 'セッション要約を生成中...', ko: '세션 요약을 생성하는 중...', uk: 'Створюємо підсумок сесії...', pl: 'Generowanie podsumowania sesji...' },
+  cancel: { en: 'Cancel', ka: 'გაუქმება', ru: 'Отмена', hy: 'Չեղարկել', tr: 'İptal', az: 'Ləğv et', es: 'Cancelar', de: 'Abbrechen', fr: 'Annuler', pt: 'Cancelar', id: 'Batal', it: 'Annulla', ar: 'إلغاء', hi: 'रद्द करें', zh: '取消', ja: 'キャンセル', ko: '취소', uk: 'Скасувати', pl: 'Anuluj' },
+  resetProgressTitle: { en: 'Reset session?', ka: 'გადავაყენოთ სესია?', ru: 'Сбросить сессию?', hy: 'Վերակայե՞լ սեանսը', tr: 'Oturum sıfırlansın mı?', az: 'Sessiya sıfırlansın?', es: '¿Restablecer sesión?', de: 'Sitzung zurücksetzen?', fr: 'Réinitialiser la séance ?', pt: 'Redefinir sessão?', id: 'Reset sesi?', it: 'Reimpostare la sessione?', ar: 'إعادة تعيين الجلسة؟', hi: 'सत्र रीसेट करें?', zh: '重置会话？', ja: 'セッションをリセットしますか？', ko: '세션을 초기화할까요?', uk: 'Скинути сесію?', pl: 'Zresetować sesję?' },
+  resetProgressMsg: { en: 'This will clear this session chat and progress.', ka: 'ეს გაასუფთავებს ამ სესიის ჩათს და პროგრესს.', ru: 'Это очистит чат и прогресс этой сессии.', hy: 'Սա կմաքրի այս սեանսի չաթը և առաջընթացը։', tr: 'Bu, bu oturumun sohbetini ve ilerlemesini temizler.', az: 'Bu, bu sessiyanın söhbətini və irəliləyişini siləcək.', es: 'Esto borrará el chat y el progreso de esta sesión.', de: 'Dadurch werden Chat und Fortschritt dieser Sitzung gelöscht.', fr: 'Cela effacera le chat et la progression de cette séance.', pt: 'Isso limpará o chat e o progresso desta sessão.', id: 'Ini akan menghapus chat dan progres sesi ini.', it: 'Questo cancellerà chat e progressi della sessione.', ar: 'سيؤدي هذا إلى مسح دردشة هذه الجلسة وتقدمها.', hi: 'यह इस सत्र की चैट और प्रगति साफ़ कर देगा।', zh: '这将清除此会话的聊天和进度。', ja: 'このセッションのチャットと進行状況が消去されます。', ko: '이 세션의 채팅과 진행 상황이 지워집니다.', uk: 'Це очистить чат і прогрес цієї сесії.', pl: 'To wyczyści czat i postęp tej sesji.' },
+  reset: { en: 'Reset', ka: 'გადაყენება', ru: 'Сбросить', hy: 'Վերակայել', tr: 'Sıfırla', az: 'Sıfırla', es: 'Restablecer', de: 'Zurücksetzen', fr: 'Réinitialiser', pt: 'Redefinir', id: 'Reset', it: 'Reimposta', ar: 'إعادة تعيين', hi: 'रीसेट', zh: '重置', ja: 'リセット', ko: '초기화', uk: 'Скинути', pl: 'Resetuj' },
   goNext: { en: 'Go to next session', ka: 'გადადი შემდეგ სესიაზე', ru: 'Перейти к следующей сессии', hy: 'Անցնել հաջորդ սեանսին', tr: 'Sonraki seansa geç', az: 'Növbəti sessiyaya keç', es: 'Ir a la siguiente sesión', de: 'Zur nächsten Sitzung', fr: 'Aller à la séance suivante', pt: 'Ir para a próxima sessão', id: 'Ke sesi berikutnya', it: 'Vai alla prossima sessione', ar: 'انتقل إلى الجلسة التالية', hi: 'अगले सत्र पर जाएँ', zh: '前往下一次会话', ja: '次のセッションへ', ko: '다음 세션으로 이동', uk: 'Перейти до наступної сесії', pl: 'Przejdź do następnej sesji' },
   inputPlaceholder: { en: 'Type a message...', ka: 'მესიჯი...', ru: 'Напишите сообщение...', hy: 'Մուտքագրեք հաղորդագրություն...', tr: 'Bir mesaj yazın...', az: 'Mesaj yazın...', es: 'Escribe un mensaje...', de: 'Nachricht eingeben...', fr: 'Écrivez un message...', pt: 'Digite uma mensagem...', id: 'Ketik pesan...', it: 'Scrivi un messaggio...', ar: 'اكتب رسالة...', hi: 'संदेश लिखें...', zh: '输入消息…', ja: 'メッセージを入力...', ko: '메시지 입력...', uk: 'Введіть повідомлення…', pl: 'Napisz wiadomość…' },
   recording: { en: 'Recording...', ka: 'იწერება...', ru: 'Запись...', hy: 'Ձայնագրում...', tr: 'Kaydediliyor...', az: 'Yazılır...', es: 'Grabando...', de: 'Aufnahme...', fr: 'Enregistrement...', pt: 'Gravando...', id: 'Merekam...', it: 'Registrazione...', ar: 'جارٍ التسجيل...', hi: 'रिकॉर्ड हो रहा है...', zh: '正在录音…', ja: '録音中...', ko: '녹음 중…', uk: 'Запис...', pl: 'Nagrywanie...' },
@@ -71,6 +124,70 @@ const T = {
 
 const pick = (map: Record<string, string>, lang: AppLanguage) => map[lang] ?? map.en;
 
+const splitSessionSummaryContent = (content: string, lang: AppLanguage) => {
+  const label = pick(T.sessionSummaryLabel, lang);
+  const markers = [`\n\n${label}\n`, `\n${label}\n`, `${label}\n`];
+
+  for (const marker of markers) {
+    const markerIndex = content.indexOf(marker);
+    if (markerIndex >= 0) {
+      return {
+        body: content.slice(0, markerIndex).trim(),
+        summaryTitle: label,
+        summary: content.slice(markerIndex + marker.length).trim(),
+      };
+    }
+  }
+
+  return { body: content, summaryTitle: '', summary: '' };
+};
+
+const buildEndSessionControlContext = (source: 'button' | 'text') => [
+  `[User Action: The client requested session closure via ${source}.]`,
+  'Close the current art-therapy session now without asking another exploration question.',
+  'Return valid JSON with session_phase=2, phase_complete=true, session_complete=true, required_input="none", action="close_session", and include session_summary.',
+  'response_text should be a brief warm closure in the user language, followed by no new question.'
+].join('\n');
+
+const isEndSessionTextIntent = (text: string): boolean => {
+  const normalized = text.toLowerCase();
+  return [
+    /\b(end|finish|close|stop)\b.{0,40}\b(session|summary|summarize)\b/i,
+    /\b(session|summary|summarize)\b.{0,40}\b(end|finish|close|stop)\b/i,
+    /დავასრულ|დასრულება|შევაჯამ|შეჯამება/i,
+    /ավարտ|ամփոփ|փակել/i,
+    /заверш|законч|резюм|итог/i,
+    /terminar|finalizar|resumen/i,
+    /bitir|özet/i,
+  ].some(pattern => pattern.test(normalized));
+};
+
+const isLikelySummaryGenerationText = (text: string): boolean => {
+  const normalized = text.toLowerCase();
+  return isEndSessionTextIntent(text) || [
+    /ready.{0,40}(close|finish|end|summary)/i,
+    /(close|finish|end|summary).{0,40}ready/i,
+    /պատրաստ.{0,40}(փակ|ավարտ|ամփոփ)/i,
+    /(փակ|ավարտ|ամփոփ).{0,40}պատրաստ/i,
+    /վերցնել.{0,60}(ինձ հետ|հետ)/i,
+    /նախադասություն.{0,60}(վերցնել|ինձ հետ|հետ)/i,
+    /готов.{0,40}(закры|заверш|итог|резюм)/i,
+    /მზად.{0,40}(დასრულ|დახურ|შეჯამ)/i,
+    /(წამოვიღ|თან წავიღ).{0,60}(წინადად|განცდ|სიტყვ)/i,
+    /listo.{0,40}(cerrar|terminar|resumen)/i,
+    /(take|carry).{0,60}(with me|from this|sentence|feeling)/i,
+  ].some(pattern => pattern.test(normalized));
+};
+
+const isDefaultEnglishImageQuestion = (text?: string): boolean => {
+  if (!text) return false;
+  const normalized = text.replace(/\s+/g, ' ').trim().toLowerCase();
+  return normalized.includes('when you look at this image right now')
+    && normalized.includes('what do you feel')
+    && normalized.includes('while you were creating')
+    && normalized.includes('was that different from now');
+};
+
 const isMeaningfulImage = (value?: string | null) => {
   if (typeof value !== 'string') return false;
   const trimmed = value.trim();
@@ -81,6 +198,74 @@ const isMeaningfulImage = (value?: string | null) => {
   }
   return true;
 };
+
+const pickWebImageAsset = (): Promise<any | null> => new Promise((resolve, reject) => {
+  if (typeof document === 'undefined') {
+    reject(new Error('Image selection is not available in this environment'));
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.style.display = 'none';
+
+  let settled = false;
+  const cleanup = () => {
+    input.onchange = null;
+    input.oncancel = null;
+    setTimeout(() => {
+      if (input.parentNode) {
+        input.parentNode.removeChild(input);
+      }
+    }, 0);
+  };
+
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (!file) {
+      if (!settled) {
+        settled = true;
+        resolve(null);
+      }
+      cleanup();
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      if (!settled) {
+        settled = true;
+        reject(new Error('Failed to read selected image'));
+      }
+      cleanup();
+    };
+    reader.onload = () => {
+      if (!settled) {
+        settled = true;
+        resolve({
+          uri: String(reader.result),
+          type: 'image',
+          fileName: file.name,
+          mimeType: file.type,
+        });
+      }
+      cleanup();
+    };
+    reader.readAsDataURL(file);
+  };
+
+  input.oncancel = () => {
+    if (!settled) {
+      settled = true;
+      resolve(null);
+    }
+    cleanup();
+  };
+
+  document.body.appendChild(input);
+  input.click();
+});
 
 const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUser, language, theme, isDark }) => {
   const [speaking, setSpeaking] = useState(false);
@@ -93,6 +278,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUse
     imageSource = base.startsWith('data:') ? base : `data:image/jpeg;base64,${base}`;
   }
   const hasImage = Boolean(imageSource);
+  const contentParts = message.content && !isUser
+    ? splitSessionSummaryContent(message.content, language)
+    : { body: message.content || '', summaryTitle: '', summary: '' };
 
   const bubbleStyles = isUser
     ? [styles.messageBubble, styles.userBubble, { backgroundColor: isDark ? '#3b82f6' : '#000000' }]
@@ -113,12 +301,33 @@ const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUse
 
         {message.content && (
           <>
-            <Text style={[
-              styles.messageText,
-              isUser ? styles.userText : [styles.aiText, { color: theme.colors.text }]
-            ]}>
-              {message.content}
-            </Text>
+            {contentParts.body ? (
+              <Text style={[
+                styles.messageText,
+                isUser ? styles.userText : [styles.aiText, { color: theme.colors.text }]
+              ]}>
+                {contentParts.body}
+              </Text>
+            ) : null}
+            {!isUser && contentParts.summary ? (
+              <View style={[
+                styles.sessionSummaryBox,
+                {
+                  backgroundColor: isDark ? 'rgba(96, 165, 250, 0.14)' : '#EFF6FF',
+                  borderColor: isDark ? 'rgba(147, 197, 253, 0.38)' : '#BFDBFE'
+                }
+              ]}>
+                <View style={styles.sessionSummaryHeaderRow}>
+                  <FontAwesome5 name="clipboard-check" size={13} color={isDark ? '#93C5FD' : '#1D4ED8'} />
+                  <Text style={[styles.sessionSummaryTitle, { color: isDark ? '#BFDBFE' : '#1E40AF' }]}>
+                    {contentParts.summaryTitle}
+                  </Text>
+                </View>
+                <Text style={[styles.sessionSummaryText, { color: theme.colors.text }]}>
+                  {contentParts.summary}
+                </Text>
+              </View>
+            ) : null}
             {!isUser && (
               <View style={styles.ttsRow}>
                 <TouchableOpacity
@@ -170,6 +379,7 @@ export default function ArtTherapySessionChat() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [receivedFirstDelta, setReceivedFirstDelta] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentSession, setCurrentSession] = useState<any>(null);
@@ -203,23 +413,79 @@ export default function ArtTherapySessionChat() {
         return at - bt;
       });
 
-      const recent = entries.slice(-5); // last 5 sessions
-      const lines: string[] = [];
+      // Build detailed clinical history (last 3-5 sessions)
+      const recent = entries.slice(-5);
+      const sessionDetails: string[] = [];
       recent.forEach(e => {
         const cs: ArtTherapyResponse = e.prog.clinicalSummary!;
-        const dateStr = e.prog.completedAt ? new Date(e.prog.completedAt).toISOString().split('T')[0] : 'unknown-date';
+        const dateStr = e.prog.completedAt ? new Date(e.prog.completedAt).toISOString().split('T')[0] : 'unknown';
         const emotions = cs.clinical_insights.emotional_indicators.detected_emotions.slice(0, 4).join(', ') || 'none';
         const themes = cs.clinical_insights.psychological_themes.slice(0, 4).join(', ') || 'none';
         const shift = cs.progress_tracking?.emotional_shift || '';
-        lines.push(`S${e.id}(${dateStr}) Emotions:${emotions}; Themes:${themes}; Shift:${shift}`);
+        const insight = cs.progress_tracking?.insight_gained || '';
+        sessionDetails.push(`Session ${e.id} (${dateStr}):\n  Emotions: ${emotions}\n  Themes: ${themes}\n  Emotional shift: ${shift}\n  Key insight: ${insight}`);
       });
 
+      // Get most recent session summary if available
+      const lastSession = recent[recent.length - 1];
+      const lastSummary = lastSession?.prog.clinicalSummary?.session_summary || '';
+
+      // Collect recurring patterns across all sessions
       const allThemes = entries.flatMap(e => e.prog.clinicalSummary!.clinical_insights.psychological_themes);
       const allEmotions = entries.flatMap(e => e.prog.clinicalSummary!.clinical_insights.emotional_indicators.detected_emotions);
       const recurringThemes = Array.from(new Set(allThemes)).slice(0, 8);
       const recurringEmotions = Array.from(new Set(allEmotions)).slice(0, 8);
 
-  return `Recent Sessions\n${lines.join('\n')}\nRecurring Themes: ${recurringThemes.join(', ')}\nRecurring Emotions: ${recurringEmotions.join(', ')}\nInstruction: Use patterns above to ask 2 comparative questions, highlight a positive progression, and gently explore one unresolved theme. Respond ONLY with a single JSON object following the agreed schema.`;
+      // Check for any safety concerns in history
+      const safetyConcerns = entries
+        .filter(e => {
+          const risk = e.prog.clinicalSummary?.safety_assessment?.risk_level;
+          return risk && risk !== 'none' && risk !== 'low';
+        })
+        .map(e => {
+          const risk = e.prog.clinicalSummary!.safety_assessment.risk_level;
+          const concerns = e.prog.clinicalSummary!.safety_assessment.concerning_imagery;
+          return `Session ${e.id}: ${risk} risk${concerns.length > 0 ? ' (' + concerns.join(', ') + ')' : ''}`;
+        });
+
+      // Analyze progress trajectory (subtle insights for AI awareness)
+      let progressNote = '';
+      if (recent.length >= 2) {
+        const recentShifts = recent.map(e => e.prog.clinicalSummary?.progress_tracking?.emotional_shift || '').filter(s => s);
+        const recentAlliance = recent.map(e => e.prog.clinicalSummary?.progress_tracking?.therapeutic_alliance || '').filter(a => a);
+        if (recentShifts.length > 0) {
+          progressNote = `Recent emotional shifts: ${recentShifts.slice(-3).join(' → ')}`;
+        }
+        if (recentAlliance.length > 0) {
+          progressNote += `\nTherapeutic alliance trend: ${recentAlliance.slice(-3).join(' → ')}`;
+        }
+      }
+
+      // Professional clinical context: AI knows everything but stays present-focused
+      return `[CLINICAL CONTEXT - Internal Reference Only]
+Total Sessions: ${entries.length}
+
+Recent Session History:
+${sessionDetails.join('\n\n')}
+
+Recurring Patterns Across All Sessions:
+- Themes: ${recurringThemes.join(', ')}
+- Emotions: ${recurringEmotions.join(', ')}
+
+Last Session Summary: ${lastSummary}
+${safetyConcerns.length > 0 ? `\nPrevious Safety Concerns:\n${safetyConcerns.join('\n')}` : ''}
+${progressNote ? `\n${progressNote}` : ''}
+
+[THERAPEUTIC INSTRUCTION]
+Use this context as your internal clinical "cheat sheet" to inform empathy, depth, and continuity of care.
+- Stay present-focused on THIS session's image and current feelings
+- Do NOT ask comparative questions about previous sessions unless the client spontaneously brings them up
+- Let prior insights inform your understanding and therapeutic attunement, not your questions
+- Recognize patterns when clinically relevant but don't explicitly mention "in previous sessions you..."
+- Build on therapeutic alliance through continuity while respecting each session's independence
+- Monitor for changes in safety concerns or progress trajectory without making it obvious
+- Avoid repeating questions that were already deeply explored in prior sessions
+- Use recurring themes awareness to ask deeper, more attuned questions about THIS session's material`;
     } catch (e) {
       console.warn('Memory context build failed:', e);
       return '';
@@ -234,14 +500,55 @@ export default function ArtTherapySessionChat() {
     })();
   }, [buildMemoryContext]);
 
+  // Check if AI response contains farewell/goodbye phrases
+  const isFarewellMessage = (text: string): boolean => {
+    const farewellPatterns = [
+      // English
+      /see you next time/i, /until next time/i, /take care/i, /goodbye/i, /bye for now/i,
+      /looking forward to our next session/i, /until we meet again/i,
+      /if you.*want.*work through/i, /ready when you are/i,
+      // Georgian
+      /გნახავ/i, /გიხდებით/i, /მომავალ სესიამდე/i, /შემდეგ შეხვედრამდე/i, /ნახვამდის/i,
+      /როცა მოინდომებ/i, /ახალ სესიაზე/i,
+      // Russian
+      /до следующей встречи/i, /до новых встреч/i, /увидимся/i, /до скорого/i,
+      /жду нашей следующей встречи/i, /до следующего раза/i, /всего доброго/i,
+      /если.*захотите.*поработать/i, /буду рад.*быть рядом/i, /рад.*быть рядом/i,
+      /спасибо.*что были в этом процессе/i, /благодарю за встречу/i,
+      // Armenian
+      /մինչև հաջորդ անգամ/i, /մինչև հաջորդ հանդիպում/i,
+      // Turkish
+      /görüşmek üzere/i, /bir sonraki sefere kadar/i,
+      // Add more patterns as needed
+    ];
+    
+    return farewellPatterns.some(pattern => pattern.test(text));
+  };
+
+  const formatAssistantContent = useCallback((response: ArtTherapyResponse): string => {
+    const responseText = response.response_text || '';
+    const isClosingResponse = response.session_complete || response.action === 'close_session' || (response.session_phase === 2 && response.phase_complete);
+    const summary = isClosingResponse && response.session_summary ? response.session_summary.trim() : '';
+
+    if (!summary || responseText.includes(summary)) {
+      return responseText;
+    }
+
+    return `${responseText}\n\n${pick(T.sessionSummaryLabel, language as AppLanguage)}\n${summary}`;
+  }, [language]);
+
   // Load session data
   useEffect(() => {
     loadSessionData();
-  }, [sessionId]);
+  }, [sessionId, language]);
 
   const loadSessionData = async () => {
     try {
-      const session = ART_THERAPY_SESSIONS.find(s => s.id.toString() === sessionId);
+      // Initialize database with current language
+      await ArtTherapyProgramManager.initialize(language);
+      
+      // Get session from database
+      const session = await ArtTherapyProgramManager.getSessionById(Number(sessionId));
       if (!session) {
         Alert.alert(pick(T.error, language as AppLanguage), pick(T.sessionNotFound, language as AppLanguage));
         router.back();
@@ -266,6 +573,13 @@ export default function ArtTherapySessionChat() {
       setSessionProgress(sessionProgress || null);
       setIsSessionComplete(sessionProgress?.completed || false);
 
+      console.log(`📚 Loading session ${session.id}:`, {
+        hasProgress: !!sessionProgress,
+        chatHistoryLength: sessionProgress?.chatHistory?.length || 0,
+        phase: sessionProgress?.phase,
+        completed: sessionProgress?.completed
+      });
+
       // Restore chat history if exists; else seed with welcome message
       const history = sessionProgress?.chatHistory || [];
       if (Array.isArray(history) && history.length > 0) {
@@ -275,13 +589,14 @@ export default function ArtTherapySessionChat() {
           timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
         }));
         setMessages(restored);
+        console.log(`✅ Restored ${restored.length} messages from storage`);
       } else {
-        const getByLang = (obj: Record<string, string>) => (obj as any)[language as AppLanguage] ?? obj.en;
-        const title = getByLang(session.title);
-        const desc = getByLang(session.description);
+        // Session data already has translated strings from database
+        // Use drawing prompt as the welcome message
+        const welcomeText = `${session.title}\n\n${session.drawingPrompt}`;
         const welcomeMessage: ChatMessage = {
           id: Date.now().toString(),
-          content: `${pick(T.welcomePrefix, language as AppLanguage)} ${title}! ${desc}`,
+          content: welcomeText,
           timestamp: new Date(),
           role: 'assistant'
         };
@@ -305,6 +620,7 @@ export default function ArtTherapySessionChat() {
     response?: any
   ) => {
     try {
+      console.log(`💾 Persisting ${msgs.length} messages for session ${sessionNumericId}, phase ${phase}`);
       const progress = await ArtTherapyProgramManager.getProgress();
       let sp = progress.get(sessionNumericId);
       if (!sp) {
@@ -316,6 +632,7 @@ export default function ArtTherapySessionChat() {
         sp.completed = true;
         sp.completedAt = new Date();
         sp.clinicalSummary = response;
+        console.log(`✅ Session ${sessionNumericId} marked as complete`);
       }
       await ArtTherapyProgramManager.saveProgress(sessionNumericId, sp);
     } catch (e) {
@@ -323,7 +640,12 @@ export default function ArtTherapySessionChat() {
     }
   };
 
-  const handleSendMessage = useCallback(async (imageUri?: string, imageBase64?: string) => {
+  const handleSendMessage = useCallback(async (
+    imageUri?: string,
+    imageBase64?: string,
+    overrideText?: string,
+    controlContext?: string
+  ) => {
     if (readOnly) {
       Alert.alert(
         pick(T.sessionCompletedTitle, language as AppLanguage),
@@ -331,27 +653,38 @@ export default function ArtTherapySessionChat() {
       );
       return;
     }
-    if (!inputText.trim() && !imageUri && !imageBase64) return;
+    const outgoingText = overrideText ?? inputText.trim();
+    if (!outgoingText && !imageUri && !imageBase64) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: inputText.trim(),
+      content: outgoingText,
+      apiOnlyContent: !outgoingText && imageBase64
+        ? 'An image was uploaded without text. Before guiding the art therapy session, apply the image eligibility rules and continue only if it clearly appears to be hand-made artwork created by the client for this session.'
+        : undefined,
       timestamp: new Date(),
       role: 'user',
       imageUri,
       imageBase64
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    // Build newMessages synchronously from captured messages state
     const newMessages = [...messages, userMessage];
+    setMessages(prev => [...prev, userMessage]);
+    
     setInputText('');
     setIsTyping(true);
     setIsStreaming(true);
     setReceivedFirstDelta(false);
 
-    // Persist user message immediately
+    // Persist user message immediately to prevent data loss
     if (currentSession) {
-      await persistMessages(currentSession.id, newMessages, (sessionProgress?.phase ?? 0) as 0 | 1 | 2);
+      try {
+        await persistMessages(currentSession.id, newMessages, (sessionProgress?.phase ?? 0) as 0 | 1 | 2);
+        console.log(`💾 User message persisted immediately for session ${currentSession.id}`);
+      } catch (error) {
+        console.warn('⚠️ Failed to persist user message:', error);
+      }
     }
 
     try {
@@ -365,12 +698,23 @@ export default function ArtTherapySessionChat() {
       };
       setMessages(prev => [...prev, placeholder]);
 
+      // Session theme is already translated from database
       const sessionTheme = currentSession
-        ? ((currentSession.theme as any)[language as AppLanguage] ?? currentSession.theme.en)
+        ? currentSession.theme
         : 'General Art Therapy';
 
       const longitudinalCtx = await buildMemoryContext();
-      const response = await artTherapyService.sendMessageStream(
+      const requestedClose = Boolean(controlContext) || isEndSessionTextIntent(outgoingText);
+      const expectsSummaryGeneration = requestedClose || isLikelySummaryGenerationText(outgoingText);
+      const lastAssistantClinical = [...messages]
+        .reverse()
+        .find(m => m.role === 'assistant' && m.clinicalData)
+        ?.clinicalData;
+      const isModifiedImageUpload = Boolean(imageBase64 && !outgoingText && lastAssistantClinical?.required_input === 'image_v2');
+      setIsGeneratingSummary(expectsSummaryGeneration);
+      const effectiveControlContext = controlContext || (requestedClose ? buildEndSessionControlContext('text') : '');
+      const requestContext = [longitudinalCtx, effectiveControlContext].filter(Boolean).join('\n\n');
+      let response = await artTherapyService.sendMessageStream(
         newMessages,
         sessionTheme,
         language as AppLanguage,
@@ -383,29 +727,72 @@ export default function ArtTherapySessionChat() {
             setIsTyping(false); // hide dots as soon as real text starts streaming
           }
         },
-        longitudinalCtx
+        requestContext
       );
 
-      // Finalize assistant message with clinical data
-  setMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: response.response_text, clinicalData: response } : m));
-  // Ensure UI scrolls to the finalized message immediately
-  scrollToBottom();
+      if (imageBase64 && !outgoingText) {
+        if (isModifiedImageUpload) {
+          response = {
+            ...response,
+            session_phase: 1 as const,
+            phase_complete: false,
+            session_complete: false,
+            required_input: 'text' as const,
+            action: 'analyze_second_drawing' as const,
+          };
+        }
+      }
 
-      // Persist AI message and phase progression
+      if (requestedClose) {
+        response = {
+          ...response,
+          session_phase: 2,
+          phase_complete: true,
+          session_complete: true,
+          required_input: 'none',
+          action: 'close_session',
+          session_summary: response.session_summary || response.phase_summary || pick(T.fallbackSessionSummary, language as AppLanguage),
+        };
+      }
+
+      // Finalize assistant message with clinical data
+      const assistantContent = formatAssistantContent(response);
+      const aiMessage: ChatMessage = { ...placeholder, content: assistantContent, clinicalData: response };
+      // Build finalMessages synchronously - no reliance on setState updater being called sync
+      const finalMessages = [...newMessages, aiMessage];
+      setMessages(prev => prev.map(m => m.id === aiId ? aiMessage : m));
+      
+      // Ensure UI scrolls to the finalized message immediately
+      scrollToBottom();
+
+      // Persist AI message and phase progression immediately after response
       if (currentSession) {
-        const updated = [...newMessages, { ...placeholder, content: response.response_text, clinicalData: response }];
-        await persistMessages(currentSession.id, updated, (response.session_phase ?? 0) as 0 | 1 | 2, response);
+        await persistMessages(currentSession.id, finalMessages, (response.session_phase ?? 0) as 0 | 1 | 2, response);
+        console.log(`✅ Persisted AI response for session ${currentSession.id}, total messages: ${finalMessages.length}, phase: ${response.session_phase}`);
       }
 
       // Check for session completion
-      if (response.session_complete && currentSession && !isSessionComplete) {
+      // Complete session if either:
+      // 1. AI explicitly marks session_complete: true
+      // 2. AI's response contains farewell/goodbye phrases
+      const hasFarewell = isFarewellMessage(response.response_text || '');
+      const completedFinalPhase = response.session_phase === 2 && response.phase_complete && Boolean(response.session_summary);
+      const shouldCompleteSession = response.session_complete || response.action === 'close_session' || hasFarewell || completedFinalPhase;
+      
+      if (hasFarewell) {
+        console.log('🔔 Farewell detected in AI response - auto-completing session');
+      }
+      
+      if (shouldCompleteSession && currentSession && !isSessionComplete) {
+        console.log('✅ Completing session:', currentSession.id);
         await ArtTherapyProgramManager.completeSession(
           currentSession.id,
           response,
-          [...newMessages, { ...placeholder, content: response.response_text, clinicalData: response }]
+          finalMessages
         );
         setIsSessionComplete(true);
         setInputText('');
+        setIsGeneratingSummary(false);
         setIsTyping(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -415,8 +802,48 @@ export default function ArtTherapySessionChat() {
     } finally {
       setIsTyping(false);
       setIsStreaming(false);
+      setIsGeneratingSummary(false);
     }
-  }, [inputText, currentSession, language, isSessionComplete, sessionProgress, readOnly, buildMemoryContext, messages]);
+  }, [inputText, currentSession, language, isSessionComplete, sessionProgress, readOnly, buildMemoryContext, messages, formatAssistantContent]);
+
+  const handleEndSessionEarly = useCallback(() => {
+    if (!currentSession || readOnly || isTyping || isStreaming) return;
+
+    if (Platform.OS === 'web') {
+      void handleSendMessage(
+        undefined,
+        undefined,
+        pick(T.endSessionUserMessage, language as AppLanguage),
+        buildEndSessionControlContext('button')
+      );
+      return;
+    }
+
+    Alert.alert(
+      pick(T.endSessionTitle, language as AppLanguage),
+      pick(T.endSessionMessage, language as AppLanguage),
+      [
+        {
+          text: pick(T.cancel, language as AppLanguage),
+          style: 'cancel'
+        },
+        {
+          text: pick(T.endSession, language as AppLanguage),
+          style: 'destructive',
+          onPress: () => {
+            const controlContext = buildEndSessionControlContext('button');
+
+            void handleSendMessage(
+              undefined,
+              undefined,
+              pick(T.endSessionUserMessage, language as AppLanguage),
+              controlContext
+            );
+          }
+        }
+      ]
+    );
+  }, [currentSession, readOnly, isTyping, isStreaming, language, handleSendMessage]);
 
   const handleImagePicker = useCallback(async () => {
     if (readOnly) {
@@ -437,6 +864,17 @@ export default function ArtTherapySessionChat() {
           );
           return;
         }
+      }
+
+      if (Platform.OS === 'web') {
+        const asset = await pickWebImageAsset();
+        if (!asset) return;
+
+        const prepared = await artTherapyService.prepareImageForAPI(asset);
+        setLastImage(prepared);
+        await handleSendMessage(prepared.displayUri, prepared.base64);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -470,10 +908,77 @@ export default function ArtTherapySessionChat() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  // Auto-persist messages to AsyncStorage whenever they change (but not during streaming)
+  useEffect(() => {
+    if (!currentSession || isStreaming || messages.length === 0) {
+      return;
+    }
+
+    const persistCurrentMessages = async () => {
+      try {
+        await persistMessages(
+          currentSession.id,
+          messages,
+          (sessionProgress?.phase ?? 0) as 0 | 1 | 2
+        );
+        console.log(`💾 Auto-persisted ${messages.length} messages for session ${currentSession.id}`);
+      } catch (error) {
+        console.warn('⚠️ Auto-persist failed:', error);
+      }
+    };
+
+    // Debounce to avoid excessive writes during rapid updates
+    const timeoutId = setTimeout(persistCurrentMessages, 500);
+    return () => clearTimeout(timeoutId);
+  }, [messages, currentSession, isStreaming, sessionProgress?.phase]);
+
   const getHeaderTitle = () => {
     if (!currentSession) return '';
-    return ((currentSession.title as any)[language] ?? currentSession.title.en);
+    // Session data now has translated strings directly from database
+    return currentSession.title;
   };
+
+  // Reset session progress with confirmation
+  const handleResetProgress = useCallback(() => {
+    if (!currentSession) return;
+    
+    Alert.alert(
+      pick(T.resetProgressTitle, language as AppLanguage),
+      pick(T.resetProgressMsg, language as AppLanguage),
+      [
+        {
+          text: pick(T.cancel, language as AppLanguage),
+          style: 'cancel'
+        },
+        {
+          text: pick(T.reset, language as AppLanguage),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear session progress
+              const progress = await ArtTherapyProgramManager.getProgress();
+              progress.delete(currentSession.id);
+              await ArtTherapyProgramManager.saveProgress(currentSession.id, {
+                sessionId: currentSession.id,
+                chatHistory: [],
+                phase: 0,
+                completed: false,
+                clinicalSummary: undefined,
+                completedAt: undefined
+              });
+              
+              // Reload session
+              await loadSessionData();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch (e) {
+              console.error('Failed to reset progress:', e);
+              Alert.alert(pick(T.error, language as AppLanguage), 'Failed to reset progress');
+            }
+          }
+        }
+      ]
+    );
+  }, [currentSession, language]);
 
   // Voice: start/stop recording (push-to-talk)
   const startRecording = useCallback(async () => {
@@ -747,6 +1252,25 @@ export default function ArtTherapySessionChat() {
             <View style={[styles.completeBadge, { backgroundColor: currentSession.color }]}>
               <Text style={styles.completeBadgeText}>✓</Text>
             </View>
+          ) : currentSession ? (
+            <TouchableOpacity
+              style={[
+                styles.endSessionButton,
+                {
+                  borderColor: currentSession.color,
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF'
+                },
+                (isTyping || isStreaming) && styles.disabledButton
+              ]}
+              onPress={handleEndSessionEarly}
+              disabled={isTyping || isStreaming}
+              activeOpacity={0.75}
+            >
+              <FontAwesome5 name="flag-checkered" size={13} color={isTyping || isStreaming ? '#999' : currentSession.color} />
+              <Text style={[styles.endSessionText, { color: isTyping || isStreaming ? '#999' : currentSession.color }]} numberOfLines={1}>
+                {pick(T.endSession, language as AppLanguage)}
+              </Text>
+            </TouchableOpacity>
           ) : undefined
         }
       />
@@ -770,6 +1294,18 @@ export default function ArtTherapySessionChat() {
       {isTyping && (
         <View style={styles.typingContainer}>
           <TypingIndicator />
+        </View>
+      )}
+
+      {isGeneratingSummary && (
+        <View style={[styles.summaryProgressContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <View style={styles.summaryProgressHeader}>
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text style={[styles.summaryProgressText, { color: theme.colors.text }]}>{pick(T.generatingSummary, language as AppLanguage)}</Text>
+          </View>
+          <View style={[styles.summaryProgressTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : '#E5E7EB' }]}>
+            <View style={[styles.summaryProgressFill, { backgroundColor: theme.colors.primary }]} />
+          </View>
         </View>
       )}
 
@@ -916,6 +1452,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  endSessionButton: {
+    minHeight: 34,
+    maxWidth: 150,
+    borderRadius: 17,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  endSessionText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -961,6 +1511,53 @@ const styles = StyleSheet.create({
   },
   aiText: {
     color: '#111827', // near-black for better readability
+  },
+  sessionSummaryBox: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+  },
+  sessionSummaryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sessionSummaryTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  sessionSummaryText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  summaryProgressContainer: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  summaryProgressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  summaryProgressText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  summaryProgressTrack: {
+    height: 6,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  summaryProgressFill: {
+    width: '72%',
+    height: '100%',
+    borderRadius: 999,
   },
   messageTime: {
     fontSize: 11,

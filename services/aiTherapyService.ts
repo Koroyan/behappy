@@ -755,7 +755,7 @@ class AITherapyService {
     console.log('New session started - history cleared');
   }
 
-  async generateSessionSummary(messages: ChatMessage[]): Promise<any> {
+  async generateSessionSummary(messages: ChatMessage[], language: string = 'en'): Promise<any> {
     try {
       const apiKey = this.getEnvApiKey();
       if (!apiKey) {
@@ -814,7 +814,7 @@ Provide a JSON response with:
           messages: [
             {
               role: 'system',
-              content: 'You are a clinical psychotherapist creating session summaries. Be concise, professional, and therapeutic.'
+              content: `You are a clinical psychotherapist creating session summaries. Be concise, professional, and therapeutic. IMPORTANT: Respond entirely in the language with code "${language}". All text values in the JSON (themes, keyInsights, homework, nextSteps) must be written in that language.`
             },
             {
               role: 'user',

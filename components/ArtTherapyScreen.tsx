@@ -6,18 +6,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Animated,
+    Dimensions,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import ArtTherapyProgramManager, { ART_THERAPY_SESSIONS, ArtTherapySession } from '../services/artTherapyProgram';
+import ArtTherapyProgramManager, { ArtTherapySession } from '../services/artTherapyProgramNew';
 import ArtTherapyCompletedList from './ArtTherapyCompletedList';
 
 const { width } = Dimensions.get('window');
@@ -60,7 +60,7 @@ const T = {
     continue: { en: 'Continue Journey', ka: 'გაგრძელება', ru: 'Продолжить путь', hy: 'Շարունակել ճանապարհը', tr: 'Yolculuğa devam et', az: 'Səyahəti davam et', es: 'Continuar el camino', de: 'Reise fortsetzen', fr: 'Poursuivre le parcours', pt: 'Continuar a jornada', id: 'Lanjutkan perjalanan', it: 'Continua il percorso', ar: 'واصل الرحلة', hi: 'यात्रा जारी रखें', zh: '继续前行', ja: '旅を続ける', ko: '여정을 계속하기', uk: 'Продовжити шлях', pl: 'Kontynuuj podróż' },
   },
   marketing: {
-    title: { en: 'A 15‑step Art Therapy course', ka: 'ხელოვნების თერაპიის 15-ნაბიჯიანი კურსი', ru: '15‑шаговый курс арт‑терапии', hy: '15 քայլանոց արվեստաբուժության ուսումնասրացք', tr: '15 adımlı Sanat Terapisi kursu', az: '15 addımlıq İncəsənət Terapiyası kursu', es: 'Un curso de arteterapia en 15 pasos', de: 'Ein 15‑stufiger Kunsttherapie‑Kurs', fr: 'Un parcours d’art‑thérapie en 15 étapes', pt: 'Um curso de arteterapia em 15 etapas', id: 'Kursus Terapi Seni 15 langkah', it: 'Un corso di arteterapia in 15 passi', ar: 'دورة علاج بالفن من 15 خطوة', hi: '15 चरणों का आर्ट थेरेपी कोर्स', zh: '15 步艺术治疗课程', ja: '15 ステップのアートセラピー講座', ko: '15단계 아트 테라피 코스', uk: '15‑кроковий курс арт‑терапії', pl: '15‑etapowy kurs arteterapii' },
+    title: { en: 'A 43-session Art Therapy course', ka: 'ხელოვნების თერაპიის 43-სესიანი კურსი', ru: '43-сеансовый курс арт-терапии', hy: '43 սեանսանոց արվեստաբուժության դասընթաց', tr: '43 seanslı Sanat Terapisi kursu', az: '43 sessiyal İncəsənət Terapiyası kursu', es: 'Un curso de arteterapia en 43 sesiones', de: 'Ein 43-stufiger Kunsttherapie-Kurs', fr: 'Un parcours d\'art-thérapie en 43 séances', pt: 'Um curso de arteterapia em 43 sessões', id: 'Kursus Terapi Seni 43 sesi', it: 'Un corso di arteterapia in 43 sessioni', ar: 'دورة علاج بالفن من 43 جلسة', hi: '43 सत्रों का आर्ट थेरेपी कोर्स', zh: '43 阶段艺术治疗课程', ja: '43 セッションのアートセラピー講座', ko: '43세션 아트 테라피 코스', uk: '43-сеансовий курс арт-терапії', pl: '43-sesyjny kurs arteterapii' },
     p1: {
       en: 'A structured, safe, session-based path for self-discovery and emotion regulation. In each session you draw, reflect, and receive warm, professional guidance.',
       ka: 'სტრუქტურირებული, უსაფრთხო და პრაქტიკული სესია-ბაზირებული გზა თვითშემეცნებისა და ემოციური რეგულაციისთვის. ყოველ სესიაში ხარატავ, ფიქრობ და იღებ თბილ, პროფესიულ მხარდაჭერას.',
@@ -156,7 +156,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, isUnlocked, isComple
         <View style={styles.sessionCardContent}>
           <View style={styles.sessionHeader}>
             <Text style={[styles.sessionTitle, { color: theme.colors.text }]}>
-              {((session.title as any)[language] ?? session.title.en) as string}
+              {session.title}
             </Text>
             <View style={[
               styles.sessionStatus,
@@ -176,11 +176,11 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, isUnlocked, isComple
           </View>
           
           <Text style={[styles.sessionDescription, { color: theme.colors.textSecondary }]}>
-            {((session.description as any)[language] ?? session.description.en) as string}
+            {session.description}
           </Text>
           
           <View style={styles.sessionFooter}>
-            <Text style={[styles.sessionDuration, { color: theme.colors.textMuted }]}>~15 {pick(T.units.min as any, language)}</Text>
+            <Text style={[styles.sessionDuration, { color: theme.colors.textMuted }]}>~{session.estimatedDuration} {pick(T.units.min as any, language)}</Text>
             <TouchableOpacity
               style={[
                 styles.sessionButton,
@@ -216,18 +216,13 @@ export default function ArtTherapyScreen() {
   // Animation values
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadSessions();
-    }, [])
-  );
-
-  const loadSessions = async () => {
+  const loadSessions = React.useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const sessionData = ART_THERAPY_SESSIONS;
+      await ArtTherapyProgramManager.initialize(language);
+      const sessionData = await ArtTherapyProgramManager.getAllSessions();
       const progress = await ArtTherapyProgramManager.getProgress();
       const completed = Array.from(progress.entries())
         .filter(([_, prog]) => prog.completed)
@@ -244,18 +239,18 @@ export default function ArtTherapyScreen() {
         useNativeDriver: false,
       }).start();
       
-    } catch (err) {
-      setError(
-        language === 'ka'
-          ? 'შეცდომა დატვირთვისას'
-          : language === 'ru'
-            ? 'Ошибка при загрузке сеансов'
-            : 'Error loading sessions'
-      );
+    } catch {
+      setError(pick(T.errorLoading as any, language));
     } finally {
       setLoading(false);
     }
-  };
+  }, [language, progressAnim]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSessions();
+    }, [loadSessions])
+  );
 
   const handleSessionPress = (session: ArtTherapySession) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -371,15 +366,15 @@ export default function ArtTherapyScreen() {
                 </View>
                 <View style={styles.heroMeta}>
                   <Text style={[styles.heroTitle, { color: theme.colors.text }]} numberOfLines={2}>
-                    {((current.title as any)[language] ?? current.title.en) as string}
+                    {current.title}
                   </Text>
                   <Text style={[styles.heroSub, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-                    ~{current.estimatedDuration} {pick(T.units.min as any, language)} · {((current.theme as any)[language] ?? current.theme.en) as string}
+                    ~{current.estimatedDuration} {pick(T.units.min as any, language)} · {current.theme}
                   </Text>
                 </View>
               </View>
               <Text style={[styles.heroDesc, { color: theme.colors.textSecondary }]}>
-                {((current.description as any)[language] ?? current.description.en) as string}
+                {current.description}
               </Text>
               <TouchableOpacity
                 style={[styles.heroButton, { backgroundColor: current.color || theme.colors.primary }]}

@@ -1,11 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useState } from 'react';
-import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { Alert, Image, Text, TouchableOpacity, View } from 'react-native';
+import { AppLanguage, useLanguage } from '../contexts/LanguageContext';
 import { ChatMessage as ChatMessageType } from '../services/aiTherapyService';
 import { TherapyBorderRadius, TherapyColors, therapyStyles } from '../styles/therapyStyles';
-import BreathingExercise from './BreathingExercise';
-import EmotionTracker from './EmotionTracker';
 import TherapeuticAnimation from './TherapeuticAnimation';
+
+const cmPick = (obj: Record<string, string>, lang: AppLanguage): string => obj[lang] ?? obj.en;
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -16,10 +16,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onInteractionComplete,
 }) => {
-  const [journalText, setJournalText] = useState('');
-  const [showInteractive, setShowInteractive] = useState(true);
-  const [isJournalMode, setIsJournalMode] = useState(false);
-  const [journalPrompt, setJournalPrompt] = useState('');
+  const { language } = useLanguage();
 
   const isUser = message.type === 'user';
   const aiResponse = message.aiResponse;
@@ -58,266 +55,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     };
   };
 
-  const handleJournalSubmit = async () => {
-    if (journalText.trim()) {
-      // Save journal entry
-      const journalEntry = {
-        type: 'journal',
-        content: journalText,
-        timestamp: new Date(),
-        prompt: journalPrompt,
-      };
-
-      // Save to AsyncStorage for later viewing in journal screens
-      try {
-        const existingEntries = await AsyncStorage.getItem('journal_entries') || '[]';
-        const entries = JSON.parse(existingEntries);
-        entries.push(journalEntry);
-        await AsyncStorage.setItem('journal_entries', JSON.stringify(entries));
-        
-        // Show success feedback
-        Alert.alert(
-          '💙 Journal Saved',
-          'Your thoughts have been safely stored in your personal journal.',
-          [{ text: 'Thank you', style: 'default' }]
-        );
-        
-      } catch (error) {
-        console.error('Failed to save journal entry:', error);
-      }
-
-      // Reset states
-      setIsJournalMode(false);
-      setJournalText('');
-      setShowInteractive(false);
-      
-      // Notify parent component
-      onInteractionComplete?.(journalEntry);
-    }
-  };
-
-  const handleBreathingComplete = (data: { cycles: number; totalTime: number }) => {
-    const minutes = Math.floor(data.totalTime / 60);
-    const seconds = data.totalTime % 60;
-    
-    onInteractionComplete?.({
-      type: 'breathing',
-      completed: true,
-      cycles: data.cycles,
-      totalTime: data.totalTime,
-      duration: `${minutes}:${seconds.toString().padStart(2, '0')}`,
-      timestamp: new Date(),
-    });
-    setShowInteractive(false);
-  };
-
-  const handleDrawingComplete = (drawingData: string) => {
-    onInteractionComplete?.({
-      type: 'drawing',
-      data: drawingData,
-      timestamp: new Date(),
-    });
-    setShowInteractive(false);
-  };
-
-  const handleEmotionTrackerComplete = () => {
-    onInteractionComplete?.({
-      type: 'emotion_tracker',
-      viewed: true,
-      timestamp: new Date(),
-    });
-    setShowInteractive(false);
-  };
-
-  const renderTechniqueBadge = () => {
-    // Badges removed - internal clinical info not shown to client
-    return null;
-  };
-
-  const renderInteractiveComponent = () => {
-    if (!aiResponse?.interactive_component || !showInteractive) return null;
-
-    switch (aiResponse.interactive_component) {
-      case 'breathing':
-        return (
-          <BreathingExercise
-            onComplete={handleBreathingComplete}
-            duration={120} // 2 minutes
-            pattern={[4, 2, 6]}
-          />
-        );
-
-      case 'drawing':
-        return (
-          <View style={therapyStyles.artTherapyContainer}>
-            <Text style={therapyStyles.subtitle}>🎨 Art Therapy Exercise</Text>
-            <Text style={therapyStyles.body}>
-              Art therapy helps express emotions that are difficult to put into words. 
-              Please take a moment to draw your feelings on paper, then upload a photo of your artwork.
-            </Text>
-            
-            <View style={therapyStyles.artTherapyInstructions}>
-              <Text style={therapyStyles.bodySecondary}>📝 Instructions:</Text>
-              <Text style={therapyStyles.bodySecondary}>• Find paper and drawing materials (pencils, crayons, markers)</Text>
-              <Text style={therapyStyles.bodySecondary}>• Draw whatever represents your current feelings</Text>
-              <Text style={therapyStyles.bodySecondary}>• Don't worry about artistic skill - focus on expression</Text>
-              <Text style={therapyStyles.bodySecondary}>• Take a clear photo and upload it using the camera button</Text>
-            </View>
-
-            <View style={{
-              backgroundColor: TherapyColors.background,
-              padding: 12,
-              borderRadius: 8,
-              marginTop: 12,
-              borderLeftWidth: 4,
-              borderLeftColor: TherapyColors.interactive.drawing,
-            }}>
-              <Text style={[therapyStyles.bodySecondary, { fontStyle: 'italic' }]}>
-                "{aiResponse.next_recommendation || 'Express what words cannot capture through your art...'}"
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => setShowInteractive(false)}
-              style={[therapyStyles.secondaryButton, { marginTop: 12 }]}
-            >
-              <Text style={therapyStyles.secondaryButtonText}>I'll draw and upload my artwork</Text>
-            </TouchableOpacity>
-          </View>
-        );
-
-      case 'journaling':
-        return (
-          <View style={[therapyStyles.card, { backgroundColor: TherapyColors.interactive.journaling + '15' }]}>
-            <Text style={[therapyStyles.subtitle, { color: TherapyColors.interactive.journaling, marginBottom: 8 }]}>
-              📝 Personal Reflection Space
-            </Text>
-            
-            {!isJournalMode ? (
-              // Initial invitation
-              <View>
-                <Text style={therapyStyles.body}>
-                  {aiResponse?.next_recommendation || "Sometimes writing helps us process complex emotions and thoughts."}
-                </Text>
-                
-                <View style={{
-                  backgroundColor: TherapyColors.background,
-                  padding: 12,
-                  borderRadius: 8,
-                  marginVertical: 12,
-                  borderLeftWidth: 4,
-                  borderLeftColor: TherapyColors.interactive.journaling,
-                }}>
-                  <Text style={[therapyStyles.bodySecondary, { fontStyle: 'italic' }]}>
-                    "Write here in a safe space. Your thoughts will be saved for your personal reflection."
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    setIsJournalMode(true);
-                    setJournalPrompt(aiResponse?.next_recommendation || "What's on your mind right now?");
-                  }}
-                  style={[therapyStyles.primaryButton, { marginTop: 8 }]}
-                >
-                  <Text style={therapyStyles.primaryButtonText}>
-                    ✍️ Start Writing
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setShowInteractive(false)}
-                  style={[therapyStyles.secondaryButton, { marginTop: 8 }]}
-                >
-                  <Text style={therapyStyles.secondaryButtonText}>
-                    Not right now
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              // Journal writing interface
-              <View>
-                <Text style={[therapyStyles.bodySecondary, { marginBottom: 12, fontStyle: 'italic' }]}>
-                  {journalPrompt}
-                </Text>
-                
-                <TextInput
-                  style={{
-                    height: 120,
-                    textAlignVertical: 'top',
-                    backgroundColor: 'white',
-                    borderColor: TherapyColors.interactive.journaling,
-                    borderWidth: 1,
-                    borderRadius: 12,
-                    padding: 16,
-                    fontSize: 16,
-                    lineHeight: 24,
-                    fontFamily: 'System',
-                  }}
-                  placeholder="Let your thoughts flow freely here... 💭"
-                  placeholderTextColor={TherapyColors.textSecondary}
-                  value={journalText}
-                  onChangeText={setJournalText}
-                  multiline
-                  autoFocus
-                />
-                
-                <Text style={[therapyStyles.caption, { 
-                  textAlign: 'center', 
-                  marginTop: 8, 
-                  color: TherapyColors.textSecondary,
-                  fontStyle: 'italic'
-                }]}>
-                  💙 Your words are private and will be saved to your personal journal
-                </Text>
-
-                <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
-                  <TouchableOpacity
-                    onPress={handleJournalSubmit}
-                    disabled={!journalText.trim()}
-                    style={[
-                      therapyStyles.primaryButton,
-                      { 
-                        flex: 1,
-                        opacity: journalText.trim() ? 1 : 0.6,
-                        backgroundColor: TherapyColors.healing,
-                      }
-                    ]}
-                  >
-                    <Text style={therapyStyles.primaryButtonText}>
-                      � Save Entry
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIsJournalMode(false);
-                      setJournalText('');
-                    }}
-                    style={[therapyStyles.secondaryButton, { flex: 1 }]}
-                  >
-                    <Text style={therapyStyles.secondaryButtonText}>
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        );
-
-      case 'emotion_tracker':
-        return (
-          <EmotionTracker
-            onComplete={handleEmotionTrackerComplete}
-            showCurrentSession={true}
-          />
-        );
-
-      default:
-        return null;
-    }
-  };
+  const renderTechniqueBadge = () => null;
 
   const renderMessageContent = () => {
     const getAnimationType = (): 'breathing' | 'heart' | 'lotus' | 'waves' | 'gentle_pulse' | null => {
@@ -403,7 +141,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     return (
       <View style={[therapyStyles.emergencyAlert, { borderColor: alertColor }]}>
         <Text style={[therapyStyles.emergencyTitle, { color: alertColor }]}>
-          🚨 {alertLevel === 'EMERGENCY' ? 'სასწრაფო დახმარება' : 'ყურადღება'}
+          {alertLevel === 'EMERGENCY'
+            ? cmPick({ en: '🚨 Emergency', ru: '🚨 Экстренная помощь', ka: '🚨 სასწრაფო დახმარება', tr: '🚨 Acil Durum', az: '🚨 Təcili', es: '🚨 Emergencia', de: '🚨 Notfall', fr: '🚨 Urgence', pt: '🚨 Emergência', id: '🚨 Darurat', it: '🚨 Emergenza', ar: '🚨 طوارئ', hi: '🚨 आपात', zh: '🚨 紧急', ja: '🚨 緊急', ko: '🚨 긴급', uk: '🚨 Екстрена допомога', pl: '🚨 Nagły przypadek' } as Record<string,string>, language)
+            : cmPick({ en: '🚨 Attention', ru: '🚨 Внимание', ka: '🚨 ყურადღება', tr: '🚨 Dikkat', az: '🚨 Diqqət', es: '🚨 Atención', de: '🚨 Achtung', fr: '🚨 Attention', pt: '🚨 Atenção', id: '🚨 Perhatian', it: '🚨 Attenzione', ar: '🚨 تنبيه', hi: '🚨 ध्यान', zh: '🚨 注意', ja: '🚨 注意', ko: '🚨 주의', uk: '🚨 Увага', pl: '🚨 Uwaga' } as Record<string,string>, language)}
         </Text>
         <Text style={therapyStyles.emergencyText}>
           {aiResponse.emergency_info.safety_plan}
@@ -415,16 +155,18 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           style={[therapyStyles.emergencyButton, { backgroundColor: alertColor }]}
           onPress={() => {
             Alert.alert(
-              'სასწრაფო დახმარება',
-              'გსურთ ახლავე დარეკვა სასწრაფო სამსახურში?',
+              cmPick({ en: 'Emergency Services', ru: 'Экстренные службы', ka: 'სასწრაფო სამსახური', tr: 'Acil Servis', az: 'Təcili Yardım', es: 'Emergencias', de: 'Notfall', fr: "Services d'Urgence", pt: 'Emergência', id: 'Darurat', it: 'Emergenza', ar: 'طوارئ', hi: 'आपात', zh: '紧急服务', ja: '緊急サービス', ko: '긴급 서비스', uk: 'Екстрені служби', pl: 'Ratownictwo' } as Record<string,string>, language),
+              cmPick({ en: 'Do you want to call emergency services now?', ru: 'Хотите позвонить в экстренные службы?', ka: 'გსურთ ახლა დარეკვა სასწრაფო სამსახურში?', tr: 'Şimdi acil servisi aramak ister misiniz?', az: 'İndi təcili yardımı çağırmaq istəyirsiniz?', es: '¿Llamar a emergencias ahora?', de: 'Jetzt Notfalldienst anrufen?', fr: "Appeler les services d'urgence?", pt: 'Ligar para emergências agora?', id: 'Hubungi layanan darurat sekarang?', it: 'Chiamare i servizi di emergenza?', ar: 'هل تريد الاتصال بالطوارئ؟', hi: 'क्या अभी आपातकालीन सेवा को कॉल करें?', zh: '现在拨打紧急服务吗？', ja: '今すぐ緊急サービスに電話しますか？', ko: '지금 긴급 서비스에 전화하시겠습니까?', uk: 'Зателефонувати до екстрених служб?', pl: 'Zadzwonić do służb ratunkowych?' } as Record<string,string>, language),
               [
-                { text: 'გაუქმება', style: 'cancel' },
-                { text: 'დარეკვა', onPress: () => console.log('Calling emergency services') }
+                { text: cmPick({ en: 'Cancel', ru: 'Отмена', ka: 'გაუქმება', tr: 'İptal', az: 'Ləğv et', es: 'Cancelar', de: 'Abbrechen', fr: 'Annuler', pt: 'Cancelar', id: 'Batal', it: 'Annulla', ar: 'إلغاء', hi: 'रद्द', zh: '取消', ja: 'キャンセル', ko: '취소', uk: 'Скасувати', pl: 'Anuluj' } as Record<string,string>, language), style: 'cancel' },
+                { text: cmPick({ en: '📞 Call', ru: '📞 Позвонить', ka: '📞 დარეკვა', tr: '📞 Ara', az: '📞 Zəng', es: '📞 Llamar', de: '📞 Anrufen', fr: '📞 Appeler', pt: '📞 Ligar', id: '📞 Hubungi', it: '📞 Chiama', ar: '📞 اتصال', hi: '📞 कॉल', zh: '📞 拨打', ja: '📞 電話', ko: '📞 전화', uk: '📞 Подзвонити', pl: '📞 Zadzwoń' } as Record<string,string>, language), onPress: () => console.log('Calling emergency services') }
               ]
             );
           }}
         >
-          <Text style={therapyStyles.emergencyButtonText}>📞 დარეკვა</Text>
+          <Text style={therapyStyles.emergencyButtonText}>
+            {cmPick({ en: '📞 Call', ru: '📞 Позвонить', ka: '📞 დარეკვა', tr: '📞 Ara', az: '📞 Zəng', es: '📞 Llamar', de: '📞 Anrufen', fr: '📞 Appeler', pt: '📞 Ligar', id: '📞 Hubungi', it: '📞 Chiama', ar: '📞 اتصال', hi: '📞 कॉल', zh: '📞 拨打', ja: '📞 電話', ko: '📞 전화', uk: '📞 Подзвонити', pl: '📞 Zadzwoń' } as Record<string,string>, language)}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -482,9 +224,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               textTransform: 'uppercase',
               letterSpacing: 0.8,
             }}>
-              {aiResponse.motivational_message.tone === 'grounding' ? 'Grounding' :
-               aiResponse.motivational_message.tone === 'gentle' ? 'Gentle Support' :
-               aiResponse.motivational_message.tone === 'uplifting' ? 'Uplifting' : 'Empowering'}
+              {cmPick(({
+                grounding: { en: 'Grounding', ru: 'Заземление', ka: 'დამყარება', hy: 'Հիմնում', tr: 'Dengeleme', az: 'Zəmin', es: 'Arraigo', de: 'Erdung', fr: 'Ancrage', pt: 'Aterramento', id: 'Pemijakan', it: 'Radicamento', ar: 'تأريض', hi: 'ग्राउंडिंग', zh: '入地', ja: 'グラウンディング', ko: '안정', uk: 'Заземлення', pl: 'Uziemienie' },
+                gentle:    { en: 'Gentle Support', ru: 'Мягкая поддержка', ka: 'თბილი მხარდაჭერა', hy: 'Նուրբ աջակցություն', tr: 'Nazik Destek', az: 'Yumşaq Dəstək', es: 'Apoyo Suave', de: 'Sanfte Unterstützung', fr: 'Soutien Doux', pt: 'Apoio Gentil', id: 'Dukungan Lembut', it: 'Supporto Gentile', ar: 'دعم لطيف', hi: 'कोमल सहारा', zh: '温柔支持', ja: '優しいサポート', ko: '부드러운 지원', uk: "М'яка підтримка", pl: 'Delikatne Wsparcie' },
+                uplifting: { en: 'Uplifting', ru: 'Воодушевляющее', ka: 'გამახალისებელი', hy: 'Ոգեշնչող', tr: 'Yükseltici', az: 'Ruhlandırıcı', es: 'Elevador', de: 'Aufmunternd', fr: 'Édifiant', pt: 'Elevador', id: 'Membangkitkan', it: 'Edificante', ar: 'رافع', hi: 'उत्साहवर्धक', zh: '振奋', ja: '高揚感', ko: '업리프팅', uk: 'Підбадьорливе', pl: 'Wzniosły' },
+                empowering: { en: 'Empowering', ru: 'Укрепляющее', ka: 'გაძლიერება', hy: 'Ուժեղացնող', tr: 'Güçlendirici', az: 'Gücləndirici', es: 'Potenciador', de: 'Stärkend', fr: 'Autonomisant', pt: 'Empoderador', id: 'Memberdayakan', it: 'Potenziante', ar: 'تمكيني', hi: 'सशक्तिकरण', zh: '赋能', ja: 'エンパワーメント', ko: '역량강화', uk: 'Надихаюче', pl: 'Wzmacniający' },
+              } as Record<string, Record<string,string>>)[aiResponse.motivational_message.tone] || { en: aiResponse.motivational_message.tone }, language)}
             </Text>
           </View>
           <Text style={{
@@ -495,7 +240,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             fontWeight: '500',
             letterSpacing: 0.2,
           }}>
-            "{aiResponse.motivational_message.short_quote}"
+            {`"${aiResponse.motivational_message.short_quote}"`}
           </Text>
           {aiResponse.motivational_message.psychological_basis && (
             <Text style={{
@@ -504,7 +249,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               marginTop: 6,
               fontWeight: '500',
             }}>
-              Based on {aiResponse.motivational_message.psychological_basis}
+              {`${cmPick({ en: 'Based on', ru: 'Основано на', ka: 'დაფუძნებულია', hy: 'Հիմնված է', tr: 'Dayandığı', az: 'Əsaslanır', es: 'Basado en', de: 'Basierend auf', fr: 'Basé sur', pt: 'Baseado em', id: 'Berdasarkan', it: 'Basato su', ar: 'مستند إلى', hi: 'आधारित', zh: '基于', ja: '基づく：', ko: '기반으로', uk: 'Засноване на', pl: 'Na podstawie' } as Record<string,string>, language)} ${aiResponse.motivational_message.psychological_basis}`}
             </Text>
           )}
         </View>
@@ -542,17 +287,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       {/* Timestamp */}
       {renderTimestamp()}
 
-      {/* Interactive component - not shown during crisis */}
-      {!isUser && !aiResponse?.emergency_info && renderInteractiveComponent()}
-
-      {/* Next recommendation for completed interactions */}
-      {!isUser && !showInteractive && aiResponse?.next_recommendation && (
-        <View style={[therapyStyles.card, { marginTop: 8 }]}>
-          <Text style={[therapyStyles.bodySecondary, { fontStyle: 'italic' }]}>
-            💡 {aiResponse.next_recommendation}
-          </Text>
-        </View>
-      )}
     </View>
   );
 };

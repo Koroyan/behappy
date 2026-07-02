@@ -1,6 +1,6 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import ArtTherapyProgramManager, { ART_THERAPY_SESSIONS, SessionProgress } from '@/services/artTherapyProgram';
+import ArtTherapyProgramManager, { ArtTherapySession } from '@/services/artTherapyProgramNew';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -8,18 +8,27 @@ import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View }
 
 interface CompletedItem {
   id: number;
-  title: { ka: string; en: string; ru?: string };
+  title: string;
   icon: string;
   color: string;
   completedAt?: string | Date;
   sessionSummary?: string;
 }
 
-const formatDate = (d?: string | Date) => {
+const DATE_LOCALES: Record<string, string> = {
+  en: 'en-US', ka: 'ka-GE', ru: 'ru-RU', hy: 'hy-AM', tr: 'tr-TR', az: 'az-AZ', es: 'es-ES', de: 'de-DE', fr: 'fr-FR', pt: 'pt-PT', id: 'id-ID', it: 'it-IT', ar: 'ar', hi: 'hi-IN', zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR', uk: 'uk-UA', pl: 'pl-PL'
+};
+
+const HY_MONTHS = ['հնվ', 'փտվ', 'մրտ', 'ապր', 'մյս', 'հնս', 'հլս', 'օգս', 'սեպ', 'հոկ', 'նոյ', 'դեկ'];
+
+const formatDate = (d: string | Date | undefined, lang: string) => {
   if (!d) return '';
   const date = typeof d === 'string' ? new Date(d) : d;
   if (isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  if (lang === 'hy') {
+    return `${date.getDate()} ${HY_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  }
+  return new Intl.DateTimeFormat(DATE_LOCALES[lang] ?? 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
 };
 
 const previewText = (s?: string) => {
@@ -37,16 +46,20 @@ export default function ArtTherapyCompletedList() {
 
   useEffect(() => {
     const load = async () => {
+      await ArtTherapyProgramManager.initialize(language);
       const map = await ArtTherapyProgramManager.getProgress();
+      const sessions = await ArtTherapyProgramManager.getAllSessions();
+      const sessionsById = new Map<number, ArtTherapySession>(sessions.map(session => [session.id, session]));
       const list: CompletedItem[] = [];
-      for (const s of ART_THERAPY_SESSIONS) {
-        const p = map.get(s.id) as SessionProgress | undefined;
+      for (const [sessionId, p] of map.entries()) {
         if (p?.completed) {
+          const session = sessionsById.get(sessionId);
+          if (!session) continue;
           list.push({
-            id: s.id,
-            title: { ka: s.title.ka, en: s.title.en, ru: (s.title as any).ru },
-            icon: s.icon,
-            color: s.color,
+            id: session.id,
+            title: session.title,
+            icon: session.icon,
+            color: session.color,
             completedAt: p.completedAt as any,
             sessionSummary: p.clinicalSummary?.session_summary,
           });
@@ -60,7 +73,7 @@ export default function ArtTherapyCompletedList() {
       setItems(list);
     };
     load();
-  }, []);
+  }, [language]);
 
   const t = useMemo(() => ({
     ka: {
@@ -88,11 +101,11 @@ export default function ArtTherapyCompletedList() {
       close: 'Закрыть',
     },
     hy: {
-      header: 'Ավարտված Սեանսներ',
+      header: 'Ավարտված սեանսներ',
       view: 'Դիտել',
-      open: 'Բացել Չատը',
+      open: 'Բացել չաթը',
       empty: 'Դեռ ավարտված սեանսներ չկան',
-      summaryTitle: 'Սեանսի Ամփոփում',
+      summaryTitle: 'Սեանսի ամփոփում',
       close: 'Փակել',
     },
     tr: {
@@ -240,8 +253,8 @@ export default function ArtTherapyCompletedList() {
               <Text style={styles.icon}>{it.icon}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>{((it.title as any)[lang] ?? it.title.en)}</Text>
-              <Text style={[styles.meta, { color: theme.colors.textSecondary }]} numberOfLines={1}>{formatDate(it.completedAt)}</Text>
+              <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>{it.title}</Text>
+              <Text style={[styles.meta, { color: theme.colors.textSecondary }]} numberOfLines={1}>{formatDate(it.completedAt, lang)}</Text>
             </View>
           </View>
           {it.sessionSummary ? (
@@ -272,9 +285,9 @@ export default function ArtTherapyCompletedList() {
             <ScrollView style={styles.modalBody}>
               {activeSummary ? (
                 <>
-                  <Text style={[styles.modalSessionTitle, { color: theme.colors.text }]}>{((activeSummary.title as any)[lang] ?? activeSummary.title.en)}</Text>
+                  <Text style={[styles.modalSessionTitle, { color: theme.colors.text }]}>{activeSummary.title}</Text>
                   {activeSummary.completedAt ? (
-                    <Text style={[styles.modalMeta, { color: theme.colors.textSecondary }]}>{formatDate(activeSummary.completedAt)}</Text>
+                    <Text style={[styles.modalMeta, { color: theme.colors.textSecondary }]}>{formatDate(activeSummary.completedAt, lang)}</Text>
                   ) : null}
                   <Text style={[styles.modalSummary, { color: theme.colors.text }]}>{activeSummary.sessionSummary}</Text>
                 </>

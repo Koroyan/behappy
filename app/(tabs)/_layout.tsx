@@ -5,15 +5,25 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 80 : 65;
 const BOTTOM_INSET = Platform.OS === 'ios' ? 34 : 16;
 
+const TAB_LABELS: Record<string, Record<string, string>> = {
+  home:    { en:'Home', ru:'Главная', ka:'მთავარი', hy:'Հիմնական', tr:'Ana Sayfa', az:'Əsas', es:'Inicio', de:'Startseite', fr:'Accueil', pt:'Início', id:'Beranda', it:'Home', ar:'الرئيسية', hi:'होम', zh:'首页', ja:'ホーム', ko:'홈', uk:'Головна', pl:'Strona główna' },
+  therapy: { en:'AI Therapy', ru:'AI Терапия', ka:'AI თერაპია', hy:'ԱԻ թերապիա', tr:'AI Terapi', az:'AI Terapiya', es:'Terapia IA', de:'KI-Therapie', fr:'Thérapie IA', pt:'Terapia IA', id:'Terapi AI', it:'Terapia AI', ar:'العلاج بالذكاء الاصطناعي', hi:'AI थेरेपी', zh:'AI治疗', ja:'AIセラピー', ko:'AI 치료', uk:'AI Терапія', pl:'Terapia AI' },
+  art:     { en:'Art Therapy', ru:'Арт Терапия', ka:'არტ თერაპია', hy:'Արվեստի թերապիա', tr:'Sanat Terapi', az:'Art Terapiya', es:'Arteterapia', de:'Kunsttherapie', fr:'Art-thérapie', pt:'Arteterapia', id:'Terapi Seni', it:'Arte Terapia', ar:'العلاج بالفن', hi:'कला चिकित्सा', zh:'艺术治疗', ja:'芸術療法', ko:'미술 치료', uk:'Арт Терапія', pl:'Arteterapia' },
+  profile: { en:'Profile', ru:'Профиль', ka:'პროფილი', hy:'Կարգավորումներ', tr:'Profil', az:'Profil', es:'Perfil', de:'Profil', fr:'Profil', pt:'Perfil', id:'Profil', it:'Profilo', ar:'الملف الشخصي', hi:'प्रोफ़ाइल', zh:'个人资料', ja:'プロフィール', ko:'프로필', uk:'Профіль', pl:'Profil' },
+};
+
 export default function TabLayout() {
   const { theme, isDark } = useTheme();
+  const { language } = useLanguage();
   const styles = React.useMemo(() => createStyles(isDark), [isDark]);
+  const tl = (key: string) => TAB_LABELS[key]?.[language] ?? TAB_LABELS[key]?.en ?? key;
 
   // Create tab bar background with blur
   const TabBarBackground = React.memo(function TabBarBackground({ style }: { style: any }) {
@@ -71,7 +81,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Главная",
+          title: tl('home'),
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="home" size={size} color={color} />
           ),
@@ -80,7 +90,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="ai-therapy-chat"
         options={{
-          title: "AI Терапия",
+          title: tl('therapy'),
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="brain" size={size} color={color} />
           ),
@@ -89,7 +99,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="art-therapy"
         options={{
-          title: "Арт Терапия",
+          title: tl('art'),
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="palette" size={size} color={color} />
           ),
@@ -98,7 +108,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="general"
         options={{
-          title: "Профиль",
+          title: tl('profile'),
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="user" size={size} color={color} />
           ),

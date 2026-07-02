@@ -8,19 +8,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface JournalEntry {
@@ -29,6 +29,7 @@ interface JournalEntry {
   content: string;
   aiResponse?: string;
   mood?: number;
+  promptTitle?: string;
   timestamp: number;
 }
 
@@ -155,7 +156,7 @@ export default function JournalScreen() {
   const [currentPrompt, setCurrentPrompt] = useState<JournalPrompt | null>(null);
   const [entryText, setEntryText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [mood, setMood] = useState<number>(3);
+  const [mood, setMood] = useState<number>(2);
 
   const screenWidth = Dimensions.get('window').width;
 
@@ -239,9 +240,10 @@ export default function JournalScreen() {
     try {
       const newEntry: JournalEntry = {
         id: Date.now().toString(),
-        date: new Date().toLocaleDateString(localeByLanguage[language] || 'en-US'),
+        date: new Date().toLocaleString(localeByLanguage[language] || 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
         content: entryText,
         mood,
+        promptTitle: currentPrompt ? pick(currentPrompt.title as any, language) : undefined,
         timestamp: Date.now(),
       };
 
@@ -264,7 +266,7 @@ export default function JournalScreen() {
       setEntryText('');
       setIsWriting(false);
       setCurrentPrompt(null);
-      setMood(3);
+      setMood(2);
 
       Alert.alert(pick(t.alertSavedTitle as any, language), pick(t.alertSavedText as any, language));
     } catch (error) {
@@ -288,7 +290,7 @@ export default function JournalScreen() {
     setIsWriting(false);
     setCurrentPrompt(null);
     setEntryText('');
-    setMood(3);
+    setMood(2);
   };
 
   const deleteEntry = async (entryId: string) => {
@@ -460,10 +462,12 @@ export default function JournalScreen() {
       marginBottom: 12,
     },
     aiResponseContainer: {
-      backgroundColor: theme.colors.surface,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
       borderRadius: 12,
       padding: 12,
       marginTop: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: theme.colors.primary,
     },
     aiResponseLabel: {
       fontSize: 12,
@@ -666,6 +670,9 @@ export default function JournalScreen() {
               multiline
               textAlignVertical="top"
             />
+            <Text style={{ textAlign: 'right', color: theme.colors.textSecondary, fontSize: 12, marginTop: -8, marginBottom: 12 }}>
+              {entryText.length} / 2000
+            </Text>
 
             <View style={styles.buttonRow}>
               <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={cancelWriting}>
@@ -782,7 +789,12 @@ export default function JournalScreen() {
             entries.map((entry) => (
               <View key={entry.id} style={styles.entryCard}>
                 <View style={styles.entryHeader}>
-                  <Text style={styles.entryDate}>{entry.date}</Text>
+                  <View>
+                    <Text style={styles.entryDate}>{entry.date}</Text>
+                    {entry.promptTitle && (
+                      <Text style={{ fontSize: 11, color: theme.colors.primary, marginTop: 2 }}>#{entry.promptTitle}</Text>
+                    )}
+                  </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {entry.mood !== undefined && (
                       <View style={styles.entryMood}>

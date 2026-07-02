@@ -65,6 +65,7 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  apiOnlyContent?: string;
   timestamp: Date;
   imageUri?: string;
   imageBase64?: string;
@@ -74,7 +75,7 @@ export interface ChatMessage {
 class ArtTherapyService {
   private apiKey: string;
   private promptId: string = 'pmpt_690baa7920308196a2d94f41d4be76be0bd44ed1840b1049';
-  private promptVersion: string = '5';
+  private promptVersion: string = '18';
   private baseURL: string = 'https://api.openai.com/v1';
 
   constructor() {
@@ -88,6 +89,48 @@ class ArtTherapyService {
     if (!this.apiKey) {
       console.warn('⚠️ OpenAI API Key not found. Please set OPENAI_API_KEY in .env file');
     }
+  }
+
+  /**
+   * Convert language code to full language name for better AI understanding
+   */
+  private getLanguageName(langCode: string): string {
+    const languageMap: Record<string, string> = {
+      en: 'English',
+      ka: 'Georgian (ქართული)',
+      ru: 'Russian (Русский)',
+      hy: 'Armenian (Հայերեն)',
+      tr: 'Turkish (Türkçe)',
+      az: 'Azerbaijani (Azərbaycan)',
+      es: 'Spanish (Español)',
+      de: 'German (Deutsch)',
+      fr: 'French (Français)',
+      pt: 'Portuguese (Português)',
+      id: 'Indonesian (Bahasa Indonesia)',
+      it: 'Italian (Italiano)',
+      ar: 'Arabic (العربية)',
+      hi: 'Hindi (हिन्दी)',
+      zh: 'Chinese Simplified (简体中文)',
+      ja: 'Japanese (日本語)',
+      ko: 'Korean (한국어)',
+      uk: 'Ukrainian (Українська)',
+      pl: 'Polish (Polski)'
+    };
+    return languageMap[langCode] || langCode;
+  }
+
+  private buildSessionContext(
+    sessionTheme: string,
+    languageName: string,
+    currentPhase: 0 | 1 | 2,
+    hasImageOnlyMessage: boolean,
+    extraContext?: string
+  ): string {
+    const imageOnlyInstruction = hasImageOnlyMessage
+      ? '\nThe latest user message contains only an image. First determine whether it clearly appears to be the client\'s own hand-made artwork for this art therapy session. If it is an ordinary photo, selfie, screenshot, digital/generated character, document, object, room, person, pet, food, landscape, or otherwise not clearly hand-made artwork, politely reject it without psychological interpretation and ask for a hand-made drawing or painting. If it is ambiguous, ask the client to confirm whether they made it by hand for this session.'
+      : '';
+
+    return `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${languageName}, Phase: ${currentPhase}. CRITICAL: You MUST respond in ${languageName} language for ALL text, including response_text, phase_summary, session_summary, next_steps, and any question. Do NOT respond in English unless Language is English.${imageOnlyInstruction} Respond with valid JSON matching the ArtTherapyResponse schema.]` + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '');
   }
 
   /**
@@ -468,10 +511,14 @@ class ArtTherapyService {
 
       // Prepare copy of messages to append session context to the last user message
       const msgs = [...messages];
+      const languageName = this.getLanguageName(userLanguage);
+      console.log('🌐 AI Request Language:', languageName, `(${userLanguage})`);
       for (let i = msgs.length - 1; i >= 0; i--) {
         if (msgs[i].role === 'user') {
-          const ctx = `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${userLanguage}, Phase: ${currentPhase}. Respond with valid JSON matching the ArtTherapyResponse schema.]` + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '');
-          msgs[i] = { ...msgs[i], content: (msgs[i].content || '') + ctx };
+          const hasImageOnlyMessage = Boolean(msgs[i].imageBase64) && !msgs[i].content;
+          const ctx = this.buildSessionContext(sessionTheme, languageName, currentPhase, hasImageOnlyMessage, extraContext);
+          const apiText = msgs[i].apiOnlyContent || msgs[i].content || '';
+          msgs[i] = { ...msgs[i], apiOnlyContent: apiText + ctx };
           break;
         }
       }
@@ -479,7 +526,8 @@ class ArtTherapyService {
       for (const msg of msgs) {
         const content: any[] = [];
         if (msg.role === 'user') {
-          if (msg.content) content.push({ type: 'input_text', text: msg.content });
+          const textContent = msg.apiOnlyContent || msg.content;
+          if (textContent) content.push({ type: 'input_text', text: textContent });
           if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64 });
           input.push({ role: 'user', content });
         } else if (msg.role === 'assistant') {
@@ -489,12 +537,9 @@ class ArtTherapyService {
       }
 
       const payload: any = {
-        model: 'gpt-5-chat-latest',
         input,
         prompt: { id: this.promptId, version: this.promptVersion },
-        temperature: 0.7,
         max_output_tokens: 2048,
-        top_p: 1,
         store: false,
         // Encourage well-formed JSON to match our schema (new field location)
   text: { format: { type: 'json_object' } },
@@ -629,17 +674,22 @@ class ArtTherapyService {
     // Build Responses input as in sendMessage
     const input: any[] = [];
     const msgs = [...messages];
+    const languageName = this.getLanguageName(userLanguage);
+    console.log('🌐 AI Stream Request Language:', languageName, `(${userLanguage})`);
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i].role === 'user') {
-        const ctx = `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${userLanguage}, Phase: ${currentPhase}. Respond with valid JSON matching the ArtTherapyResponse schema.]` + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '');
-        msgs[i] = { ...msgs[i], content: (msgs[i].content || '') + ctx };
+        const hasImageOnlyMessage = Boolean(msgs[i].imageBase64) && !msgs[i].content;
+        const ctx = this.buildSessionContext(sessionTheme, languageName, currentPhase, hasImageOnlyMessage, extraContext);
+        const apiText = msgs[i].apiOnlyContent || msgs[i].content || '';
+        msgs[i] = { ...msgs[i], apiOnlyContent: apiText + ctx };
         break;
       }
     }
     for (const msg of msgs) {
       const content: any[] = [];
       if (msg.role === 'user') {
-        if (msg.content) content.push({ type: 'input_text', text: msg.content });
+        const textContent = msg.apiOnlyContent || msg.content;
+        if (textContent) content.push({ type: 'input_text', text: textContent });
         if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64 });
         input.push({ role: 'user', content });
       } else if (msg.role === 'assistant') {
@@ -649,12 +699,9 @@ class ArtTherapyService {
     }
 
     const body = JSON.stringify({
-      model: 'gpt-5-chat-latest',
       input,
       prompt: { id: this.promptId, version: this.promptVersion },
-      temperature: 0.7,
       max_output_tokens: 2048,
-      top_p: 1,
       stream: true,
       // Encourage JSON, but we still handle plain-text gracefully
   text: { format: { type: 'json_object' } }

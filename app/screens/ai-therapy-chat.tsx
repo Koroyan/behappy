@@ -7,22 +7,22 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,8 +30,8 @@ import ChatMessage from '../../components/ChatMessage';
 import ClientSessionSummaryCard, { ClientSessionSummary } from '../../components/ClientSessionSummaryCard';
 import TypingIndicator from '../../components/TypingIndicator';
 import aiTherapyService, {
-  ChatMessage as ChatMessageType,
-  SessionData
+    ChatMessage as ChatMessageType,
+    SessionData
 } from '../../services/aiTherapyService';
 import { TherapyColors, therapyStyles } from '../../styles/therapyStyles';
 
@@ -129,6 +129,243 @@ const AITherapyChatScreen: React.FC = () => {
       ko: '사용자가 미술치료 분석을 위해 이미지를 공유했습니다. 감정적 내용, 색상, 형태, 상징성을 분석해주세요.',
       uk: 'Користувач поділився зображенням для арт-терапевтичного аналізу. Проаналізуй емоційний зміст, кольори, форми та символіку.',
       pl: 'Użytkownik udostępnił obraz do analizy w ramach arteterapii. Przeanalizuj emocjonalną treść, kolory, kształty i symbolikę.',
+    },
+    errors: {
+      messageProcessing: {
+        en: "I'm here with you. I had a small technical issue, but I'm still listening. Could you share that again?",
+        ka: 'შენთან ვარ. მოხდა მცირე ტექნიკური პრობლემა, მაგრამ კვლავ ვუსმენ. შეგიძლია კიდევ ერთხელ გაიმეოროს?',
+        ru: 'Я здесь с вами. Возникла небольшая техническая проблема, но я по-прежнему слушаю. Не могли бы вы повторить?',
+        hy: 'Ես այստեղ եմ քեզ հետ։ Փոքր տեխնիկական խնդիր առաջացավ, բայց ես կրկին լսում եմ։ Կարո՞ղ ես կրկնել։',
+        tr: 'Seninle buradayım. Küçük bir teknik sorun yaşandı, ama seni hâlâ dinliyorum. Tekrar paylaşır mısın?',
+        az: 'Burdayam, yanındayam. Kiçik bir texniki problem yarandı, amma hələ dinləyirəm. Yenidən bölüşə bilərsən?',
+        es: 'Estoy aquí contigo. Tuve un pequeño problema técnico, pero sigo escuchándote. ¿Podrías repetirlo?',
+        de: 'Ich bin bei dir. Es gab ein kleines technisches Problem, aber ich höre weiterhin zu. Könntest du das wiederholen?',
+        fr: "Je suis là avec toi. J'ai eu un petit problème technique, mais j'écoute toujours. Pourrais-tu répéter ?",
+        pt: 'Estou aqui com você. Houve um pequeno problema técnico, mas ainda estou ouvindo. Você poderia repetir?',
+        id: 'Aku di sini bersamamu. Ada sedikit masalah teknis, tapi aku masih mendengarkan. Bisakah kamu ulangi?',
+        it: "Sono qui con te. C'è stato un piccolo problema tecnico, ma sto ancora ascoltando. Potresti ripetere?",
+        ar: 'أنا هنا معك. حدثت مشكلة تقنية صغيرة، لكنني ما زلت أستمع. هل يمكنك المشاركة مرة أخرى؟',
+        hi: 'मैं यहाँ आपके साथ हूँ। एक छोटी सी तकनीकी समस्या आई, लेकिन मैं अभी भी सुन रहा/रही हूँ। क्या आप दोबारा साझा कर सकते हैं?',
+        zh: '我在这里陪你。出现了一个小技术问题，但我仍在倾听。你能再说一遍吗？',
+        ja: 'ここにいますよ。小さな技術的な問題がありましたが、まだ聞いています。もう一度話してもらえますか？',
+        ko: '제가 곁에 있어요. 작은 기술적 문제가 생겼지만 여전히 듣고 있어요. 다시 말해줄 수 있나요?',
+        uk: 'Я поруч із вами. Виникла невелика технічна проблема, але я все ще слухаю. Чи не могли б ви повторити?',
+        pl: 'Jestem tu z Tobą. Wystąpił mały problem techniczny, ale nadal słucham. Czy możesz powtórzyć?',
+      },
+      imageProcessing: {
+        en: "I had some difficulty with the image, but I'd love to hear about it. What did you create, and what feelings or thoughts did it bring up for you?",
+        ka: 'სურათთან გამიჭირდა, მაგრამ მსმენელი ვარ. რა შექმენი და რა გრძნობები ან აზრები გაგიჩნდა?',
+        ru: 'У меня возникли сложности с изображением, но я хотел(а) бы услышать об этом. Что вы создали, и какие чувства или мысли это вызвало?',
+        hy: 'Պատկերի հետ դժվարություն ունեցա, բայց կուզեի լսել։ Ի՞նչ ստեղծեցիր, ի՞նչ զգացողություններ կամ մտքեր առաջացան։',
+        tr: 'Görselde biraz zorlandım, ama duymak isterim. Ne yarattın ve sende ne gibi duygular ya da düşünceler uyandırdı?',
+        az: 'Şəkillə bir az çətinlik çəkdim, amma dinləmək istəyirəm. Nə yaratdın və bu səndə nə hisslər oyatdı?',
+        es: 'Tuve dificultades con la imagen, pero me gustaría escuchar. ¿Qué creaste y qué sentimientos o pensamientos te generó?',
+        de: 'Mit dem Bild hatte ich Schwierigkeiten, aber ich würde gerne davon hören. Was hast du geschaffen, und welche Gefühle oder Gedanken hat es ausgelöst?',
+        fr: "J'ai eu du mal avec l'image, mais j'aimerais en entendre parler. Qu'as-tu créé, et quels sentiments ou pensées cela a-t-il suscité ?",
+        pt: 'Tive dificuldade com a imagem, mas adoraria ouvir sobre isso. O que você criou e que sentimentos ou pensamentos isso trouxe?',
+        id: 'Aku agak kesulitan dengan gambarnya, tapi aku ingin mendengar. Apa yang kamu buat, dan perasaan atau pikiran apa yang muncul?',
+        it: "Ho avuto difficoltà con l'immagine, ma mi piacerebbe sentirne parlare. Cosa hai creato, e quali sentimenti o pensieri ha suscitato?",
+        ar: 'واجهت بعض الصعوبة مع الصورة، لكن يسعدني الاستماع. ماذا ابتكرت، وما المشاعر أو الأفكار التي أثارتها؟',
+        hi: 'छवि के साथ थोड़ी कठिनाई हुई, लेकिन मैं इसके बारे में सुनना चाहूँगा/चाहूँगी। आपने क्या बनाया और इसने क्या भावनाएं या विचार जगाए?',
+        zh: '处理图片时遇到了一些困难，但我很想听你说说。你创作了什么，带给你什么样的感受或想法？',
+        ja: '画像に少し問題がありましたが、聞かせてください。何を作りましたか？どんな気持ちや考えが浮かびましたか？',
+        ko: '이미지에 약간의 문제가 있었지만, 들어보고 싶어요. 무엇을 만들었나요, 어떤 감정이나 생각이 떠올랐나요?',
+        uk: 'Виникли труднощі із зображенням, але я хотів(ла) б почути про це. Що ви створили і які почуття чи думки це викликало?',
+        pl: 'Miałem/am trudności z obrazem, ale chciałbym/chciałabym o tym usłyszeć. Co stworzyłeś/aś i jakie uczucia lub myśli to wywołało?',
+      },
+    },
+    followUp: {
+      breathing: {
+        en: 'Well done with the breathing exercise! How are you feeling now — do you notice any shift in your body or mind?',
+        ka: 'კარგად გაკეთე სუნთქვის ვარჯიში! ახლა როგორ გრძნობ თავს — შეამჩნიე რაიმე ცვლილება სხეულში ან გონებაში?',
+        ru: 'Хорошо сделали дыхательное упражнение! Как вы чувствуете себя сейчас — есть ли ощущение изменений в теле или мыслях?',
+        hy: 'Լավ արեցիր շնչառական վարժությունը: Ինչպե՞ս ես հիմա — նկատո՞ւմ ես ինչ-որ փոփոխություն մարմնում կամ մտքերում:',
+        tr: 'Nefes egzersizini harika tamamladın! Şu an nasıl hissediyorsun — bedeninde ya da zihninde bir değişim fark ediyor musun?',
+        az: 'Nəfəs məşqini yaxşı etdin! İndi özünü necə hiss edirsən — bədənində ya da zehnində hər hansı bir dəyişiklik hiss edirsən?',
+        es: '¡Bien hecho con el ejercicio de respiración! ¿Cómo te sientes ahora? ¿Notas algún cambio en tu cuerpo o mente?',
+        de: 'Gut gemacht beim Atemübung! Wie fühlst du dich jetzt — merkst du eine Veränderung in Körper oder Geist?',
+        fr: "Bravo pour l'exercice de respiration ! Comment te sens-tu maintenant — ressens-tu un changement dans ton corps ou ta tête ?",
+        pt: 'Ótimo trabalho com o exercício de respiração! Como você está se sentindo agora — note alguma mudança no corpo ou na mente?',
+        id: 'Bagus sekali dengan latihan napasnya! Bagaimana perasaanmu sekarang — apakah kamu merasakan perubahan di tubuh atau pikiranmu?',
+        it: "Ben fatto con l'esercizio di respirazione! Come ti senti ora — noti qualche cambiamento nel corpo o nella mente?",
+        ar: 'أحسنت في تمرين التنفس! كيف تشعر الآن — هل لاحظت أي تغيير في جسدك أو عقلك؟',
+        hi: 'सांस लेने के व्यायाम के लिए शाबाश! अब आप कैसा महसूस कर रहे हैं — शरीर या मन में कोई बदलाव नजर आ रहा है?',
+        zh: '呼吸练习做得很好！你现在感觉如何——身体或心理有没有感到变化？',
+        ja: '呼吸法、よくできました！今どんな気分ですか？体や心に何か変化を感じましたか？',
+        ko: '호흡 운동 잘 하셨어요! 지금 어떤 느낌인가요 — 몸이나 마음에 변화가 느껴지나요?',
+        uk: 'Добре виконали дихальну вправу! Як ви почуваєтеся зараз — відчуваєте якісь зміни в тілі чи думках?',
+        pl: 'Świetnie wykonałeś/aś ćwiczenie oddechowe! Jak się teraz czujesz — czy zauważasz jakąś zmianę w ciele lub umyśle?',
+      },
+      drawing: {
+        en: 'Thank you for sharing your creative expression. What did you notice while drawing — any feelings, images, or surprises that came up?',
+        ka: 'გმადლობ, რომ გაიზიარე შენი შემოქმედებითი გამოხატვა. რა შეამჩნიე ხატვისას — მოვიდა რაიმე გრძნობა, სახე ან სიურპრიზი?',
+        ru: 'Спасибо, что поделились своим творческим выражением. Что вы замечали во время рисования — какие чувства, образы или открытия?',
+        hy: 'Շնորհակалություն ստեղծագործական արտահայտությունդ կիսելու համար։ Ի՞նչ նկատեցիր նկارелու ժամανак — ի՞նչ զگацողություններ, կerpadներ կam اnnouncements:',
+        tr: 'Yaratıcı ifadeni paylaştığın için teşekkürler. Çizerken ne fark ettin — ortaya çıkan duygular, imgeler ya da sürprizler oldu mu?',
+        az: 'Yaradıcı ifadəni paylaşdığın üçün sağ ol. Çəkərkən nə hiss etdin — hər hansı bir duyğu, görüntü ya da sürpriz yarandı mı?',
+        es: 'Gracias por compartir tu expresión creativa. ¿Qué notaste mientras dibujabas — surgieron sentimientos, imágenes o sorpresas?',
+        de: 'Danke fürs Teilen deines kreativen Ausdrucks. Was hast du beim Zeichnen bemerkt — welche Gefühle, Bilder oder Überraschungen tauchten auf?',
+        fr: "Merci de partager ton expression créative. Qu'as-tu remarqué en dessinant — des émotions, des images ou des surprises sont-elles apparues ?",
+        pt: 'Obrigado por compartilhar sua expressão criativa. O que você notou ao desenhar — surgiram sentimentos, imagens ou surpresas?',
+        id: 'Terima kasih telah berbagi ekspresi kreatifmu. Apa yang kamu perhatikan saat menggambar — muncul perasaan, gambar, atau kejutan?',
+        it: 'Grazie per aver condiviso la tua espressione creativa. Cosa hai notato mentre disegnavi — sono emersi sentimenti, immagini o sorprese?',
+        ar: 'شكرًا لمشاركة تعبيرك الإبداعي. ماذا لاحظت أثناء الرسم — هل ظهرت مشاعر أو صور أو مفاجآت؟',
+        hi: 'अपनी रचनात्मक अभिव्यक्ति साझा करने के लिए धन्यवाद। चित्र बनाते समय आपने क्या महसूस किया — कोई भावनाएं, दृश्य या आश्चर्य आए?',
+        zh: '感谢你分享你的创意表达。画画时你注意到了什么——有没有涌现出什么感受、画面或意外发现？',
+        ja: 'あなたの創造的な表現を共有してくれてありがとう。描きながら何かに気づきましたか — 感情や映像、驚きが浮かびましたか？',
+        ko: '창의적인 표현을 나눠 주셔서 감사해요. 그리는 동안 무엇을 느꼈나요 — 감정, 이미지, 또는 놀라움이 떠올랐나요?',
+        uk: 'Дякую за ваш творчий вираз. Що ви помітили під час малювання — які почуття, образи або несподіванки виникли?',
+        pl: 'Dziękuję za podzielenie się swoją twórczą ekspresją. Co zauważyłeś/aś podczas rysowania — czy pojawiły się jakieś uczucia, obrazy lub niespodzianki?',
+      },
+      journal: {
+        en: 'I appreciate you taking time to write and reflect. What stood out most from what you wrote — any insight or feeling that surprised you?',
+        ka: 'ვაფასებ, რომ დრო გამოიყავი წერასა და რეფლექსიისთვის. რა გამოარჩია ყველაზე მეტად — მოვიდა რაიმე გამოცდილება ან გრძნობა, რომელმაც გაგიკვირა?',
+        ru: 'Ценю, что вы нашли время написать и поразмышлять. Что больше всего выделилось из написанного — какое открытие или чувство вас удивило?',
+        hy: 'Ценюм, որ ժամानак հատկացրIT գrRecord писать и رмышлять. Ի՞նչ ամeniste Ծge outделилось из написанного.',
+        tr: 'Yazmak ve düşünmek için zaman ayırdığın için minnettarım. Yazdıklarından en çok ne öne çıktı — seni şaşırtan bir fikir ya da duygu var mıydı?',
+        az: 'Yazmaq və düşünmək üçün vaxt ayırdığına görə minnətdaram. Yazdıqlarından ən çox nə öne çıxdı — səni heyrətləndirən bir fikir ya duyğu var idi?',
+        es: 'Aprecio que tomaste tiempo para escribir y reflexionar. ¿Qué destacó más de lo que escribiste — hubo algún insight o sentimiento que te sorprendiera?',
+        de: 'Ich schätze, dass du dir Zeit zum Schreiben und Nachdenken genommen hast. Was stach am meisten hervor — gab es eine Erkenntnis oder ein Gefühl, das dich überraschte?',
+        fr: "J'apprécie que tu aies pris le temps d'écrire et de réfléchir. Qu'est-ce qui t'a le plus marqué — as-tu eu une révélation ou une émotion qui t'a surpris(e) ?",
+        pt: 'Aprecio que você tenha reservado um tempo para escrever e refletir. O que mais se destacou do que escreveu — surgiu alguma percepção ou sentimento que te surpreendeu?',
+        id: 'Aku menghargai waktu yang kamu luangkan untuk menulis dan berefleksi. Apa yang paling menonjol dari tulisanmu — adakah wawasan atau perasaan yang mengejutkanmu?',
+        it: "Apprezzo che tu abbia preso del tempo per scrivere e riflettere. Cosa ti ha colpito di più di quello che hai scritto — c'è stata qualche intuizione o emozione che ti ha sorpreso?",
+        ar: 'أقدر أنك أخذت وقتًا للكتابة والتأمل. ما الذي برز أكثر مما كتبته — هل ظهرت رؤية أو مشاعر أدهشتك؟',
+        hi: 'मैं सराहना करता/करती हूँ कि आपने लिखने और चिंतन के लिए समय निकाला। आपके लेखन से क्या सबसे अधिक उभरा — कोई अंतर्दृष्टि या भावना जिसने आपको चौंका दिया?',
+        zh: '感谢你花时间写作和思考。你写的内容中最突出的是什么——有没有让你惊讶的洞察或感受？',
+        ja: '書いて振り返る時間を取ってくれてありがとう。書いた中で一番印象に残ったことは何ですか — 気づきや驚きはありましたか？',
+        ko: '쓰고 성찰하는 시간을 내줘서 고마워요. 쓴 내용 중 가장 눈에 띄는 것은 무엇인가요 — 놀라운 통찰이나 감정이 있었나요?',
+        uk: 'Ціную, що ви знайшли час для написання та роздумів. Що найбільше вирізнилось із написаного — чи виникло якесь відкриття або почуття, яке вас здивувало?',
+        pl: 'Doceniam, że poświęciłeś/aś czas na pisanie i refleksję. Co najbardziej wyróżniało się z tego, co napisałeś/aś — czy pojawiło się jakieś spostrzeżenie lub uczucie, które Cię zaskoczyło?',
+      },
+      emotionTracker: {
+        en: "Tracking your emotions is a meaningful act of self-awareness. Looking at the patterns — what do you notice? Is there anything that stands out or feels important?",
+        ka: 'ემოციების თვალყური დევნება თვითშეგნების მნიშვნელოვანი ნაბიჯია. პატერნებს რომ უყურებ — რას ამჩნევ? არის რამე, რაც გამოარჩება ან მნიშვნელოვნად გეჩვენება?',
+        ru: 'Отслеживание эмоций — это важный шаг к самопознанию. Глядя на паттерны — что вы замечаете? Есть ли что-то, что выделяется или кажется важным?',
+        hy: 'Էмоции вот мой відстежування — важный крок к самопознанию. Дивлячись на паттерни — що ви помічаєте?',
+        tr: 'Duygularını takip etmek anlamlı bir öz-farkındalık adımı. Kalıplara bakınca — ne fark ediyorsun? Öne çıkan ya da önemli hissettiren bir şey var mı?',
+        az: 'Duyğularını izləmək özünüdərk etmənin mənalı bir addımıdır. Naxışlara baxanda — nə görürsən? Nə isə fərqlənən ya da önəmli görünən var?',
+        es: 'Registrar tus emociones es un acto significativo de autoconciencia. Mirando los patrones — ¿qué notas? ¿Hay algo que destaque o parezca importante?',
+        de: 'Deine Emotionen zu verfolgen ist ein bedeutsamer Schritt zur Selbstwahrnehmung. Schaut man auf die Muster — was fällt dir auf? Gibt es etwas, das hervorsticht oder wichtig erscheint?',
+        fr: "Suivre tes émotions est un acte de conscience de soi important. En regardant les tendances — qu'est-ce que tu remarques ? Y a-t-il quelque chose qui ressort ou qui semble important ?",
+        pt: 'Acompanhar suas emoções é um ato significativo de autoconsciência. Olhando para os padrões — o que você nota? Há algo que se destaca ou parece importante?',
+        id: 'Melacak emosimu adalah tindakan kesadaran diri yang bermakna. Melihat polanya — apa yang kamu perhatikan? Adakah sesuatu yang menonjol atau terasa penting?',
+        it: "Tenere traccia delle proprie emozioni è un atto significativo di consapevolezza. Guardando i modelli — cosa noti? C'è qualcosa che si distingue o sembra importante?",
+        ar: 'تتبع مشاعرك خطوة مهمة للوعي الذاتي. عند النظر إلى الأنماط — ماذا تلاحظ؟ هل هناك شيء يبرز أو يبدو مهمًا؟',
+        hi: 'अपनी भावनाओं को ट्रैक करना आत्म-जागरूकता का एक महत्वपूर्ण कार्य है। पैटर्न देखते हुए — आप क्या नोटिस करते हैं? क्या कुछ ऐसा है जो विशेष रूप से सामने आता है?',
+        zh: '追踪情绪是自我意识的重要举动。看着这些规律——你注意到了什么？有什么特别突出或感觉重要的吗？',
+        ja: '感情を追跡することは、自己認識の大切な行動です。パターンを見てみると — 何かに気づきますか？目立つことや重要に感じることがありますか？',
+        ko: '감정을 추적하는 것은 자기 인식의 의미 있는 행동이에요. 패턴을 보면 — 무엇이 보이나요? 눈에 띄거나 중요하게 느껴지는 것이 있나요?',
+        uk: 'Відстеження своїх емоцій — важливий крок до самопізнання. Дивлячись на патерни — що ви помічаєте? Чи є щось, що виділяється або здається важливим?',
+        pl: 'Śledzenie emocji to ważny krok w samoświadomości. Patrząc na wzorce — co zauważasz? Czy jest coś, co się wyróżnia lub wydaje ważne?',
+      },
+      default: {
+        en: 'Thank you for completing that. How did it feel for you?',
+        ka: 'გმადლობ, რომ ეს შეასრულე. როგორ იგრძენი თავი?',
+        ru: 'Спасибо, что выполнили это. Как вы себя чувствуете?',
+        hy: 'Շнорhakаlություն кагат կատарե։ Ի՞нч ком чувствуете себя？',
+        tr: 'Bunu tamamladığın için teşekkürler. Nasıl hissettirdi?',
+        az: 'Bunu tamamladığın üçün sağ ol. Necə hiss etdirdi?',
+        es: 'Gracias por completar eso. ¿Cómo te hizo sentir?',
+        de: 'Danke, dass du das erledigt hast. Wie hat es sich angefühlt?',
+        fr: "Merci d'avoir terminé ça. Comment cela t'a-t-il fait te sentir ?",
+        pt: 'Obrigado por completar isso. Como foi para você?',
+        id: 'Terima kasih telah menyelesaikan itu. Bagaimana rasanya bagimu?',
+        it: 'Grazie per aver completato questo. Come ti ha fatto sentire?',
+        ar: 'شكرًا لإتمامك ذلك. كيف شعرت بذلك؟',
+        hi: 'इसे पूरा करने के लिए धन्यवाद। आपको यह कैसा लगा?',
+        zh: '感谢你完成了这个。你感觉如何？',
+        ja: '完了してくれてありがとう。どんな気持ちでしたか？',
+        ko: '완료해 주셔서 감사해요. 어떤 느낌이었나요?',
+        uk: 'Дякую за виконання цього. Як ви себе почуваєте?',
+        pl: 'Dziękuję za ukończenie tego. Jak się z tym czułeś/aś?',
+      },
+    },
+    activityCompletion: {
+      breathing: {
+        en: (cycles: string, duration: string) => `I just completed a breathing exercise — ${cycles} cycles over ${duration}. I feel more grounded now.`,
+        ka: (cycles: string, duration: string) => `ახლახან შევასრულე სუნთქვის ვარჯიში — ${cycles} ციკლი ${duration} განმავლობაში. ახლა უფრო სტაბილურად ვგრძნობ თავს.`,
+        ru: (cycles: string, duration: string) => `Я только что выполнил(а) дыхательное упражнение — ${cycles} циклов за ${duration}. Сейчас чувствую себя более устойчиво.`,
+        hy: (cycles: string, duration: string) => `Ես հIJK нOPQ завершил(а) дыхательное упражнение — ${cycles} циклов за ${duration}.`,
+        tr: (cycles: string, duration: string) => `Az önce nefes egzersizi tamamladım — ${duration} boyunca ${cycles} döngü. Şu an daha dengeli hissediyorum.`,
+        az: (cycles: string, duration: string) => `Az öncə nəfəs məşqini tamamladım — ${duration} ərzində ${cycles} dövr. İndi daha sabitləşmiş hiss edirəm.`,
+        es: (cycles: string, duration: string) => `Acabo de completar un ejercicio de respiración — ${cycles} ciclos en ${duration}. Me siento más centrado/a ahora.`,
+        de: (cycles: string, duration: string) => `Ich habe gerade eine Atemübung abgeschlossen — ${cycles} Zyklen in ${duration}. Ich fühle mich jetzt geerdet.`,
+        fr: (cycles: string, duration: string) => `Je viens de terminer un exercice de respiration — ${cycles} cycles en ${duration}. Je me sens plus centré(e) maintenant.`,
+        pt: (cycles: string, duration: string) => `Acabei de completar um exercício de respiração — ${cycles} ciclos em ${duration}. Sinto-me mais equilibrado(a) agora.`,
+        id: (cycles: string, duration: string) => `Baru saja menyelesaikan latihan napas — ${cycles} siklus dalam ${duration}. Sekarang aku merasa lebih tenang.`,
+        it: (cycles: string, duration: string) => `Ho appena completato un esercizio di respirazione — ${cycles} cicli in ${duration}. Ora mi sento più centrato/a.`,
+        ar: (cycles: string, duration: string) => `أكملت للتو تمرين التنفس — ${cycles} دورة خلال ${duration}. أشعر الآن بمزيد من الاتزان.`,
+        hi: (cycles: string, duration: string) => `मैंने अभी सांस लेने का व्यायाम पूरा किया — ${duration} में ${cycles} चक्र। अब मैं अधिक स्थिर महसूस कर रहा/रही हूँ।`,
+        zh: (cycles: string, duration: string) => `我刚完成了呼吸练习 — ${duration}内${cycles}个循环。现在感觉更平静了。`,
+        ja: (cycles: string, duration: string) => `たった今、呼吸法を完了しました — ${duration}で${cycles}サイクル。今はより落ち着いた気持ちです。`,
+        ko: (cycles: string, duration: string) => `방금 호흡 운동을 완료했어요 — ${duration} 동안 ${cycles}회. 이제 더 안정된 느낌이에요.`,
+        uk: (cycles: string, duration: string) => `Щойно завершив(ла) дихальну вправу — ${cycles} циклів за ${duration}. Зараз відчуваю себе більш стабільно.`,
+        pl: (cycles: string, duration: string) => `Właśnie ukończyłem/am ćwiczenie oddechowe — ${cycles} cykli w ciągu ${duration}. Teraz czuję się bardziej uziemiony/a.`,
+      },
+      drawing: {
+        en: 'I just finished an art therapy drawing and expressed some of my inner feelings through it.',
+        ka: 'ახლახან დავხატე არტ თერაპიის ნახატი და გამოვხატე ჩემი შინაგანი გრძნობები.',
+        ru: 'Я только что завершил(а) рисунок арт-терапии и выразил(а) через него некоторые внутренние чувства.',
+        hy: 'Ես нOPQ завершил(а) рисунок арт-терапии.',
+        tr: 'Az önce bir sanat terapisi çizimini tamamladım ve bazı iç duygularımı ifade ettim.',
+        az: 'Az öncə bir art-terapiya rəsmi tamamladım və bəzi daxili hisslərimi ifadə etdim.',
+        es: 'Acabo de terminar un dibujo de arteterapia y expresé algunos de mis sentimientos internos a través de él.',
+        de: 'Ich habe gerade eine Kunsttherapie-Zeichnung fertiggestellt und einige innere Gefühle dadurch ausgedrückt.',
+        fr: "Je viens de terminer un dessin d'art-thérapie et d'exprimer certains de mes sentiments intérieurs.",
+        pt: 'Acabei de concluir um desenho de arteterapia e expressei alguns dos meus sentimentos internos através dele.',
+        id: 'Baru saja menyelesaikan gambar terapi seni dan mengungkapkan beberapa perasaan dalam melaluinya.',
+        it: 'Ho appena finito un disegno di arteterapia ed espresso alcuni dei miei sentimenti interiori.',
+        ar: 'أكملت للتو رسمًا علاجيًا وعبرت عن بعض مشاعري الداخلية من خلاله.',
+        hi: 'मैंने अभी एक कला-चिकित्सा चित्र पूरा किया और उसके माध्यम से अपनी कुछ आंतरिक भावनाएं व्यक्त कीं।',
+        zh: '我刚完成了一幅艺术治疗画，并通过它表达了一些内心的感受。',
+        ja: '今アートセラピーの絵を描き終え、内側の気持ちをいくつか表現しました。',
+        ko: '방금 미술치료 그림을 마치고 내면의 감정을 표현했어요.',
+        uk: 'Щойно завершив(ла) малюнок арт-терапії та виразив(ла) через нього деякі внутрішні почуття.',
+        pl: 'Właśnie ukończyłem/am rysunek arteterapeutyczny i wyraziłem/am przez niego niektóre wewnętrzne uczucia.',
+      },
+      journal: {
+        en: 'I just finished a journaling exercise and took time to reflect on my thoughts and feelings.',
+        ka: 'ახლახან დავასრულე ჟურნალის ვარჯიში და დამიარინდა ჩემი აზრებისა და გრძნობების შესახებ.',
+        ru: 'Я только что закончил(а) упражнение по ведению дневника и отразил(а) свои мысли и чувства.',
+        hy: 'Ես нOPQ завершил(а) упражнение по ведению дневника.',
+        tr: 'Az önce bir günlük egzersizini tamamladım ve düşünce ve duygularım üzerine zaman ayırdım.',
+        az: 'Az öncə gündəlik məşqini tamamladım və öz düşüncə və hisslərim üzərinde vaxt keçirdim.',
+        es: 'Acabo de terminar un ejercicio de diario y tomé tiempo para reflexionar sobre mis pensamientos y sentimientos.',
+        de: 'Ich habe gerade eine Tagebuchübung beendet und Zeit für die Reflexion meiner Gedanken und Gefühle genommen.',
+        fr: "Je viens de terminer un exercice de journaling et j'ai pris le temps de réfléchir à mes pensées et sentiments.",
+        pt: 'Acabei de concluir um exercício de diário e reservei um tempo para refletir sobre meus pensamentos e sentimentos.',
+        id: 'Baru saja menyelesaikan latihan jurnal dan meluangkan waktu untuk merefleksikan pikiran dan perasaan.',
+        it: 'Ho appena finito un esercizio di journaling e ho dedicato del tempo a riflettere sui miei pensieri e sentimenti.',
+        ar: 'أكملت للتو تمرين اليوميات وأخذت وقتًا للتأمل في أفكاري ومشاعري.',
+        hi: 'मैंने अभी एक जर्नलिंग अभ्यास पूरा किया और अपने विचारों और भावनाओं पर विचार करने के लिए समय निकाला।',
+        zh: '我刚完成了一个日记练习，花时间思考了我的想法和感受。',
+        ja: '今ジャーナリングの練習を終え、自分の思いや気持ちを振り返りました。',
+        ko: '방금 저널링 운동을 마치고 내 생각과 감정에 대해 성찰하는 시간을 가졌어요.',
+        uk: 'Щойно завершив(ла) вправу ведення щоденника та приділив(ла) час роздумам про свої думки та почуття.',
+        pl: 'Właśnie ukończyłem/am ćwiczenie journalingowe i poświęciłem/am czas na refleksję nad moimi myślami i uczuciami.',
+      },
+      emotionTracker: {
+        en: 'I just reviewed my emotional patterns and tracked my mood today.',
+        ka: 'ახლახან გადავხედე ჩემს ემოციურ პატერნებს და დღეს განწყობა გავაკვალე.',
+        ru: 'Я только что просмотрел(а) свои эмоциональные паттерны и отследил(а) настроение сегодня.',
+        hy: 'Ես нOPQ пересмотрел(а) свои эмоциональные паттерны.',
+        tr: 'Az önce duygusal örüntülerimi gözden geçirdim ve bugünkü ruh halimi takip ettim.',
+        az: 'Az öncə emosional naxışlarımı nəzərdən keçirdim və bu günkü əhval-ruhiyyəmi izlədim.',
+        es: 'Acabo de revisar mis patrones emocionales y rastrear mi estado de ánimo hoy.',
+        de: 'Ich habe gerade meine emotionalen Muster überprüft und meine Stimmung heute verfolgt.',
+        fr: "Je viens de passer en revue mes schémas émotionnels et de suivre mon humeur aujourd'hui.",
+        pt: 'Acabei de revisar meus padrões emocionais e monitorar meu humor hoje.',
+        id: 'Baru saja meninjau pola emosi dan melacak suasana hatiku hari ini.',
+        it: 'Ho appena ripassato i miei schemi emotivi e tracciato il mio umore oggi.',
+        ar: 'راجعت للتو أنماطي العاطفية وتتبعت مزاجي اليوم.',
+        hi: 'मैंने अभी अपने भावनात्मक पैटर्न की समीक्षा की और आज अपने मूड को ट्रैक किया।',
+        zh: '我刚查看了我的情绪模式，并追踪了今天的心情。',
+        ja: '感情パターンを振り返り、今日の気分を記録しました。',
+        ko: '방금 내 감정 패턴을 검토하고 오늘의 기분을 추적했어요.',
+        uk: 'Щойно переглянув(ла) свої емоційні патерни та відстежив(ла) настрій сьогодні.',
+        pl: 'Właśnie przejrzałem/am swoje wzorce emocjonalne i śledziłem/am swój nastrój dzisiaj.',
+      },
     },
   } as const;
   // Ensure we never append an empty AI message
@@ -294,7 +531,13 @@ const AITherapyChatScreen: React.FC = () => {
             ...currentSession.emotions,
             {
               emotion: aiResponse.detected_emotion,
-              intensity: Math.random() * 10, // In real app, this would be more sophisticated
+              intensity: (() => {
+                const emotionIntensityMap: Record<string, number> = {
+                  anxious: 7, sad: 6, angry: 8, confused: 5, positive: 3,
+                  welcoming: 2, neutral: 4, calm: 2, fear: 8, hopeful: 3,
+                };
+                return emotionIntensityMap[aiResponse.detected_emotion] ?? 5;
+              })(),
               timestamp: new Date(),
             },
           ],
@@ -309,7 +552,7 @@ const AITherapyChatScreen: React.FC = () => {
       const errorMessage: ChatMessageType = {
         id: `msg_${Date.now()}_error`,
         type: 'ai',
-        content: "I'm sorry, I encountered an issue processing your message. Please try again, and remember that I'm here to support you.",
+        content: pick(t.errors.messageProcessing as any, language),
         timestamp: new Date(),
         aiResponse: {
           response_text: "Error message",
@@ -508,7 +751,7 @@ const AITherapyChatScreen: React.FC = () => {
           const errorMessage: ChatMessageType = {
             id: `msg_${Date.now()}_error`,
             type: 'ai',
-            content: "I apologize, but I encountered an issue analyzing your image. The visual content is important, and I'd love to discuss what you were expressing through your art. Could you describe what you drew and what it means to you?",
+            content: pick(t.errors.imageProcessing as any, language),
             timestamp: new Date(),
             aiResponse: {
               response_text: "Error processing image",
@@ -535,21 +778,22 @@ const AITherapyChatScreen: React.FC = () => {
     }
   };
 
-  const handleInteractionComplete = async (interactionData: any) => {
-    // Build detailed message based on interaction type
-    let userMessage = '';
-    
+  const getActivityCompletionMessage = (interactionData: any): string => {
+    const a = t.activityCompletion as any;
     if (interactionData.type === 'breathing') {
-      userMessage = `I completed a breathing exercise: ${interactionData.cycles} cycles over ${interactionData.duration} minutes. I feel more centered now.`;
-    } else if (interactionData.type === 'drawing') {
-      userMessage = `I completed an art therapy drawing exercise and expressed my emotions through art.`;
-    } else if (interactionData.type === 'journal') {
-      userMessage = `I completed a journaling exercise and reflected on my thoughts and feelings.`;
-    } else if (interactionData.type === 'emotion_tracker') {
-      userMessage = `I viewed my emotional patterns and tracked my mood.`;
-    } else {
-      userMessage = `Completed ${interactionData.type} activity`;
+      const fn = a.breathing[language] ?? a.breathing.en;
+      return typeof fn === 'function'
+        ? fn(String(interactionData.cycles ?? ''), String(interactionData.duration ?? ''))
+        : fn;
     }
+    if (interactionData.type === 'drawing') return pick(a.drawing, language);
+    if (interactionData.type === 'journal') return pick(a.journal, language);
+    if (interactionData.type === 'emotion_tracker') return pick(a.emotionTracker, language);
+    return pick(t.followUp.default as any, language);
+  };
+
+  const handleInteractionComplete = async (interactionData: any) => {
+    const userMessage = getActivityCompletionMessage(interactionData);
 
     // Create user message with activity details
     const interactionMessage: ChatMessageType = {
@@ -605,14 +849,12 @@ const AITherapyChatScreen: React.FC = () => {
   };
 
   const getFollowUpMessage = (activityType: string): string => {
-    const messages = {
-      breathing: "Great job with the breathing exercise! How are you feeling now? Notice any changes in your body or mind?",
-      drawing: "Thank you for sharing your artistic expression. Art can reveal so much about our inner world. What did you notice while drawing?",
-      journal: "I appreciate you taking the time to reflect and write. Writing can be a powerful tool for self-discovery. What insights did you gain?",
-      emotion_tracker: "It's wonderful that you're tracking your emotions. Self-awareness is the first step toward emotional wellness. What patterns do you notice?"
-    };
-
-    return messages[activityType as keyof typeof messages] || "Thank you for completing that activity. How did it feel?";
+    const f = t.followUp as any;
+    if (activityType === 'breathing') return pick(f.breathing, language);
+    if (activityType === 'drawing') return pick(f.drawing, language);
+    if (activityType === 'journal') return pick(f.journal, language);
+    if (activityType === 'emotion_tracker') return pick(f.emotionTracker, language);
+    return pick(f.default, language);
   };
 
   const endSession = async () => {
@@ -625,7 +867,7 @@ const AITherapyChatScreen: React.FC = () => {
       const duration = Math.floor((new Date().getTime() - currentSession.startTime.getTime()) / 60000);
 
       // Generate AI summary
-      const summaryData = await aiTherapyService.generateSessionSummary(messages);
+      const summaryData = await aiTherapyService.generateSessionSummary(messages, language);
 
       // Create CLIENT-SAFE summary (no sensitive clinical details)
       const clientSummary: ClientSessionSummary = {
@@ -634,20 +876,20 @@ const AITherapyChatScreen: React.FC = () => {
         // Simplify emotions to general feelings (remove clinical terms)
         mainFeelings: summaryData.themes?.slice(0, 4).map((theme: string) => 
           theme.replace(/_/g, ' ').toLowerCase()
-        ) || ['reflection', 'awareness', 'growth'],
-        // Simplify activities (no detailed clinical techniques)
-        practiceActivities: summaryData.homework?.slice(0, 3) || [
-          'Take time to reflect on today\'s conversation',
-          'Practice self-compassion',
-          'Notice your feelings without judgment'
+        ) || [
+          pick({ en:'reflection', ru:'рефлексия', ka:'ასახვა', tr:'yansıma', az:'əks etdirmə', es:'reflexión', de:'Reflexion', fr:'réflexion', pt:'reflexão', id:'refleksi', it:'riflessione', ar:'تأمل', hi:'चिंतन', zh:'反思', ja:'内省', ko:'성찰', uk:'рефлексія', pl:'refleksja' } as any, language),
+          pick({ en:'awareness', ru:'осознанность', ka:'ცნობიერება', tr:'farkındalık', az:'fərasət', es:'conciencia', de:'Bewusstsein', fr:'conscience', pt:'consciência', id:'kesadaran', it:'consapevolezza', ar:'وعي', hi:'जागरूकता', zh:'觉知', ja:'気づき', ko:'자각', uk:'усвідомленість', pl:'świadomość' } as any, language),
+          pick({ en:'growth', ru:'рост', ka:'ზრდა', tr:'büyüme', az:'inkişaf', es:'crecimiento', de:'Wachstum', fr:'croissance', pt:'crescimento', id:'pertumbuhan', it:'crescita', ar:'نمو', hi:'विकास', zh:'成长', ja:'成長', ko:'성장', uk:'розвиток', pl:'wzrost' } as any, language),
         ],
-        // Positive, encouraging message
-        encouragement: summaryData.nextSteps || 
-          'You took an important step today by being here. Continue being kind to yourself and remember that growth is a journey, not a destination. You\'re doing great! 💚',
-        // Optional growth note (positive spin on progress)
+        practiceActivities: summaryData.homework?.slice(0, 3) || [
+          pick({ en:"Take time to reflect on today's conversation", ru:'Уделите время осмыслению сегодняшнего разговора', ka:'დაუთმეთ დრო დღევანდელი საუბრის ასახვას', tr:"Bugünkü konuşmayı yansıtmak için zaman ayırın", az:"Bu günkü söhbəti dəyərləndirmək üçün vaxt ayırın", es:'Tómate tiempo para reflexionar sobre la conversación de hoy', de:'Nehme dir Zeit, um das heutige Gespräch zu reflektieren', fr:"Prenez le temps de réfléchir à la conversation d'aujourd'hui", pt:'Reserve um tempo para refletir sobre a conversa de hoje', id:'Luangkan waktu untuk merenungkan percakapan hari ini', it:'Prenditi del tempo per riflettere sulla conversazione di oggi', ar:'خذ وقتاً للتأمل في محادثة اليوم', hi:'आज की बातचीत पर विचार करने के लिए समय निकालें', zh:'花时间反思今天的对话', ja:'今日の会話を振り返る時間を作ってください', ko:'오늘 대화를 돌아보는 시간을 가지세요', uk:'Знайдіть час, щоб осмислити сьогоднішню розмову', pl:'Poświęć czas na refleksję nad dzisiejszą rozmową' } as any, language),
+          pick({ en:'Practice self-compassion', ru:'Практикуйте самосострадание', ka:'ივარჯიშეთ თვით-თანაგრძნობაში', tr:'Öz-şefkat pratiği yapın', az:'Özünüzə qarşı mərhəmət göstərin', es:'Practica la autocompasión', de:'Übe Selbstmitgefühl', fr:"Pratiquez l'autocompassion", pt:'Pratique a autocompaixão', id:'Praktikkan kasih sayang pada diri sendiri', it:'Pratica l\'autocompassione', ar:'مارس التعاطف مع الذات', hi:'आत्म-करुणा का अभ्यास करें', zh:'练习自我慈悲', ja:'セルフ・コンパッションを実践する', ko:'자기 자비를 연습하세요', uk:'Практикуйте самоспівчуття', pl:'Ćwicz współczucie dla siebie' } as any, language),
+          pick({ en:'Notice your feelings without judgment', ru:'Замечайте свои чувства без осуждения', ka:'შეამჩნიეთ თქვენი გრძნობები განსჯის გარეშე', tr:'Duygularınızı yargılamadan fark edin', az:'Hisslərinizi mühakiməsiz qeyd edin', es:'Observa tus sentimientos sin juzgarlos', de:'Nimm deine Gefühle wahr ohne zu urteilen', fr:'Remarquez vos émotions sans les juger', pt:'Observe seus sentimentos sem julgamento', id:'Perhatikan perasaan Anda tanpa menghakimi', it:'Osserva i tuoi sentimenti senza giudizio', ar:'لاحظ مشاعرك دون إصدار أحكام', hi:'अपनी भावनाओं को बिना निर्णय के नोटिस करें', zh:'不加评判地关注你的感受', ja:'感情を判断せずに気づいてください', ko:'판단 없이 감정을 알아차리세요', uk:'Помічайте свої почуття без засуджень', pl:'Obserwuj swoje uczucia bez osądzania' } as any, language),
+        ],
+        encouragement: summaryData.nextSteps || pick({ en:"You took an important step today by being here. Continue being kind to yourself and remember that growth is a journey, not a destination. You're doing great! 💚", ru:'Вы сделали важный шаг, придя сюда. Продолжайте быть добры к себе — рост это путь, а не пункт назначения. Вы молодец! 💚', ka:'თქვენ გადადგით მნიშვნელოვანი ნაბიჯი დღეს. გააგრძელეთ საკუთარი თავის მიმართ კეთილი ყოფნა — ზრდა მოგზაურობაა, არა დანიშნულება. კარგად გამოდის! 💚', tr:"Bugün burada olarak önemli bir adım attınız. Kendinize karşı nazik olmaya devam edin. 💚", az:"Bu gün buraya gəlməklə mühüm addım atdınız. Özünüzə qarşı mehriban olmağa davam edin. 💚", es:'Diste un paso importante hoy al estar aquí. El crecimiento es un camino. ¡Lo estás haciendo muy bien! 💚', de:'Du hast heute einen wichtigen Schritt gemacht. Wachstum ist eine Reise. Du machst das großartig! 💚', fr:"Vous avez fait un pas important aujourd'hui. La croissance est un voyage. Vous faites du très bon travail ! 💚", pt:'Você deu um passo importante hoje. O crescimento é uma jornada. Você está indo muito bem! 💚', id:'Anda mengambil langkah penting hari ini. Pertumbuhan adalah perjalanan. Anda luar biasa! 💚', it:'Hai fatto un passo importante oggi. La crescita è un viaggio. Stai andando alla grande! 💚', ar:'اتخذت خطوة مهمة اليوم بتواجدك هنا. النمو رحلة وليس وجهة. أنت تقوم بعمل رائع! 💚', hi:'आज यहाँ आकर आपने एक महत्वपूर्ण कदम उठाया। विकास एक यात्रा है। आप बहुत अच्छा कर रहे हैं! 💚', zh:'今天来这里，你迈出了重要的一步。成长是一段旅程。你做得很好！💚', ja:'今日ここにいることで、重要な一歩を踏み出しました。成長は旅です。よくやっています！💚', ko:'오늘 여기에 있음으로써 중요한 발걸음을 내딛었습니다. 성장은 여정입니다. 잘 하고 있습니다! 💚', uk:'Ви зробили важливий крок, прийшовши сюди. Зростання — це подорож. Ви молодець! 💚', pl:'Zrobiłeś ważny krok, będąc tutaj. Wzrost to podróż, nie cel. Świetnie sobie radzisz! 💚' } as any, language),
         personalGrowth: summaryData.progressScore && summaryData.progressScore >= 60 
-          ? 'You showed great openness and willingness to explore your feelings today.' 
-          : 'Every session is a step forward. Your commitment to your wellbeing matters.'
+          ? pick({ en:'You showed great openness and willingness to explore your feelings today.', ru:'Вы проявили искреннюю открытость и готовность исследовать свои чувства сегодня.', ka:'თქვენ გამოავლინეთ შესანიშნავი გახსნილობა და სურვილი, შეისწავლოთ საკუთარი გრძნობები დღეს.', hy:'Այսօր դուք մեծ բացություն և պատրաստակամություն ցուցաբերեցիք ձեր զգացմունքները ուսումնասիրելու համար։', tr:'Bugün duygularınızı keşfetme konusunda büyük bir açıklık ve isteklilik gösterdiniz.', az:'Bu gün hisslərinizi araşdırmaq üçün böyük açıqlıq göstərdiniz.', es:'Mostraste gran apertura y disposición para explorar tus sentimientos hoy.', de:'Du hast heute große Offenheit gezeigt, deine Gefühle zu erkunden.', fr:"Vous avez montré une grande ouverture d'esprit pour explorer vos sentiments aujourd'hui.", pt:'Você demonstrou grande abertura para explorar seus sentimentos hoje.', id:'Anda menunjukkan keterbukaan yang luar biasa untuk menjelajahi perasaan Anda hari ini.', it:"Hai mostrato grande apertura nell'esplorare i tuoi sentimenti oggi.", ar:'أظهرت انفتاحاً كبيراً واستعداداً لاستكشاف مشاعرك اليوم.', hi:'आपने आज अपनी भावनाओं का पता लगाने में बड़ी खुलापन दिखाई।', zh:'今天你展示了探索自己感受的极大开放性和意愿。', ja:'今日は感情を探求する素晴らしい開放性を示しました。', ko:'오늘 감정을 탐색하는 훌륭한 개방성을 보여주셨습니다.', uk:'Ви проявили велику відкритість і готовність досліджувати свої почуття сьогодні.', pl:'Wykazałeś wielką otwartość i chęć eksploracji swoich uczuć dzisiaj.' } as any, language)
+          : pick({ en:'Every session is a step forward. Your commitment to your wellbeing matters.', ru:'Каждая сессия — шаг вперёд. Ваша забота о своём благополучии имеет значение.', ka:'ყოველი სესია ნაბიჯია წინ. თქვენი გულისხმიერება საკუთარი კეთილდღეობისადმი მნიშვნელოვანია.', hy:'Յուրաքանչյուր սեանս մեկ քայլ է առաջ։ Ձեր բարեկեցության հանդեպ ձեր հոգատարությունը կարևոր է։', tr:'Her seans bir adım ileriye. Refahınıza olan bağlılığınız önemlidir.', az:'Hər sessiya irəliyə bir addımdır. Sağlamlığınıza bağlılığınız vacibdir.', es:'Cada sesión es un paso adelante. Tu compromiso con tu bienestar es importante.', de:'Jede Sitzung ist ein Schritt nach vorn. Dein Engagement für dein Wohlbefinden ist wichtig.', fr:'Chaque séance est un pas en avant. Votre engagement envers votre bien-être compte.', pt:'Cada sessão é um passo à frente. Seu comprometimento com seu bem-estar importa.', id:'Setiap sesi adalah langkah maju. Komitmen Anda terhadap kesejahteraan Anda penting.', it:"Ogni sessione è un passo avanti. Il tuo impegno per il tuo benessere è importante.", ar:'كل جلسة خطوة إلى الأمام. التزامك بصحتك له أهمية.', hi:'हर सत्र आगे बढ़ने का एक कदम है। अपनी भलाई के प्रति आपकी प्रतिबद्धता मायने रखती है।', zh:'每次会话都是向前的一步。您对自身健康的承诺很重要。', ja:'すべてのセッションは前進です。自分の幸福へのコミットメントが大切です。', ko:'모든 세션은 앞으로 나아가는 걸음입니다. 당신의 웰빙에 대한 헌신이 중요합니다.', uk:'Кожна сесія — крок вперед. Ваша відданість власному благополуччю має значення.', pl:'Każda sesja to krok naprzód. Twoje zaangażowanie w swoje dobrostanie ma znaczenie.' } as any, language)
       };
 
       // Save session (with full clinical data in storage)
@@ -914,11 +1156,11 @@ const AITherapyChatScreen: React.FC = () => {
               setShowSummaryModal(false);
               // Ask if user wants to start new session
               Alert.alert(
-                'Start New Session?',
-                'Would you like to begin a new therapy session?',
+                pick(t.alerts.startNewTitle as any, language),
+                pick(t.alerts.startNewText as any, language),
                 [
                   {
-                    text: 'Yes, Start Fresh',
+                    text: pick(t.alerts.yesStartFresh as any, language),
                     onPress: () => {
                       setMessages([]);
                       setCurrentSession(null);
@@ -927,7 +1169,7 @@ const AITherapyChatScreen: React.FC = () => {
                     },
                   },
                   {
-                    text: 'Stay Here',
+                    text: pick(t.alerts.stayHere as any, language),
                     style: 'cancel'
                   }
                 ]

@@ -1,20 +1,22 @@
 import CommonHeader from '@/components/CommonHeader';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  Dimensions,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Animated,
+    Dimensions,
+    Easing,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
+const CIRCLE_SIZE = Math.min(width * 0.72, 270);
 
 // Multilingual breathing patterns (names, descriptions, benefits)
 const breathingPatterns = [
@@ -66,305 +68,542 @@ const T = {
   },
 } as const;
 
+// ─── Phase visual config ─────────────────────────────────────────────────────
+const PHASE_CONFIG: Record<string, { bg: readonly [string, string, string]; primary: string; glow: string; text: string }> = {
+  ready:     { bg: ['#030710', '#0a1225', '#030710'], primary: '#818cf8', glow: 'rgba(99,102,241,0.22)',  text: '#c7d2fe' },
+  inhale:    { bg: ['#02091a', '#0c213f', '#02091a'], primary: '#38bdf8', glow: 'rgba(14,165,233,0.28)',  text: '#bae6fd' },
+  hold:      { bg: ['#0a0600', '#1e1200', '#0a0600'], primary: '#fbbf24', glow: 'rgba(245,158,11,0.28)',  text: '#fde68a' },
+  exhale:    { bg: ['#0e0018', '#250040', '#0e0018'], primary: '#f472b6', glow: 'rgba(236,72,153,0.24)',  text: '#fbcfe8' },
+  pause:     { bg: ['#000e08', '#001e10', '#000e08'], primary: '#34d399', glow: 'rgba(16,185,129,0.24)',  text: '#a7f3d0' },
+  completed: { bg: ['#000e08', '#002018', '#000e08'], primary: '#4ade80', glow: 'rgba(34,197,94,0.28)',   text: '#bbf7d0' },
+};
+
+const PATTERN_META = [
+  { gradient: ['#12103a', '#2d2a6e'] as const, accent: '#818cf8' },
+  { gradient: ['#072234', '#0c4a6e'] as const, accent: '#38bdf8' },
+  { gradient: ['#1a0838', '#3b0f7a'] as const, accent: '#c084fc' },
+] as const;
+
 type Phase = 'ready' | 'inhale' | 'hold' | 'exhale' | 'pause' | 'completed';
-type PhaseInfo = { text: string; color: string };
-type Phases = { [key in Phase]: PhaseInfo };
 
+// ─── Rhythm visualizer bar ───────────────────────────────────────────────────
+function RhythmBars({ pattern }: { pattern: typeof breathingPatterns[0] }) {
+  const segs: Array<{ dur: number; color: string; label: string }> = [];
+  if (pattern.inhale > 0)         segs.push({ dur: pattern.inhale,         color: '#38bdf8', label: `↑ ${pattern.inhale}s` });
+  if ((pattern as any).hold > 0)  segs.push({ dur: (pattern as any).hold,  color: '#fbbf24', label: `◉ ${(pattern as any).hold}s` });
+  if (pattern.exhale > 0)         segs.push({ dur: pattern.exhale,         color: '#f472b6', label: `↓ ${pattern.exhale}s` });
+  if ((pattern as any).pause > 0) segs.push({ dur: (pattern as any).pause, color: '#34d399', label: `○ ${(pattern as any).pause}s` });
+  const total = segs.reduce((s, x) => s + x.dur, 0);
+  return (
+    <View style={{ marginVertical: 10 }}>
+      <View style={{ flexDirection: 'row', height: 5, borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+        {segs.map((s, i) => (
+          <View key={i} style={{ flex: s.dur / total, backgroundColor: s.color, marginHorizontal: 0.5 }} />
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+        {segs.map((s, i) => (
+          <Text key={i} style={{ fontSize: 11, color: s.color, fontWeight: '600' }}>{s.label}</Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 export default function BreathingScreen() {
-  const router = useRouter();
-  const { theme } = useTheme();
   const { language } = useLanguage();
+  const { theme } = useTheme();
 
-  const [selectedPattern, setSelectedPattern] = useState(breathingPatterns[0]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<Phase>('ready');
   const [currentCycle, setCurrentCycle] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
 
+  const selectedPattern = breathingPatterns[selectedIdx];
+  const phaseConfig = PHASE_CONFIG[currentPhase] ?? PHASE_CONFIG.ready;
+
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const rippleAnims = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+  const rippleLoops = useRef<Animated.CompositeAnimation[]>([]);
+  const rippleTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const pick = (obj: Record<string, any>) => (obj as any)[language as AppLanguage] ?? (obj as any).en;
-
-  const phasesText: Phases = useMemo(
-    () => ({
-      ready: { text: pick(T.ready as any), color: '#A8A8A8' },
-      inhale: { text: pick(T.phases.inhale as any), color: '#4ECDC4' },
-      hold: { text: pick(T.phases.hold as any), color: '#FFE66D' },
-      exhale: { text: pick(T.phases.exhale as any), color: '#FF6B6B' },
-      pause: { text: pick(T.phases.pause as any), color: '#A8E6CF' },
-      completed: { text: pick(T.phases.completed as any), color: '#4BB543' },
-    }),
+  const p = useCallback(
+    (obj: Record<string, any>): any => (obj as any)[language as AppLanguage] ?? (obj as any).en,
     [language]
   );
 
-  const startBreathing = () => {
+  const doScale = useCallback((toValue: number, duration: number) => {
+    Animated.timing(scaleAnim, {
+      toValue,
+      duration,
+      useNativeDriver: true,
+      easing: Easing.inOut(Easing.sin),
+    }).start();
+  }, [scaleAnim]);
+
+  const startRipples = useCallback(() => {
+    rippleLoops.current.forEach(l => l.stop());
+    rippleTimers.current.forEach(t => clearTimeout(t));
+    rippleLoops.current = [];
+    rippleTimers.current = [];
+    rippleAnims.forEach((anim, i) => {
+      anim.setValue(0);
+      const t = setTimeout(() => {
+        const loop = Animated.loop(
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 2400,
+            useNativeDriver: true,
+            easing: Easing.out(Easing.quad),
+          })
+        );
+        loop.start();
+        rippleLoops.current.push(loop);
+      }, i * 800);
+      rippleTimers.current.push(t);
+    });
+  }, [rippleAnims]);
+
+  const stopRipples = useCallback(() => {
+    rippleLoops.current.forEach(l => l.stop());
+    rippleTimers.current.forEach(t => clearTimeout(t));
+    rippleLoops.current = [];
+    rippleTimers.current = [];
+    rippleAnims.forEach(a => a.setValue(0));
+  }, [rippleAnims]);
+
+  useEffect(() => () => { stopRipples(); }, [stopRipples]);
+
+  const startBreathing = useCallback(() => {
     setIsActive(true);
     setCurrentCycle(0);
     setCurrentPhase('inhale');
     setTimeLeft(selectedPattern.inhale);
+    startRipples();
+    doScale(1.65, selectedPattern.inhale * 1000);
+  }, [selectedPattern, startRipples, doScale]);
 
-    Animated.timing(scaleAnim, {
-      toValue: 1.5,
-      duration: selectedPattern.inhale * 1000,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const stopBreathing = () => {
+  const stopBreathing = useCallback(() => {
     setIsActive(false);
     setCurrentPhase('ready');
     setCurrentCycle(0);
     setTimeLeft(0);
-
-    Animated.timing(scaleAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
-  };
+    stopRipples();
+    doScale(1, 600);
+  }, [stopRipples, doScale]);
 
   useEffect(() => {
-    if (isActive && timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
+    if (!isActive) return;
+    if (timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
       return () => clearTimeout(timer);
     }
-
-    if (isActive && timeLeft === 0) {
-      switch (currentPhase) {
-        case 'inhale': {
-          const nextHold = (selectedPattern as any).hold || 0;
-          if (nextHold > 0) {
-            setCurrentPhase('hold');
-            setTimeLeft(nextHold);
-            Animated.timing(scaleAnim, {
-              toValue: 1.5,
-              duration: nextHold * 1000,
-              useNativeDriver: true,
-            }).start();
-          } else {
-            setCurrentPhase('exhale');
-            setTimeLeft(selectedPattern.exhale);
-            Animated.timing(scaleAnim, {
-              toValue: 1,
-              duration: selectedPattern.exhale * 1000,
-              useNativeDriver: true,
-            }).start();
-          }
-          break;
-        }
-        case 'hold': {
+    switch (currentPhase) {
+      case 'inhale': {
+        const holdTime = (selectedPattern as any).hold || 0;
+        if (holdTime > 0) {
+          setCurrentPhase('hold');
+          setTimeLeft(holdTime);
+        } else {
           setCurrentPhase('exhale');
           setTimeLeft(selectedPattern.exhale);
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: selectedPattern.exhale * 1000,
-            useNativeDriver: true,
-          }).start();
-          break;
+          doScale(1, selectedPattern.exhale * 1000);
         }
-        case 'exhale': {
-          const nextPause = (selectedPattern as any).pause || 0;
-          if (nextPause > 0) {
-            setCurrentPhase('pause');
-            setTimeLeft(nextPause);
-            Animated.timing(scaleAnim, {
-              toValue: 1,
-              duration: nextPause * 1000,
-              useNativeDriver: true,
-            }).start();
-          } else {
-            const nextCycle = currentCycle + 1;
-            if (nextCycle < selectedPattern.cycles) {
-              setCurrentCycle(nextCycle);
-              setCurrentPhase('inhale');
-              setTimeLeft(selectedPattern.inhale);
-              Animated.timing(scaleAnim, {
-                toValue: 1.5,
-                duration: selectedPattern.inhale * 1000,
-                useNativeDriver: true,
-              }).start();
-            } else {
-              setCurrentPhase('completed');
-              setIsActive(false);
-              setTimeout(() => setCurrentPhase('ready'), 3000);
-            }
-          }
-          break;
-        }
-        case 'pause': {
-          const nextCycle = currentCycle + 1;
-          if (nextCycle < selectedPattern.cycles) {
-            setCurrentCycle(nextCycle);
+        break;
+      }
+      case 'hold': {
+        setCurrentPhase('exhale');
+        setTimeLeft(selectedPattern.exhale);
+        doScale(1, selectedPattern.exhale * 1000);
+        break;
+      }
+      case 'exhale': {
+        const pauseTime = (selectedPattern as any).pause || 0;
+        if (pauseTime > 0) {
+          setCurrentPhase('pause');
+          setTimeLeft(pauseTime);
+        } else {
+          const next = currentCycle + 1;
+          if (next < selectedPattern.cycles) {
+            setCurrentCycle(next);
             setCurrentPhase('inhale');
             setTimeLeft(selectedPattern.inhale);
-            Animated.timing(scaleAnim, {
-              toValue: 1.5,
-              duration: selectedPattern.inhale * 1000,
-              useNativeDriver: true,
-            }).start();
+            doScale(1.65, selectedPattern.inhale * 1000);
           } else {
             setCurrentPhase('completed');
             setIsActive(false);
-            setTimeout(() => setCurrentPhase('ready'), 3000);
+            stopRipples();
+            setTimeout(() => setCurrentPhase('ready'), 3500);
           }
-          break;
         }
+        break;
+      }
+      case 'pause': {
+        const next = currentCycle + 1;
+        if (next < selectedPattern.cycles) {
+          setCurrentCycle(next);
+          setCurrentPhase('inhale');
+          setTimeLeft(selectedPattern.inhale);
+          doScale(1.65, selectedPattern.inhale * 1000);
+        } else {
+          setCurrentPhase('completed');
+          setIsActive(false);
+          stopRipples();
+          setTimeout(() => setCurrentPhase('ready'), 3500);
+        }
+        break;
       }
     }
-  }, [isActive, timeLeft, currentPhase, currentCycle, selectedPattern, scaleAnim]);
+  }, [isActive, timeLeft, currentPhase, currentCycle, selectedPattern, doScale, stopRipples]);
 
-  const styles = createStyles(theme);
+  const phaseLabel: Record<Phase, string> = {
+    ready:     p(T.ready),
+    inhale:    p(T.phases.inhale),
+    hold:      p(T.phases.hold),
+    exhale:    p(T.phases.exhale),
+    pause:     p(T.phases.pause),
+    completed: p(T.phases.completed),
+  };
 
+  // ── SELECTION SCREEN ──────────────────────────────────────────────────────
+  if (!isActive && currentPhase === 'ready') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <LinearGradient colors={['#030710', '#0a1225', '#030710']} style={StyleSheet.absoluteFill} />
+        <CommonHeader title={p(T.headerTitle)} />
+        <ScrollView contentContainerStyle={styles.selectionScroll} showsVerticalScrollIndicator={false}>
+          <Text style={styles.selectionTitle}>{p(T.choosePattern)}</Text>
+
+          {breathingPatterns.map((pattern, idx) => {
+            const meta = PATTERN_META[idx];
+            const isSel = selectedIdx === idx;
+            return (
+              <TouchableOpacity key={pattern.id} onPress={() => setSelectedIdx(idx)} activeOpacity={0.85}>
+                <LinearGradient
+                  colors={isSel
+                    ? [meta.gradient[0], meta.gradient[1], meta.accent + '33']
+                    : [meta.gradient[0], meta.gradient[1]]}
+                  style={[styles.patternCard, isSel && { borderColor: meta.accent, borderWidth: 1.5 }]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.patternCardTop}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.patternCardName}>{p(pattern.name)}</Text>
+                      <Text style={styles.patternCardDesc}>{p(pattern.description)}</Text>
+                    </View>
+                    {isSel && (
+                      <View style={[styles.checkBadge, { backgroundColor: meta.accent }]}>
+                        <Text style={styles.checkBadgeText}>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                  <RhythmBars pattern={pattern} />
+                  <View style={styles.chipRow}>
+                    {(p(pattern.benefits) as string[]).map((b, i) => (
+                      <View key={i} style={[styles.chip, { borderColor: meta.accent + '55', backgroundColor: meta.accent + '18' }]}>
+                        <Text style={[styles.chipText, { color: meta.accent }]}>{b}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            );
+          })}
+
+          <TouchableOpacity onPress={startBreathing} activeOpacity={0.85}>
+            <LinearGradient
+              colors={[PATTERN_META[selectedIdx].accent, PATTERN_META[selectedIdx].accent + 'bb']}
+              style={styles.startBtn}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.startBtnText}>{p(T.start)}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── ACTIVE BREATHING SCREEN ───────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
-      <CommonHeader title={pick(T.headerTitle as any)} />
+      <LinearGradient colors={phaseConfig.bg} style={StyleSheet.absoluteFill} />
+      <CommonHeader title={p(T.headerTitle)} />
 
-      {!isActive && currentPhase === 'ready' ? (
-        <View style={styles.patternContainer}>
-          <Text style={styles.sectionTitle}>{pick(T.choosePattern as any)}</Text>
-          <View style={styles.patternGrid}>
-            {breathingPatterns.map((pattern) => (
-              <TouchableOpacity
-                key={pattern.id}
-                style={[
-                  styles.patternCard,
-                  selectedPattern.id === pattern.id && styles.selectedPattern,
-                ]}
-                onPress={() => setSelectedPattern(pattern)}
-              >
-                <Text style={styles.patternName}>{pick(pattern.name)}</Text>
-                <Text style={styles.patternDescription}>{pick(pattern.description)}</Text>
-                <View style={styles.benefitsList}>
-                  {pick(pattern.benefits).map((b: string, i: number) => (
-                    <View key={i} style={styles.benefitItem}>
-                      <FontAwesome5 name="check-circle" size={12} color={theme.colors.success} />
-                      <Text style={styles.benefitText}>{b}</Text>
-                    </View>
-                  ))}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+      <View style={styles.activeOuter}>
+        {/* Circle + ripple rings */}
+        <View style={styles.circleArea}>
+          {rippleAnims.map((anim, i) => (
+            <Animated.View
+              key={i}
+              style={[
+                styles.rippleRing,
+                {
+                  borderColor: phaseConfig.primary + '55',
+                  transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 2.7] }) }],
+                  opacity: anim.interpolate({ inputRange: [0, 0.45, 1], outputRange: [0.55, 0.18, 0] }),
+                },
+              ]}
+            />
+          ))}
 
-          <TouchableOpacity style={styles.controlButton} onPress={startBreathing}>
-            <Text style={styles.controlButtonText}>{pick(T.start as any)}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.circleContainer}>
+          {/* Atmospheric halo */}
+          <View style={[styles.haloGlow, { backgroundColor: phaseConfig.glow, borderColor: phaseConfig.primary + '22' }]} />
+
+          {/* Main breathing circle */}
           <Animated.View
             style={[
-              styles.breathingCircle,
-              { transform: [{ scale: scaleAnim }], borderColor: phasesText[currentPhase].color },
+              styles.breathCircle,
+              {
+                borderColor: phaseConfig.primary,
+                backgroundColor: phaseConfig.glow,
+                transform: [{ scale: scaleAnim }],
+              },
             ]}
           >
-            <Text style={[styles.phaseText, { color: phasesText[currentPhase].color }]}>
-              {phasesText[currentPhase].text}
+            <Text style={[styles.phaseText, { color: phaseConfig.text }]}>
+              {phaseLabel[currentPhase]}
             </Text>
             {timeLeft > 0 && (
-              <Text style={[styles.timeText, { color: phasesText[currentPhase].color }]}>
+              <Text style={[styles.countdownNum, { color: phaseConfig.primary }]}>
                 {timeLeft}
               </Text>
             )}
           </Animated.View>
+        </View>
 
-          {currentPhase !== 'completed' && (
+        {/* Bottom controls */}
+        <View style={styles.bottomArea}>
+          {(isActive || currentPhase === 'completed') && (
+            <View style={styles.dotRow}>
+              {Array.from({ length: selectedPattern.cycles }).map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor:
+                        i < currentCycle ? phaseConfig.primary :
+                        i === currentCycle && isActive ? phaseConfig.primary + 'aa' :
+                        'rgba(255,255,255,0.15)',
+                      transform: [{ scale: i === currentCycle && isActive ? 1.4 : 1 }],
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+
+          {isActive && (
             <Text style={styles.cycleText}>
-              {pick(T.cycle as any)} {currentCycle + 1} / {selectedPattern.cycles}
+              {`${p(T.cycle)} ${currentCycle + 1} / ${selectedPattern.cycles}`}
+            </Text>
+          )}
+
+          {currentPhase === 'completed' && (
+            <Text style={[styles.completedText, { color: phaseConfig.primary }]}>
+              {phaseLabel.completed}
             </Text>
           )}
 
           {isActive && (
-            <TouchableOpacity style={styles.controlButton} onPress={stopBreathing}>
-              <Text style={styles.controlButtonText}>{pick(T.stop as any)}</Text>
+            <TouchableOpacity onPress={stopBreathing} activeOpacity={0.75}>
+              <View style={[styles.stopBtn, { borderColor: phaseConfig.primary + '55' }]}>
+                <Text style={[styles.stopBtnText, { color: phaseConfig.text }]}>
+                  {p(T.stop)}
+                </Text>
+              </View>
             </TouchableOpacity>
           )}
         </View>
-      )}
+      </View>
     </SafeAreaView>
   );
 }
 
-const createStyles = (theme: any) =>
-  StyleSheet.create({
-    container: { flex: 1, backgroundColor: theme.colors.background },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
-    },
-    headerTitle: { fontSize: 20, fontWeight: '600', color: theme.colors.text },
-    backButton: { padding: 8 },
-    placeholder: { width: 40 },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#030710',
+  },
 
-    patternContainer: { flex: 1, padding: 16 },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 16,
-    },
-    patternGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-    },
-    patternCard: {
-      width: '48%',
-      backgroundColor: theme.colors.card,
-      borderRadius: 18,
-      padding: 16,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 6,
-      elevation: 3,
-    },
-    selectedPattern: { borderWidth: 2, borderColor: theme.colors.accent },
-    patternName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 8,
-    },
-    patternDescription: { fontSize: 14, color: theme.colors.textSecondary, marginBottom: 12 },
-    benefitsList: { marginTop: 8 },
-    benefitItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-    benefitText: { fontSize: 12, color: theme.colors.textSecondary, marginLeft: 6 },
+  // Selection screen ──────────────────────────────────────────────────────────
+  selectionScroll: {
+    padding: 20,
+    paddingTop: 8,
+    paddingBottom: 40,
+  },
+  selectionTitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 1.5,
+    marginBottom: 16,
+    textTransform: 'uppercase',
+  },
+  patternCard: {
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  patternCardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 2,
+  },
+  patternCardName: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  patternCardDesc: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+    lineHeight: 18,
+  },
+  checkBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+    marginTop: 2,
+  },
+  checkBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  startBtn: {
+    borderRadius: 18,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  startBtnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
 
-    circleContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    breathingCircle: {
-      width: width * 0.62,
-      height: width * 0.62,
-      borderRadius: width * 0.31,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(255,255,255,0.08)',
-      borderWidth: 3,
-    },
-    phaseText: { fontSize: 24, fontWeight: 'bold', marginBottom: 8 },
-    timeText: { fontSize: 48, fontWeight: '300' },
-    cycleText: { fontSize: 16, color: theme.colors.textSecondary, marginTop: 16 },
-
-    controlButton: {
-      backgroundColor: theme.colors.accent,
-      paddingHorizontal: 36,
-      paddingVertical: 16,
-      borderRadius: 32,
-      marginTop: 32,
-      marginBottom: 16,
-      shadowColor: theme.colors.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    controlButtonText: { fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
-  });
+  // Active breathing screen ───────────────────────────────────────────────────
+  activeOuter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 36,
+  },
+  circleArea: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  rippleRing: {
+    position: 'absolute',
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    borderWidth: 1.5,
+  },
+  haloGlow: {
+    position: 'absolute',
+    width: CIRCLE_SIZE + 70,
+    height: CIRCLE_SIZE + 70,
+    borderRadius: (CIRCLE_SIZE + 70) / 2,
+    borderWidth: 1,
+  },
+  breathCircle: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phaseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  countdownNum: {
+    fontSize: 80,
+    fontWeight: '100',
+    letterSpacing: -4,
+    lineHeight: 88,
+  },
+  bottomArea: {
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 32,
+  },
+  dotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 4,
+  },
+  cycleText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.35)',
+    marginBottom: 24,
+    letterSpacing: 0.5,
+  },
+  completedText: {
+    fontSize: 26,
+    fontWeight: '700',
+    letterSpacing: 2,
+    marginBottom: 16,
+  },
+  stopBtn: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 44,
+    paddingVertical: 15,
+    marginTop: 4,
+  },
+  stopBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+});
