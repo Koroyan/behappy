@@ -28,6 +28,8 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="art-therapy-session" options={{ headerShown: false }} />
           <Stack.Screen name="screens/session-history" options={{ headerShown: false }} />
+          <Stack.Screen name="screens/ai-therapy-chat" options={{ headerShown: false }} />
+          <Stack.Screen name="screens/profile-setup" options={{ headerShown: false }} />
 
           {/* Other Screens */}
           <Stack.Screen name="screens/meditation" options={{ headerShown: false }} />

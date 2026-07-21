@@ -1,6 +1,7 @@
 import CommonHeader from '@/components/CommonHeader';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -85,6 +86,34 @@ const PATTERN_META = [
 ] as const;
 
 type Phase = 'ready' | 'inhale' | 'hold' | 'exhale' | 'pause' | 'completed';
+
+const BREATHING_PROGRESS_KEY = '@behappy_breathing_progress';
+
+async function saveBreathingCompletion(pattern: typeof breathingPatterns[0]) {
+  const cycleSeconds = pattern.inhale + pattern.exhale + ((pattern as any).hold || 0) + ((pattern as any).pause || 0);
+  const durationMinutes = Math.max(1, Math.round((cycleSeconds * pattern.cycles) / 60));
+
+  try {
+    const raw = await AsyncStorage.getItem(BREATHING_PROGRESS_KEY);
+    const current = raw ? JSON.parse(raw) : {};
+    const completedSessions = Array.isArray(current.completedSessions) ? current.completedSessions : [];
+    const nextSessions = [
+      {
+        patternId: pattern.id,
+        completedAt: new Date().toISOString(),
+        durationMinutes,
+      },
+      ...completedSessions,
+    ].slice(0, 100);
+
+    await AsyncStorage.setItem(BREATHING_PROGRESS_KEY, JSON.stringify({
+      totalMinutes: nextSessions.reduce((sum, session) => sum + (Number(session?.durationMinutes) || 0), 0),
+      completedSessions: nextSessions,
+    }));
+  } catch (error) {
+    console.log('Failed to save breathing progress:', error);
+  }
+}
 
 // ─── Rhythm visualizer bar ───────────────────────────────────────────────────
 function RhythmBars({ pattern }: { pattern: typeof breathingPatterns[0] }) {
@@ -239,6 +268,7 @@ export default function BreathingScreen() {
             setCurrentPhase('completed');
             setIsActive(false);
             stopRipples();
+            void saveBreathingCompletion(selectedPattern);
             setTimeout(() => setCurrentPhase('ready'), 3500);
           }
         }
@@ -255,6 +285,7 @@ export default function BreathingScreen() {
           setCurrentPhase('completed');
           setIsActive(false);
           stopRipples();
+          void saveBreathingCompletion(selectedPattern);
           setTimeout(() => setCurrentPhase('ready'), 3500);
         }
         break;

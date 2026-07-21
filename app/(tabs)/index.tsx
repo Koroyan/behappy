@@ -1,6 +1,9 @@
 import type { AppLanguage } from '@/contexts/LanguageContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import DailyMotivationCard from '@/components/DailyMotivationCard';
+import PsychologistQuoteBar from '@/components/PsychologistQuoteBar';
+import { hasProfile } from '@/services/userProfileService';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -292,6 +295,13 @@ export default function HomeScreen() {
   const fade = useRef(new Animated.Value(0)).current;
   const translate = useRef(new Animated.Value(24)).current;
 
+  // Gently prompt for profile setup on first launch (dismissible, not a hard block).
+  useEffect(() => {
+    hasProfile().then((exists) => {
+      if (!exists) router.push('/screens/profile-setup?mode=onboarding' as any);
+    });
+  }, []);
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fade, { toValue: 1, duration: 500, useNativeDriver: true }),
@@ -423,6 +433,10 @@ export default function HomeScreen() {
       <Header />
       <Animated.ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fade, transform: [{ translateY: translate }] }}>
+        {/* Daily AI motivation + psychologist quote */}
+        <DailyMotivationCard />
+        <PsychologistQuoteBar />
+
         {/* Spotlight banner */}
         <View style={styles.spotlightWrapper}>
           <LinearGradient colors={isDark ? ['#111827', '#0B1020'] : ['#E0E7FF', '#EEF2FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.spotlightCard}>

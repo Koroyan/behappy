@@ -176,6 +176,12 @@ const T = {
     es: 'Tú', de: 'Du', fr: 'Vous', pt: 'Você', id: 'Kamu', it: 'Tu',
     ar: 'أنت', hi: 'आप', zh: '你', ja: 'あなた', ko: '당신', uk: 'Ви', pl: 'Ty',
   },
+  continueSession: {
+    en: 'Continue', ka: 'გაგრძელება', ru: 'Продолжить', hy: 'Շարունակել', tr: 'Devam et',
+    az: 'Davam et', es: 'Continuar', de: 'Fortsetzen', fr: 'Continuer', pt: 'Continuar',
+    id: 'Lanjutkan', it: 'Continua', ar: 'متابعة', hi: 'जारी रखें', zh: '继续',
+    ja: '続ける', ko: '계속하기', uk: 'Продовжити', pl: 'Kontynuuj',
+  },
 };
 
 // ────────────────────────────────────────────────
@@ -224,15 +230,24 @@ interface SessionCardProps {
   colors: any;
   onPress: () => void;
   onDelete: () => void;
+  onContinue: () => void;
 }
 
-const SessionCard: React.FC<SessionCardProps> = ({ session, index, lang, isDark, colors, onPress, onDelete }) => {
+function previewText(session: SessionData): string {
+  const firstUser = session.messages?.find(m => m.type === 'user' && m.content?.trim());
+  if (!firstUser) return '';
+  const text = firstUser.content.trim();
+  return text.length > 90 ? `${text.slice(0, 90)}…` : text;
+}
+
+const SessionCard: React.FC<SessionCardProps> = ({ session, index, lang, isDark, colors, onPress, onDelete, onContinue }) => {
   const msgCount = session.messages?.length ?? 0;
   const duration = formatDuration(session.startTime, session.endTime, lang);
   const date = formatDate(session.startTime);
   const time = formatTime(session.startTime);
   const emotions = topEmotions(session.emotions ?? []);
   const isComplete = !!session.endTime;
+  const preview = previewText(session);
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
@@ -257,6 +272,13 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, lang, isDark,
         {/* Date & time */}
         <Text style={[styles.cardDate, { color: colors.text }]}>{date}</Text>
         <Text style={[styles.cardTime, { color: colors.textMuted }]}>{time}</Text>
+
+        {/* Preview snippet */}
+        {preview ? (
+          <Text style={[styles.cardPreview, { color: colors.textSecondary }]} numberOfLines={2}>
+            {preview}
+          </Text>
+        ) : null}
 
         {/* Stats row */}
         <View style={styles.statsRow}>
@@ -284,10 +306,20 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, lang, isDark,
           </View>
         )}
 
-        {/* View button */}
-        <View style={[styles.viewBtn, { backgroundColor: isDark ? 'rgba(0,149,246,0.15)' : '#EFF6FF' }]}>
-          <Text style={[styles.viewBtnText, { color: colors.accent }]}>{pick(T.viewDetail, lang)}</Text>
-          <Ionicons name="chevron-forward" size={14} color={colors.accent} />
+        {/* Actions */}
+        <View style={styles.cardActionsRow}>
+          <TouchableOpacity
+            onPress={onContinue}
+            style={[styles.continueBtn, { backgroundColor: colors.accent }]}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="play-forward" size={13} color="#FFFFFF" />
+            <Text style={styles.continueBtnText}>{pick(T.continueSession, lang)}</Text>
+          </TouchableOpacity>
+          <View style={[styles.viewBtn, { backgroundColor: isDark ? 'rgba(0,149,246,0.15)' : '#EFF6FF' }]}>
+            <Text style={[styles.viewBtnText, { color: colors.accent }]}>{pick(T.viewDetail, lang)}</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.accent} />
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -301,12 +333,13 @@ interface DetailModalProps {
   session: SessionData | null;
   visible: boolean;
   onClose: () => void;
+  onContinue: () => void;
   lang: AppLanguage;
   isDark: boolean;
   colors: any;
 }
 
-const DetailModal: React.FC<DetailModalProps> = ({ session, visible, onClose, lang, isDark, colors }) => {
+const DetailModal: React.FC<DetailModalProps> = ({ session, visible, onClose, onContinue, lang, isDark, colors }) => {
   if (!session) return null;
   const messages = session.messages ?? [];
   const insights = session.insights?.filter(Boolean) ?? [];
@@ -324,6 +357,15 @@ const DetailModal: React.FC<DetailModalProps> = ({ session, visible, onClose, la
             <Ionicons name="close-circle" size={28} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          onPress={onContinue}
+          style={[styles.modalContinueBtn, { backgroundColor: colors.accent }]}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="play-forward" size={15} color="#FFFFFF" />
+          <Text style={styles.modalContinueBtnText}>{pick(T.continueSession, lang)}</Text>
+        </TouchableOpacity>
 
         <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
           {/* Key Insights */}
@@ -355,7 +397,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ session, visible, onClose, la
                 styles.msgSender,
                 { color: msg.type === 'user' ? 'rgba(255,255,255,0.75)' : colors.textMuted },
               ]}>
-                {msg.type === 'user' ? pick(T.you, lang) : 'Dr. Sophia'}
+                {msg.type === 'user' ? pick(T.you, lang) : 'Dr. Pijilo'}
               </Text>
               <Text style={[
                 styles.msgText,
@@ -440,6 +482,10 @@ export default function SessionHistoryScreen() {
     );
   };
 
+  const continueSession = (id: string) => {
+    router.push({ pathname: '/screens/ai-therapy-chat', params: { sessionId: id } } as any);
+  };
+
   const clearAll = () => {
     Alert.alert(
       pick(T.clearAll, language),
@@ -513,6 +559,7 @@ export default function SessionHistoryScreen() {
               colors={c}
               onPress={() => { setSelectedSession(item); setShowDetail(true); }}
               onDelete={() => deleteSession(item.id)}
+              onContinue={() => continueSession(item.id)}
             />
           )}
         />
@@ -522,6 +569,7 @@ export default function SessionHistoryScreen() {
         session={selectedSession}
         visible={showDetail}
         onClose={() => setShowDetail(false)}
+        onContinue={() => selectedSession && continueSession(selectedSession.id)}
         lang={language}
         isDark={isDark}
         colors={c}
@@ -581,8 +629,15 @@ const styles = StyleSheet.create({
   },
   emotionEmoji: { fontSize: 14 },
   emotionLabel: { fontSize: 12, textTransform: 'capitalize' },
+  cardPreview: { fontSize: 13, lineHeight: 18, marginBottom: 10 },
+  cardActionsRow: { flexDirection: 'row', gap: 8 },
+  continueBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 8, borderRadius: 10,
+  },
+  continueBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
   viewBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 4, paddingVertical: 8, borderRadius: 10,
   },
   viewBtnText: { fontSize: 13, fontWeight: '600' },
@@ -595,6 +650,11 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: '700' },
   modalSubtitle: { fontSize: 13, marginTop: 2 },
   closeBtn: { padding: 4 },
+  modalContinueBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, marginHorizontal: 16, marginTop: 14, paddingVertical: 12, borderRadius: 12,
+  },
+  modalContinueBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   modalBody: { flex: 1, padding: 16 },
   insightsBlock: {
     borderRadius: 12, padding: 14, marginBottom: 20,

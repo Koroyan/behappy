@@ -1,5 +1,6 @@
 import { AppLanguage } from '@/contexts/LanguageContext';
 import Constants from 'expo-constants';
+import { buildProfileContextBlock, getUserProfile } from './userProfileService';
 
 /**
  * Card Therapy Service
@@ -110,12 +111,11 @@ const CONTEXT_MESSAGES = {
 class CardTherapyService {
   private apiKey: string;
   private promptId: string = 'pmpt_690f8a73181481968bdf18821d56058203765a60aea147e6'; // Replace with your actual prompt ID
-  private version: string = '3';
+  private version: string = '4';
 
   constructor() {
-    this.apiKey = Constants.expoConfig?.extra?.OPENAI_API_KEY 
-      || process.env.EXPO_PUBLIC_OPENAI_API_KEY 
-      || process.env.OPENAI_API_KEY 
+    this.apiKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_API_KEY
+      || process.env.EXPO_PUBLIC_API_KEY
       || '';
 
     if (!this.apiKey) {
@@ -133,7 +133,7 @@ class CardTherapyService {
     negativeImageBase64?: string | null
   ): Promise<string> {
     try {
-      const contextMessage = this.buildContextMessage(cardContext);
+      const contextMessage = await this.buildContextMessage(cardContext);
 
       // Build content array with text and optional images
       const content: any[] = [
@@ -243,10 +243,10 @@ class CardTherapyService {
     try {
       // Add card context as system message if not already present
       const hasContext = messages.some(m => m.role === 'system');
-      const messagesWithContext = hasContext 
-        ? messages 
+      const messagesWithContext = hasContext
+        ? messages
         : [
-            { role: 'system' as const, content: this.buildContextMessage(cardContext) },
+            { role: 'system' as const, content: await this.buildContextMessage(cardContext) },
             ...messages,
           ];
 
@@ -386,7 +386,7 @@ class CardTherapyService {
 
       // Add context as first user message, then conversation, then summary request
       const allMessages = [
-        { role: 'system' as const, content: this.buildContextMessage(cardContext) },
+        { role: 'system' as const, content: await this.buildContextMessage(cardContext) },
         ...messages,
         summaryRequest,
       ];
@@ -468,22 +468,27 @@ class CardTherapyService {
   /**
    * Build context message based on card type (multilingual)
    */
-  private buildContextMessage(cardContext: CardContext): string {
+  private async buildContextMessage(cardContext: CardContext): Promise<string> {
     const { cardType, cardId, positiveCardId, negativeCardId, language = 'en' } = cardContext;
 
+    let base: string;
     switch (cardType) {
       case 'emotion':
-        return CONTEXT_MESSAGES.emotion[language]?.(cardId) || CONTEXT_MESSAGES.emotion.en(cardId);
+        base = CONTEXT_MESSAGES.emotion[language]?.(cardId) || CONTEXT_MESSAGES.emotion.en(cardId);
+        break;
 
       case 'resource':
-        return CONTEXT_MESSAGES.resource[language]?.(cardId) || CONTEXT_MESSAGES.resource.en(cardId);
+        base = CONTEXT_MESSAGES.resource[language]?.(cardId) || CONTEXT_MESSAGES.resource.en(cardId);
+        break;
 
       case 'positive_negative':
-        return CONTEXT_MESSAGES.positive_negative[language]?.(positiveCardId || '', negativeCardId || '') || 
+        base = CONTEXT_MESSAGES.positive_negative[language]?.(positiveCardId || '', negativeCardId || '') ||
                CONTEXT_MESSAGES.positive_negative.en(positiveCardId || '', negativeCardId || '');
+        break;
 
       case 'narrative':
-        return CONTEXT_MESSAGES.narrative[language]?.(cardId) || CONTEXT_MESSAGES.narrative.en(cardId);
+        base = CONTEXT_MESSAGES.narrative[language]?.(cardId) || CONTEXT_MESSAGES.narrative.en(cardId);
+        break;
 
       default:
         const defaultMessages = {
@@ -491,8 +496,11 @@ class CardTherapyService {
           ka: `კლიენტმა აირჩია ბარათი #${cardId} თერაპიული ექსპლორაციისთვის. წარმართეთ ისინი მნიშვნელოვან 20-30 გაცვლის სესიაში, რომელიც დასრულდება ყოვლისმომცველი შეჯამებით.`,
           ru: `Клиент выбрал карту #${cardId} для терапевтического исследования. Проведите их через значимую сессию из 20-30 обменов, заканчивающуюся комплексным резюме.`,
         };
-        return defaultMessages[language as keyof typeof defaultMessages] || defaultMessages.en;
+        base = defaultMessages[language as keyof typeof defaultMessages] || defaultMessages.en;
     }
+
+    const profileBlock = buildProfileContextBlock(await getUserProfile());
+    return profileBlock ? `${profileBlock}\n\n${base}` : base;
   }
 
   /**

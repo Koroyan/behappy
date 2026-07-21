@@ -1,4 +1,5 @@
 ﻿import AsyncStorage from '@react-native-async-storage/async-storage';
+import { buildProfileContextBlock, getUserProfile } from './userProfileService';
 
 export interface TherapyTechnique {
   method: string;
@@ -69,8 +70,10 @@ class AITherapyService {
   private promptInitialized: boolean = false;
   private promptInstructions: string | null = null;
   private readonly PROMPT_ID = "pmpt_6902692e3d8081959fff3a192b21482902ebe8295781d9fb";
-  private readonly PROMPT_VERSION = "9";
-  private readonly PROMPT_STORAGE_KEY = "cached_prompt_instructions_v7";
+  private readonly PROMPT_VERSION = "11";
+  // Derived from PROMPT_VERSION so bumping the hosted prompt version automatically
+  // invalidates any stale cached instructions text instead of silently reusing it.
+  private readonly PROMPT_STORAGE_KEY = `cached_prompt_instructions_v${this.PROMPT_VERSION}`;
 
   constructor() {}
 
@@ -242,13 +245,16 @@ class AITherapyService {
       }
       
       // For pure text sessions, use Responses API with Prompt
-      const recentHistory = this.sessionHistory.slice(-20).map(msg => 
+      const recentHistory = this.sessionHistory.slice(-20).map(msg =>
         `${msg.type === 'user' ? 'Client' : 'Therapist'}: ${msg.content}`
       ).join('\n');
-      
-      const contextualMessage = recentHistory 
-        ? `Session context:\n${recentHistory}\n\nCurrent message: ${userMessage}\n\n[Respond with valid JSON matching the clinical schema.]`
-        : `${userMessage}\n\n[Respond with valid JSON matching the clinical schema.]`;
+
+      const profileBlock = buildProfileContextBlock(await getUserProfile());
+      const profilePrefix = profileBlock ? `${profileBlock}\n\n` : '';
+
+      const contextualMessage = recentHistory
+        ? `${profilePrefix}Session context:\n${recentHistory}\n\nCurrent message: ${userMessage}\n\n[Respond with valid JSON matching the clinical schema.]`
+        : `${profilePrefix}${userMessage}\n\n[Respond with valid JSON matching the clinical schema.]`;
       
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -293,7 +299,9 @@ class AITherapyService {
 
       // Get system prompt instructions
       await this.initPromptIfNeeded();
-      const systemPrompt = this.promptInstructions || "You are Dr. Sophia Chen, PhD, LCSW - a clinical psychotherapist with expertise in trauma-informed care, CBT, DBT, EMDR, IFS, and art therapy.";
+      const basePrompt = this.promptInstructions || "You are Dr. Pijilo, a warm, curious AI therapy companion grounded in Cognitive Behavioral Therapy (cognitive restructuring, Socratic questioning, behavioral activation) with DBT and mindfulness skills as secondary tools. You are an AI, not a licensed clinician. Ask one focused question at a time; never lecture. Respond with valid JSON matching the clinical schema.";
+      const profileBlock = buildProfileContextBlock(await getUserProfile());
+      const systemPrompt = profileBlock ? `${basePrompt}\n\n${profileBlock}` : basePrompt;
 
       // Build conversation history for Chat Completions API
       const messages: any[] = [
@@ -717,6 +725,49 @@ class AITherapyService {
     }
   }
 
+  /**
+   * Load a specific past (or in-progress) session by id, rehydrating Date fields
+   * that come back as strings after AsyncStorage's JSON round-trip.
+   */
+  async getSessionById(id: string): Promise<SessionData | null> {
+    try {
+      const raw = await AsyncStorage.getItem('therapy_sessions');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return null;
+      const found = parsed.find((s: SessionData) => s.id === id);
+      if (!found) return null;
+      return {
+        ...found,
+        startTime: new Date(found.startTime),
+        endTime: found.endTime ? new Date(found.endTime) : undefined,
+        messages: (found.messages || []).map((m: ChatMessage) => ({ ...m, timestamp: new Date(m.timestamp) })),
+        emotions: (found.emotions || []).map((e: any) => ({ ...e, timestamp: new Date(e.timestamp) })),
+      };
+    } catch (error) {
+      console.error('Failed to load session by id:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Most recently started session (in-progress or completed), for resuming the
+   * conversation the user last had instead of always starting blank.
+   */
+  async getMostRecentSession(): Promise<SessionData | null> {
+    try {
+      const raw = await AsyncStorage.getItem('therapy_sessions');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) return null;
+      const sorted = [...parsed].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+      return this.getSessionById(sorted[0].id);
+    } catch (error) {
+      console.error('Failed to load most recent session:', error);
+      return null;
+    }
+  }
+
   async endSession(): Promise<void> {
     if (this.currentSession) {
       this.currentSession.endTime = new Date();
@@ -753,6 +804,17 @@ class AITherapyService {
     this.currentSession = null;
     this.hasImageInSession = false; // Reset image flag
     console.log('New session started - history cleared');
+  }
+
+  /**
+   * Restore in-memory conversation state for a session loaded from storage (resuming
+   * an old or in-progress session), so subsequent processMessage() calls have correct
+   * context instead of behaving like a brand-new session.
+   */
+  resumeSession(session: SessionData): void {
+    this.currentSession = session;
+    this.sessionHistory = (session.messages || []).slice(-20);
+    this.hasImageInSession = (session.messages || []).some(m => !!m.imageUri);
   }
 
   async generateSessionSummary(messages: ChatMessage[], language: string = 'en'): Promise<any> {

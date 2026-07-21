@@ -8,6 +8,7 @@ import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
+import { buildProfileContextBlock, getUserProfile } from './userProfileService';
 
 // Advanced AI Art Therapy Response Interface
 export interface ArtTherapyResponse {
@@ -75,7 +76,7 @@ export interface ChatMessage {
 class ArtTherapyService {
   private apiKey: string;
   private promptId: string = 'pmpt_690baa7920308196a2d94f41d4be76be0bd44ed1840b1049';
-  private promptVersion: string = '18';
+  private promptVersion: string = '20';
   private baseURL: string = 'https://api.openai.com/v1';
 
   constructor() {
@@ -119,18 +120,20 @@ class ArtTherapyService {
     return languageMap[langCode] || langCode;
   }
 
-  private buildSessionContext(
+  private async buildSessionContext(
     sessionTheme: string,
     languageName: string,
     currentPhase: 0 | 1 | 2,
     hasImageOnlyMessage: boolean,
     extraContext?: string
-  ): string {
+  ): Promise<string> {
     const imageOnlyInstruction = hasImageOnlyMessage
       ? '\nThe latest user message contains only an image. First determine whether it clearly appears to be the client\'s own hand-made artwork for this art therapy session. If it is an ordinary photo, selfie, screenshot, digital/generated character, document, object, room, person, pet, food, landscape, or otherwise not clearly hand-made artwork, politely reject it without psychological interpretation and ask for a hand-made drawing or painting. If it is ambiguous, ask the client to confirm whether they made it by hand for this session.'
       : '';
 
-    return `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${languageName}, Phase: ${currentPhase}. CRITICAL: You MUST respond in ${languageName} language for ALL text, including response_text, phase_summary, session_summary, next_steps, and any question. Do NOT respond in English unless Language is English.${imageOnlyInstruction} Respond with valid JSON matching the ArtTherapyResponse schema.]` + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '');
+    const profileBlock = buildProfileContextBlock(await getUserProfile());
+
+    return `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${languageName}, Phase: ${currentPhase}. CRITICAL: You MUST respond in ${languageName} language for ALL text, including response_text, phase_summary, session_summary, next_steps, and any question. Do NOT respond in English unless Language is English.${imageOnlyInstruction} Respond with valid JSON matching the ArtTherapyResponse schema.]` + (profileBlock ? `\n${profileBlock}` : '') + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '');
   }
 
   /**
@@ -516,19 +519,24 @@ class ArtTherapyService {
       for (let i = msgs.length - 1; i >= 0; i--) {
         if (msgs[i].role === 'user') {
           const hasImageOnlyMessage = Boolean(msgs[i].imageBase64) && !msgs[i].content;
-          const ctx = this.buildSessionContext(sessionTheme, languageName, currentPhase, hasImageOnlyMessage, extraContext);
+          const ctx = await this.buildSessionContext(sessionTheme, languageName, currentPhase, hasImageOnlyMessage, extraContext);
           const apiText = msgs[i].apiOnlyContent || msgs[i].content || '';
           msgs[i] = { ...msgs[i], apiOnlyContent: apiText + ctx };
           break;
         }
       }
 
-      for (const msg of msgs) {
+      // Only the most recent image needs full detail; older images in history are sent at
+      // low detail to cut input-token cost while the model still retains access to them.
+      const lastImageIdx = msgs.reduce((acc, m, i) => (m.imageBase64 ? i : acc), -1);
+
+      for (let i = 0; i < msgs.length; i++) {
+        const msg = msgs[i];
         const content: any[] = [];
         if (msg.role === 'user') {
           const textContent = msg.apiOnlyContent || msg.content;
           if (textContent) content.push({ type: 'input_text', text: textContent });
-          if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64 });
+          if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64, detail: i === lastImageIdx ? 'high' : 'low' });
           input.push({ role: 'user', content });
         } else if (msg.role === 'assistant') {
           if (msg.content) content.push({ type: 'output_text', text: msg.content });
@@ -557,8 +565,11 @@ class ArtTherapyService {
         }
       );
 
-      // Expect output_text with JSON string
-      const outputText: string | undefined = response.data?.output_text || response.data?.output?.[0]?.content?.[0]?.text || response.data?.response?.output_text;
+      // Expect output_text with JSON string. Reasoning-capable models prepend a 'reasoning'
+      // item (with empty content) before the actual 'message' item, so find the message
+      // explicitly rather than assuming output[0] holds the text.
+      const messageItem = response.data?.output?.find((o: any) => o?.type === 'message');
+      const outputText: string | undefined = response.data?.output_text || messageItem?.content?.find((c: any) => typeof c?.text === 'string')?.text || response.data?.response?.output_text;
       if (!outputText) {
         throw new Error('AI returned empty response. Please try with a different image.');
       }
@@ -679,18 +690,23 @@ class ArtTherapyService {
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i].role === 'user') {
         const hasImageOnlyMessage = Boolean(msgs[i].imageBase64) && !msgs[i].content;
-        const ctx = this.buildSessionContext(sessionTheme, languageName, currentPhase, hasImageOnlyMessage, extraContext);
+        const ctx = await this.buildSessionContext(sessionTheme, languageName, currentPhase, hasImageOnlyMessage, extraContext);
         const apiText = msgs[i].apiOnlyContent || msgs[i].content || '';
         msgs[i] = { ...msgs[i], apiOnlyContent: apiText + ctx };
         break;
       }
     }
-    for (const msg of msgs) {
+    // Only the most recent image needs full detail; older images in history are sent at
+    // low detail to cut input-token cost while the model still retains access to them.
+    const lastImageIdx = msgs.reduce((acc, m, i) => (m.imageBase64 ? i : acc), -1);
+
+    for (let i = 0; i < msgs.length; i++) {
+      const msg = msgs[i];
       const content: any[] = [];
       if (msg.role === 'user') {
         const textContent = msg.apiOnlyContent || msg.content;
         if (textContent) content.push({ type: 'input_text', text: textContent });
-        if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64 });
+        if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64, detail: i === lastImageIdx ? 'high' : 'low' });
         input.push({ role: 'user', content });
       } else if (msg.role === 'assistant') {
         if (msg.content) content.push({ type: 'output_text', text: msg.content });

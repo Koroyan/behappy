@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
@@ -38,6 +39,8 @@ import { TherapyColors, therapyStyles } from '../../styles/therapyStyles';
 const AITherapyChatScreen: React.FC = () => {
   const { language } = useLanguage();
   const { theme, isDark } = useTheme();
+  const router = useRouter();
+  const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const pick = (obj: Record<string, string>, lang: AppLanguage) => obj[lang] ?? obj.en;
   const t = {
     headerStatuses: {
@@ -409,7 +412,6 @@ const AITherapyChatScreen: React.FC = () => {
   const slideAnim = useSharedValue(50);
 
   useEffect(() => {
-    initializeSession();
     startWelcomeAnimation();
     checkOpenAIConnection();
 
@@ -428,6 +430,13 @@ const AITherapyChatScreen: React.FC = () => {
       keyboardWillHide.remove();
     };
   }, []);
+
+  // Re-run whenever sessionId changes (e.g. navigating here from History with a
+  // different session), not just on first mount.
+  useEffect(() => {
+    initializeSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   // Check API connectivity once on mount
   const checkOpenAIConnection = async () => {
@@ -452,10 +461,30 @@ const AITherapyChatScreen: React.FC = () => {
     }
   }, [messages]);
 
-  const initializeSession = () => {
+  const buildWelcomeMessage = (): ChatMessageType => ({
+    id: `msg_${Date.now()}`,
+    type: 'ai',
+    content: pick(t.welcome as any, language),
+    timestamp: new Date(),
+    aiResponse: {
+      response_text: "Professional welcome establishing therapeutic alliance",
+      technique: {
+        method: "Therapeutic Alliance",
+        name: "rapport_building",
+        description: "Establishing safety and connection for therapeutic work",
+        clinical_rationale: "Initial alliance-building sets foundation for effective therapeutic engagement"
+      },
+      detected_emotion: "welcoming",
+      key_insights: ["Client entering therapeutic space", "Establishing safety and trust"],
+      next_recommendation: "Allow client to share at their own pace",
+      language: "english"
+    }
+  });
+
+  const startFreshSession = () => {
     // Clear previous session history in the service
     aiTherapyService.startNewSession();
-    
+
     const session: SessionData = {
       id: `session_${Date.now()}`,
       messages: [],
@@ -464,33 +493,42 @@ const AITherapyChatScreen: React.FC = () => {
       emotions: [],
     };
     setCurrentSession(session);
+    setIsFirstMessage(true);
+    setMessages([buildWelcomeMessage()]);
+  };
 
-    // Add welcome message with more sophisticated, gentle approach
-    const welcomeMessage: ChatMessageType = {
-      id: `msg_${Date.now()}`,
-      type: 'ai',
-      content: pick(t.welcome as any, language),
-      timestamp: new Date(),
-      aiResponse: {
-        response_text: "Professional welcome establishing therapeutic alliance",
-        technique: {
-          method: "Therapeutic Alliance",
-          name: "rapport_building",
-          description: "Establishing safety and connection for therapeutic work",
-          clinical_rationale: "Initial alliance-building sets foundation for effective therapeutic engagement"
-        },
-        detected_emotion: "welcoming",
-        key_insights: ["Client entering therapeutic space", "Establishing safety and trust"],
-        next_recommendation: "Allow client to share at their own pace",
-        language: "english"
+  // Resume an existing session (from History, or the most recent one on cold open)
+  // instead of always starting blank — new messages just continue appending to it.
+  const resumeExistingSession = (session: SessionData) => {
+    aiTherapyService.resumeSession(session);
+    setCurrentSession(session);
+    setIsFirstMessage(session.messages.length === 0);
+    setMessages(session.messages.length > 0 ? session.messages : [buildWelcomeMessage()]);
+  };
+
+  const initializeSession = async () => {
+    // Explicit sessionId (opened via "Continue" from History) always wins.
+    if (sessionId) {
+      const existing = await aiTherapyService.getSessionById(sessionId);
+      if (existing) {
+        resumeExistingSession(existing);
+        return;
       }
-    };
+    }
 
-    setMessages([welcomeMessage]);
+    // Otherwise, continue the most recent conversation (like reopening ChatGPT),
+    // falling back to a brand-new session only if none exist yet.
+    const recent = await aiTherapyService.getMostRecentSession();
+    if (recent) {
+      resumeExistingSession(recent);
+      return;
+    }
+
+    startFreshSession();
   };
 
   const handleSendMessage = async () => {
-    if (!inputText.trim() && !isLoading) return;
+    if (!inputText.trim() || isLoading) return;
 
     const userMessage: ChatMessageType = {
       id: `msg_${Date.now()}`,
@@ -543,11 +581,16 @@ const AITherapyChatScreen: React.FC = () => {
           ],
         };
         setCurrentSession(updatedSession);
+        // Persist after every turn (not just on explicit "End Session") so nothing
+        // is lost if the user just navigates away, and History always has the latest.
+        aiTherapyService.saveSession(updatedSession).catch(err =>
+          console.warn('Auto-save session failed:', err)
+        );
       }
 
     } catch (error) {
       console.error('Error processing message:', error);
-      
+
       // Add error message
       const errorMessage: ChatMessageType = {
         id: `msg_${Date.now()}_error`,
@@ -744,6 +787,18 @@ const AITherapyChatScreen: React.FC = () => {
           };
 
           setMessages(prev => [...prev, aiMessage]);
+
+          if (currentSession) {
+            const updatedSession = {
+              ...currentSession,
+              messages: [...currentSession.messages, imageMessage, aiMessage],
+              insights: [...currentSession.insights, ...aiResponse.key_insights],
+            };
+            setCurrentSession(updatedSession);
+            aiTherapyService.saveSession(updatedSession).catch(err =>
+              console.warn('Auto-save session failed:', err)
+            );
+          }
 
         } catch (error) {
           console.error('Error processing image:', error);
@@ -973,7 +1028,7 @@ const AITherapyChatScreen: React.FC = () => {
                 <Text style={{ color: '#FFFFFF', fontSize: 18 }}>🌸</Text>
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[therapyStyles.subtitle, { color: theme.colors.text }]} numberOfLines={1} ellipsizeMode="tail">Dr. Sophia Chen, PhD, LCSW</Text>
+                <Text style={[therapyStyles.subtitle, { color: theme.colors.text }]} numberOfLines={1} ellipsizeMode="tail">Dr. Pijilo</Text>
                 <Text style={[therapyStyles.caption, { color: theme.colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">
                   {isLoading 
                     ? pick(t.headerStatuses.analyzing as any, language)
@@ -984,41 +1039,73 @@ const AITherapyChatScreen: React.FC = () => {
                 </Text>
               </View>
             </View>
-            
-            <TouchableOpacity 
-              onPress={endSession}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: isDark ? 'rgba(231, 76, 60, 0.2)' : 'rgba(255, 59, 92, 0.12)',
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 20,
-                borderWidth: 1.5,
-                borderColor: isDark ? 'rgba(231, 76, 60, 0.4)' : 'rgba(255, 59, 92, 0.3)',
-                shadowColor: '#FF3B5C',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 4,
-                elevation: 3,
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name="stop-circle" 
-                size={16} 
-                color="#FF3B5C" 
-                style={{ marginRight: 6 }}
-              />
-              <Text numberOfLines={1} ellipsizeMode="clip" style={{
-                color: '#FF3B5C',
-                fontSize: 13,
-                fontWeight: '700',
-                letterSpacing: 0.3
-              }}>
-                {pick(t.endSession as any, language)}
-              </Text>
-            </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => router.push('/screens/session-history' as any)}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9',
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="time-outline" size={18} color={theme.colors.text} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={startFreshSession}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9',
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={endSession}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: isDark ? 'rgba(231, 76, 60, 0.2)' : 'rgba(255, 59, 92, 0.12)',
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  borderWidth: 1.5,
+                  borderColor: isDark ? 'rgba(231, 76, 60, 0.4)' : 'rgba(255, 59, 92, 0.3)',
+                  shadowColor: '#FF3B5C',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="stop-circle"
+                  size={16}
+                  color="#FF3B5C"
+                  style={{ marginRight: 6 }}
+                />
+                <Text numberOfLines={1} ellipsizeMode="clip" style={{
+                  color: '#FF3B5C',
+                  fontSize: 13,
+                  fontWeight: '700',
+                  letterSpacing: 0.3
+                }}>
+                  {pick(t.endSession as any, language)}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Messages */}
@@ -1095,6 +1182,7 @@ const AITherapyChatScreen: React.FC = () => {
               
               <TouchableOpacity
                 onPress={handleImagePicker}
+                disabled={isLoading}
                 style={{
                   width: 44,
                   height: 44,
@@ -1103,6 +1191,7 @@ const AITherapyChatScreen: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: 8,
+                  opacity: isLoading ? 0.5 : 1,
                   shadowColor: theme.colors.shadow,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.2,

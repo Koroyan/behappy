@@ -299,7 +299,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUse
           </View>
         )}
 
-        {message.content && (
+        {message.content ? (
           <>
             {contentParts.body ? (
               <Text style={[
@@ -350,7 +350,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isUse
               </View>
             )}
           </>
-        )}
+        ) : null}
 
         <Text style={[
           styles.messageTime,
