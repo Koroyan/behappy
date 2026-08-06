@@ -2,6 +2,7 @@ import ArtTherapyScreen from '@/components/ArtTherapyScreen';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import PurchaseService from '@/services/purchase';
+import SubscriptionService from '@/services/subscriptionService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -151,74 +152,39 @@ export default function ArtTherapyPage() {
 
   const t = {
     unlockTitle: {
-      en: 'Unlock Art Therapy',
-      ka: 'ხელოვნების თერაპიის გახსნა',
-      ru: 'Открыть арт‑терапию',
-      hy: 'Բացել արվեստաբուժությունը',
-      tr: 'Sanat Terapisini Aç',
-      az: 'İncəsənət terapiyasını aç',
-      es: 'Desbloquear Arteterapia',
-      de: 'Kunsttherapie freischalten',
-      fr: 'Débloquer l’art‑thérapie',
-      pt: 'Desbloquear Arteterapia',
-      id: 'Buka Terapi Seni',
-      it: 'Sblocca l’arteterapia',
-      ar: 'افتح العلاج بالفن',
-      hi: 'आर्ट थेरेपी अनलॉक करें',
-      zh: '解锁艺术治疗',
-      ja: 'アートセラピーを解放',
-      ko: '아트 테라피 잠금 해제',
-      uk: 'Відкрити арт‑терапію',
-      pl: 'Odblokuj arteterapię'
+      en: 'Unlock beHappy Premium',
+      ka: 'გახსენი beHappy Premium',
+      ru: 'Открой beHappy Premium',
     },
     unlockText: {
-      en: 'Pay 50 ₾ to continue the session. You’ll keep access on this device.',
-      ka: 'გადაიხადეთ 50 ₾ სესიის გასაგრძელებლად. წვდომა შენარჩუნდება ამ მოწყობილობაზე.',
-      ru: 'Оплатите 50 ₾, чтобы продолжить сессию. Доступ сохранится на этом устройстве.',
-      hy: 'Վճարեք 50 ₾՝ սեանսը շարունակելու համար։ Մուտքը կմնա այս սարքում։',
-      tr: 'Seansı sürdürmek için 50 ₾ ödeyin. Bu cihazda erişiminiz korunur.',
-      az: 'Seansı davam etdirmək üçün 50 ₾ ödəyin. Bu cihazda giriş saxlanılacaq.',
-      es: 'Paga 50 ₾ para continuar la sesión. Mantendrás el acceso en este dispositivo.',
-      de: 'Zahlen Sie 50 ₾, um die Sitzung fortzusetzen. Der Zugriff bleibt auf diesem Gerät.',
-      fr: 'Payez 50 ₾ pour poursuivre la séance. Vous conserverez l’accès sur cet appareil.',
-      pt: 'Pague 50 ₾ para continuar a sessão. Você manterá o acesso neste dispositivo.',
-      id: 'Bayar 50 ₾ untuk melanjutkan sesi. Akses akan tetap di perangkat ini.',
-      it: 'Paga 50 ₾ per continuare la sessione. Mantieni l’accesso su questo dispositivo.',
-      ar: 'ادفع 50 ₾ لمتابعة الجلسة. سيبقى الوصول على هذا الجهاز.',
-      hi: 'सत्र जारी रखने के लिए 50 ₾ का भुगतान करें। इस डिवाइस पर आपकी पहुंच बनी रहेगी।',
-      zh: '支付 50 ₾ 继续会话。您将在此设备上保留访问权限。',
-      ja: 'セッションを続行するには 50 ₾ をお支払いください。このデバイスでアクセスが維持されます。',
-      ko: '세션을 계속하려면 50 ₾를 결제하세요. 이 기기에서 액세스가 유지됩니다.',
-      uk: 'Сплатіть 50 ₾, щоб продовжити сесію. Доступ збережеться на цьому пристрої.',
-      pl: 'Zapłać 50 ₾, aby kontynuować sesję. Dostęp zostanie zachowany na tym urządzeniu.'
+      en: 'You’ve used your free session. Get unlimited access to Art Therapy and every other tool with a Premium plan.',
+      ka: 'უფასო სესია უკვე გამოყენებულია. მიიღე შეუზღუდავი წვდომა არტ თერაპიასა და ყველა სხვა ხელსაწყოზე Premium პაკეტით.',
+      ru: 'Бесплатная сессия уже использована. Получи безлимитный доступ к арт-терапии и другим инструментам с Premium.',
     },
     unlockBtn: {
-      en: 'Unlock for 50 ₾',
-      ka: 'გახსნა 50 ₾-ად',
-      ru: 'Открыть за 50 ₾',
-      hy: 'Բացել 50 ₾-ով',
-      tr: '50 ₾ karşılığında aç',
-      az: '50 ₾ ilə aç',
-      es: 'Desbloquear por 50 ₾',
-      de: 'Für 50 ₾ freischalten',
-      fr: 'Débloquer pour 50 ₾',
-      pt: 'Desbloquear por 50 ₾',
-      id: 'Buka seharga 50 ₾',
-      it: 'Sblocca per 50 ₾',
-      ar: 'افتح مقابل 50 ₾',
-      hi: '50 ₾ में अनलॉक करें',
-      zh: '50 ₾ 解锁',
-      ja: '50 ₾ で解放',
-      ko: '50 ₾로 잠금 해제',
-      uk: 'Відкрити за 50 ₾',
-      pl: 'Odblokuj za 50 ₾'
+      en: 'See Premium plans',
+      ka: 'ნახე Premium პაკეტები',
+      ru: 'Смотреть тарифы Premium',
     }
   } as const;
 
   useEffect(() => {
     (async () => {
-      const ok = await PurchaseService.isUnlocked('art-therapy');
-      setUnlocked(ok);
+      // Legacy one-off unlock stays honored for anyone who already paid the old way.
+      const legacyUnlocked = await PurchaseService.isUnlocked('art-therapy');
+      if (legacyUnlocked) {
+        setUnlocked(true);
+        setLoading(false);
+        return;
+      }
+
+      // Whether they can open the course at all: the free first session hasn't been
+      // used yet, or they're Premium (even if today's single session is already spent —
+      // they should still see their progress, not a hard paywall; the per-session gate
+      // inside ArtTherapyScreen enforces the daily cap when they try to start a new one).
+      const freeUsed = await SubscriptionService.hasUsedArtTherapyFreeSession();
+      const premiumActive = await SubscriptionService.isPremiumActive();
+      setUnlocked(!freeUsed || premiumActive);
       setLoading(false);
     })();
   }, []);
@@ -238,7 +204,7 @@ export default function ArtTherapyPage() {
           <Text style={[styles.lockTitle, { color: theme.colors.text }]}>{pick(t.unlockTitle as any, language)}</Text>
           <Text style={[styles.lockText, { color: theme.colors.textSecondary }]}>{pick(t.unlockText as any, language)}</Text>
           <TouchableOpacity
-            onPress={() => router.push({ pathname: '/purchase', params: { product: 'art-therapy', amount: '50', currency: 'GEL', returnTo: '/art-therapy' } })}
+            onPress={() => router.push({ pathname: '/subscription', params: { returnTo: '/art-therapy' } })}
             style={[styles.payBtn, { backgroundColor: theme.colors.primary }]}
             activeOpacity={0.9}
           >

@@ -130,7 +130,8 @@ class CardTherapyService {
     cardContext: CardContext,
     cardImageBase64?: string | null,
     positiveImageBase64?: string | null,
-    negativeImageBase64?: string | null
+    negativeImageBase64?: string | null,
+    onResponseId?: (id: string) => void
   ): Promise<string> {
     try {
       const contextMessage = await this.buildContextMessage(cardContext);
@@ -217,7 +218,8 @@ class CardTherapyService {
 
       const data = await response.json();
       console.log('✅ Received response from API');
-      
+      if (data?.id) onResponseId?.(data.id);
+
       // Extract text from Responses API format
       const assistantMessage = data.output?.[0];
       if (assistantMessage?.content?.[0]?.type === 'output_text') {
@@ -233,53 +235,96 @@ class CardTherapyService {
   }
 
   /**
-   * Send a message in an ongoing session
+   * Send a message in an ongoing session.
+   *
+   * Cost optimization: when `previousResponseId` is supplied (from the prior turn in this
+   * same session), only the newest user turn is sent, chained via OpenAI's server-side
+   * conversation state — the model still has full access to everything said before, but
+   * we're billed full price only for the new turn while the rest is served from OpenAI's
+   * input-token cache. This matters most here since card sessions run 20-30 exchanges by
+   * design, so resending the whole transcript every turn would otherwise be the dominant
+   * cost. If the stored id has expired, we fall back to resending the full local history
+   * once and report the new id back via `onResponseId` so the chain can continue from there.
    */
   async sendMessage(
     messages: ChatMessage[],
     cardContext: CardContext,
-    onStream?: (delta: string) => void
+    onStream?: (delta: string) => void,
+    previousResponseId?: string,
+    onResponseId?: (id: string) => void
   ): Promise<string> {
     try {
-      // Add card context as system message if not already present
-      const hasContext = messages.some(m => m.role === 'system');
-      const messagesWithContext = hasContext
-        ? messages
-        : [
-            { role: 'system' as const, content: await this.buildContextMessage(cardContext) },
-            ...messages,
-          ];
+      const buildFullInput = async (): Promise<any[]> => {
+        // Add card context as system message if not already present. Note: convertMessagesToInput
+        // drops 'system' entries (the prompt already carries protocol instructions), so this
+        // context is really only meaningful the very first time via startSession's own call.
+        const hasContext = messages.some(m => m.role === 'system');
+        const messagesWithContext = hasContext
+          ? messages
+          : [
+              { role: 'system' as const, content: await this.buildContextMessage(cardContext) },
+              ...messages,
+            ];
+        return this.convertMessagesToInput(messagesWithContext);
+      };
+      const buildIncrementalInput = (): any[] => {
+        const last = messages[messages.length - 1];
+        if (!last || last.role !== 'user') return this.convertMessagesToInput(messages); // safety net
+        return [{ role: 'user', content: [{ type: 'input_text', text: last.content }] }];
+      };
+
+      const isStaleChainError = (e: any) => {
+        const msg = String(e?.message || '').toLowerCase();
+        return msg.includes('previous_response') || (msg.includes('response') && msg.includes('not found'));
+      };
 
       if (onStream) {
-        // Streaming mode
-        return await this.sendMessageStream(messagesWithContext, onStream);
-      } else {
-        // Non-streaming mode
-        const input = this.convertMessagesToInput(messagesWithContext);
-        
-        const response = await fetch('https://api.openai.com/v1/responses', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`,
-          },
-          body: JSON.stringify({
-            prompt: {
-              id: this.promptId,
-              version: this.version,
-            },
-            input: input,
-            max_output_tokens: 1500,
-            store: true,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.text();
-          throw new Error(`Failed to send message: ${response.status} ${error}`);
+        if (previousResponseId) {
+          try {
+            return await this.sendMessageStream(buildIncrementalInput(), onStream, previousResponseId, onResponseId);
+          } catch (e: any) {
+            if (!isStaleChainError(e)) throw e;
+            console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
+          }
         }
+        return await this.sendMessageStream(await buildFullInput(), onStream, undefined, onResponseId);
+      } else {
+        const doRequest = async (input: any[], chainId?: string): Promise<any> => {
+          const response = await fetch('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiKey}`,
+            },
+            body: JSON.stringify({
+              prompt: { id: this.promptId, version: this.version },
+              input,
+              max_output_tokens: 1500,
+              store: true,
+              ...(chainId ? { previous_response_id: chainId } : {}),
+            }),
+          });
+          if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Failed to send message: ${response.status} ${error}`);
+          }
+          return response.json();
+        };
 
-        const data = await response.json();
+        let data: any;
+        if (previousResponseId) {
+          try {
+            data = await doRequest(buildIncrementalInput(), previousResponseId);
+          } catch (e: any) {
+            if (!isStaleChainError(e)) throw e;
+            console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
+            data = await doRequest(await buildFullInput(), undefined);
+          }
+        } else {
+          data = await doRequest(await buildFullInput(), undefined);
+        }
+        if (data?.id) onResponseId?.(data.id);
+
         // Extract text from Responses API format
         const assistantMessage = data.output?.[0];
         if (assistantMessage?.content?.[0]?.type === 'output_text') {
@@ -294,15 +339,16 @@ class CardTherapyService {
   }
 
   /**
-   * Send message with streaming support
+   * Send message with streaming support. `input` is already in Responses API format
+   * (either the full converted transcript or just the newest turn when chaining).
    */
   private async sendMessageStream(
-    messages: ChatMessage[],
-    onStream: (delta: string) => void
+    input: any[],
+    onStream: (delta: string) => void,
+    previousResponseId?: string,
+    onResponseId?: (id: string) => void
   ): Promise<string> {
     try {
-      const input = this.convertMessagesToInput(messages);
-      
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
@@ -318,6 +364,7 @@ class CardTherapyService {
           max_output_tokens: 1500,
           stream: true,
           store: true,
+          ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
         }),
       });
 
@@ -330,6 +377,7 @@ class CardTherapyService {
       if (!response.body) {
         console.warn('Streaming not available, falling back to non-streaming');
         const data = await response.json();
+        if (data?.id) onResponseId?.(data.id);
         const assistantMessage = data.output?.[0];
         const fullText = assistantMessage?.content?.[0]?.text || '';
         onStream(fullText);
@@ -354,6 +402,7 @@ class CardTherapyService {
 
             try {
               const parsed = JSON.parse(data);
+              if (parsed.response?.id) onResponseId?.(parsed.response.id);
               // Responses API streaming format: { output: [{ content: [{ type, text }] }] }
               const delta = parsed.output?.[0]?.content?.[0]?.text || parsed.delta || '';
               if (delta) {
@@ -375,47 +424,71 @@ class CardTherapyService {
   }
 
   /**
-   * Request session summary (to be called after 20-30 exchanges)
+   * Request session summary (to be called after 20-30 exchanges). This is where chaining
+   * matters most: without it, the entire 20-30 exchange transcript would be resent one
+   * final time right when it's at its largest.
    */
-  async requestSummary(messages: ChatMessage[], cardContext: CardContext): Promise<string> {
+  async requestSummary(
+    messages: ChatMessage[],
+    cardContext: CardContext,
+    previousResponseId?: string,
+    onResponseId?: (id: string) => void
+  ): Promise<string> {
     try {
       const summaryRequest: ChatMessage = {
         role: 'user',
         content: 'We\'ve covered a lot of meaningful ground. I\'m ready for the session summary now. Please provide the comprehensive therapeutic summary.',
       };
 
-      // Add context as first user message, then conversation, then summary request
-      const allMessages = [
-        { role: 'system' as const, content: await this.buildContextMessage(cardContext) },
-        ...messages,
-        summaryRequest,
-      ];
-      
-      const input = this.convertMessagesToInput(allMessages);
+      const buildFullInput = async () => {
+        // Add context as first user message, then conversation, then summary request
+        const allMessages = [
+          { role: 'system' as const, content: await this.buildContextMessage(cardContext) },
+          ...messages,
+          summaryRequest,
+        ];
+        return this.convertMessagesToInput(allMessages);
+      };
+      const buildIncrementalInput = () => this.convertMessagesToInput([summaryRequest]);
 
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          prompt: {
-            id: this.promptId,
-            version: this.version,
+      const doRequest = async (input: any[], chainId?: string): Promise<any> => {
+        const response = await fetch('https://api.openai.com/v1/responses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
           },
-          input: input,
-          max_output_tokens: 3000, // Higher limit for summary
-          store: true,
-        }),
-      });
+          body: JSON.stringify({
+            prompt: { id: this.promptId, version: this.version },
+            input,
+            max_output_tokens: 3000, // Higher limit for summary
+            store: true,
+            ...(chainId ? { previous_response_id: chainId } : {}),
+          }),
+        });
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`Failed to generate summary: ${response.status} ${error}`);
+        }
+        return response.json();
+      };
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Failed to generate summary: ${response.status} ${error}`);
+      let data: any;
+      if (previousResponseId) {
+        try {
+          data = await doRequest(buildIncrementalInput(), previousResponseId);
+        } catch (e: any) {
+          const msg = String(e?.message || '').toLowerCase();
+          const looksLikeStaleChain = msg.includes('previous_response') || (msg.includes('response') && msg.includes('not found'));
+          if (!looksLikeStaleChain) throw e;
+          console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
+          data = await doRequest(await buildFullInput(), undefined);
+        }
+      } else {
+        data = await doRequest(await buildFullInput(), undefined);
       }
+      if (data?.id) onResponseId?.(data.id);
 
-      const data = await response.json();
       // Extract text from Responses API format
       const assistantMessage = data.output?.[0];
       if (assistantMessage?.content?.[0]?.type === 'output_text') {

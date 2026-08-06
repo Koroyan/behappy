@@ -76,7 +76,7 @@ export interface ChatMessage {
 class ArtTherapyService {
   private apiKey: string;
   private promptId: string = 'pmpt_690baa7920308196a2d94f41d4be76be0bd44ed1840b1049';
-  private promptVersion: string = '20';
+  private promptVersion: string = '21';
   private baseURL: string = 'https://api.openai.com/v1';
 
   constructor() {
@@ -669,6 +669,15 @@ class ArtTherapyService {
   /**
    * Stream message using Responses API (SSE). Emits partial response_text via onDelta,
    * and resolves with the final parsed JSON when complete.
+   *
+   * Cost optimization: when `previousResponseId` is supplied (from the prior turn in this
+   * same session), only the newest user turn is sent, chained via OpenAI's server-side
+   * conversation state — the model still has full access to everything said and shown
+   * before (at original image fidelity, not the downgraded 'low' detail used in the
+   * full-resend path), but we're only billed full price for the new turn while the rest
+   * is served from OpenAI's input-token cache. If that id has expired or is otherwise
+   * rejected, we transparently fall back to resending the full local history once and
+   * report the new id back via `onResponseId` so the chain can continue from there.
    */
   async sendMessageStream(
     messages: ChatMessage[],
@@ -676,115 +685,107 @@ class ArtTherapyService {
     userLanguage: string = 'en',
     currentPhase: 0 | 1 | 2 = 0,
     onDelta?: (partialResponseText: string) => void,
-    extraContext?: string
+    extraContext?: string,
+    previousResponseId?: string,
+    onResponseId?: (id: string) => void
   ): Promise<ArtTherapyResponse> {
     if (!this.apiKey) {
       throw new Error('OpenAI API key is not configured');
     }
 
-    // Build Responses input as in sendMessage
-    const input: any[] = [];
-    const msgs = [...messages];
     const languageName = this.getLanguageName(userLanguage);
     console.log('🌐 AI Stream Request Language:', languageName, `(${userLanguage})`);
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].role === 'user') {
-        const hasImageOnlyMessage = Boolean(msgs[i].imageBase64) && !msgs[i].content;
-        const ctx = await this.buildSessionContext(sessionTheme, languageName, currentPhase, hasImageOnlyMessage, extraContext);
-        const apiText = msgs[i].apiOnlyContent || msgs[i].content || '';
-        msgs[i] = { ...msgs[i], apiOnlyContent: apiText + ctx };
-        break;
-      }
-    }
-    // Only the most recent image needs full detail; older images in history are sent at
-    // low detail to cut input-token cost while the model still retains access to them.
-    const lastImageIdx = msgs.reduce((acc, m, i) => (m.imageBase64 ? i : acc), -1);
 
-    for (let i = 0; i < msgs.length; i++) {
-      const msg = msgs[i];
-      const content: any[] = [];
-      if (msg.role === 'user') {
-        const textContent = msg.apiOnlyContent || msg.content;
-        if (textContent) content.push({ type: 'input_text', text: textContent });
-        if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64, detail: i === lastImageIdx ? 'high' : 'low' });
-        input.push({ role: 'user', content });
-      } else if (msg.role === 'assistant') {
-        if (msg.content) content.push({ type: 'output_text', text: msg.content });
-        input.push({ role: 'assistant', content });
-      }
-    }
-
-    const body = JSON.stringify({
-      input,
-      prompt: { id: this.promptId, version: this.promptVersion },
-      max_output_tokens: 2048,
-      stream: true,
-      // Encourage JSON, but we still handle plain-text gracefully
-  text: { format: { type: 'json_object' } }
-    });
-
-    const controller = new AbortController();
-  let buffer = '';
-  let partialShown = '';
-
-    const extractResponseText = (buf: string): string => {
-      // Try to extract the current JSON field value for "response_text"
-      const m = buf.match(/"response_text"\s*:\s*"((?:\\.|[^"\\])*)/);
-      if (!m) return partialShown;
-      const raw = m[1];
-      // Unescape minimal JSON sequences for display
-      const unescaped = raw
-        .replace(/\\n/g, '\n')
-        .replace(/\\r/g, '\r')
-        .replace(/\\t/g, '\t')
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, '\\');
-      return unescaped;
-    };
-
-    try {
-      const res = await fetch(`${this.baseURL}/responses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Accept': 'text/event-stream'
-        },
-        body,
-        signal: controller.signal,
-      } as any);
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Streaming request failed: ${res.status} ${text}`);
-      }
-
-      // React Native fetch may not expose a ReadableStream body. If so, fall back to non-streaming.
-      if (!(res as any).body || !(res as any).body.getReader) {
-        try {
-          // Graceful fallback: re-issue as non-streaming request
-          const nonStream = await this.sendMessage(messages, sessionTheme, userLanguage, currentPhase);
-          // Surface full text to UI once
-          if (nonStream?.response_text) onDelta?.(nonStream.response_text);
-          return nonStream;
-        } catch (e) {
-          const text = await res.text().catch(() => '');
-          throw new Error(`Streaming unsupported on this platform. Fallback failed. Raw: ${text}`);
+    // Full multi-turn input (every message this session) — used when there's no chain yet,
+    // or once as a recovery resend if the stored previous_response_id turned out to be stale.
+    const buildFullInput = async (): Promise<any[]> => {
+      const input: any[] = [];
+      const msgs = [...messages];
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role === 'user') {
+          const hasImageOnlyMessage = Boolean(msgs[i].imageBase64) && !msgs[i].content;
+          const ctx = await this.buildSessionContext(sessionTheme, languageName, currentPhase, hasImageOnlyMessage, extraContext);
+          const apiText = msgs[i].apiOnlyContent || msgs[i].content || '';
+          msgs[i] = { ...msgs[i], apiOnlyContent: apiText + ctx };
+          break;
         }
       }
+      // Only the most recent image needs full detail; older images in history are sent at
+      // low detail to cut input-token cost while the model still retains access to them.
+      const lastImageIdx = msgs.reduce((acc, m, i) => (m.imageBase64 ? i : acc), -1);
 
-      const reader = (res.body as any).getReader();
-      const decoder = new TextDecoder('utf-8');
-      let done = false;
-  let finalText = '';
+      for (let i = 0; i < msgs.length; i++) {
+        const msg = msgs[i];
+        const content: any[] = [];
+        if (msg.role === 'user') {
+          const textContent = msg.apiOnlyContent || msg.content;
+          if (textContent) content.push({ type: 'input_text', text: textContent });
+          if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64, detail: i === lastImageIdx ? 'high' : 'low' });
+          input.push({ role: 'user', content });
+        } else if (msg.role === 'assistant') {
+          if (msg.content) content.push({ type: 'output_text', text: msg.content });
+          input.push({ role: 'assistant', content });
+        }
+      }
+      return input;
+    };
 
-      while (!done) {
-        const { value, done: readerDone } = await reader.read();
-        done = readerDone;
-        const chunk = decoder.decode(value || new Uint8Array(), { stream: !done });
+    // Only the newest user turn — used when continuing via previous_response_id, since
+    // OpenAI already retains every earlier turn server-side for that chain.
+    const buildIncrementalInput = async (): Promise<any[]> => {
+      const last = messages[messages.length - 1];
+      if (!last || last.role !== 'user') return buildFullInput(); // shouldn't happen; safety net
+      const hasImageOnlyMessage = Boolean(last.imageBase64) && !last.content;
+      const ctx = await this.buildSessionContext(sessionTheme, languageName, currentPhase, hasImageOnlyMessage, extraContext);
+      const apiText = last.apiOnlyContent || last.content || '';
+      const content: any[] = [];
+      const textContent = apiText + ctx;
+      if (textContent) content.push({ type: 'input_text', text: textContent });
+      if (last.imageBase64) content.push({ type: 'input_image', image_url: last.imageBase64, detail: 'high' });
+      return [{ role: 'user', content }];
+    };
+
+    const runRequest = async (
+      input: any[],
+      chainId: string | undefined
+    ): Promise<ArtTherapyResponse> => {
+      const body = JSON.stringify({
+        input,
+        prompt: { id: this.promptId, version: this.promptVersion },
+        max_output_tokens: 2048,
+        stream: true,
+        store: true,
+        ...(chainId ? { previous_response_id: chainId } : {}),
+        // Encourage JSON, but we still handle plain-text gracefully
+        text: { format: { type: 'json_object' } }
+      });
+
+      const controller = new AbortController();
+      let buffer = '';
+      let partialShown = '';
+
+      const extractResponseText = (buf: string): string => {
+        // Try to extract the current JSON field value for "response_text"
+        const m = buf.match(/"response_text"\s*:\s*"((?:\\.|[^"\\])*)/);
+        if (!m) return partialShown;
+        const raw = m[1];
+        // Unescape minimal JSON sequences for display
+        const unescaped = raw
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t')
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\');
+        return unescaped;
+      };
+
+      // Feeds one raw text chunk (from either the fetch reader on web, or XHR's growing
+      // responseText on native) through the same SSE-frame parser, updating the closures
+      // above and forwarding partial text via onDelta as it arrives.
+      let finalText = '';
+      let responseId: string | undefined;
+      const consumeChunk = (chunk: string) => {
         buffer += chunk;
-
-        // Split on event separators. SSE frames are separated by two newlines
         const parts = buffer.split(/\n\n/);
         buffer = parts.pop() || '';
         for (const part of parts) {
@@ -796,9 +797,9 @@ class ArtTherapyService {
             try {
               const evt = JSON.parse(jsonStr);
               const type = evt.type || evt.event || '';
+              if (evt.response?.id) responseId = evt.response.id;
               if (type === 'response.output_text.delta' && typeof evt.delta === 'string') {
                 finalText += evt.delta;
-                // Prefer extracting response_text field; if absent, surface plain text so the user sees progress
                 const current = extractResponseText(finalText) || finalText;
                 const display = (current || '').trim();
                 if (display && display !== partialShown) {
@@ -806,44 +807,143 @@ class ArtTherapyService {
                   onDelta?.(partialShown);
                 }
               } else if (type === 'response.completed') {
-                // Some implementations include full response here
                 if (evt.response?.output_text && typeof evt.response.output_text === 'string') {
                   finalText = evt.response.output_text;
                 }
               } else if (type === 'response.error') {
-                const msg = evt.error?.message || 'Unknown streaming error';
-                throw new Error(msg);
+                throw new Error(evt.error?.message || 'Unknown streaming error');
               }
             } catch (e) {
               // Ignore JSON parse errors for partial frames
             }
           }
         }
+      };
+
+      const finalizeResponse = (): ArtTherapyResponse => {
+        const text = finalText.trim();
+        if (!text) throw new Error('AI returned empty response.');
+
+        let parsed: any;
+        try {
+          parsed = JSON.parse(text);
+        } catch (e) {
+          const start = text.indexOf('{');
+          const end = text.lastIndexOf('}');
+          if (start >= 0 && end > start) {
+            parsed = JSON.parse(text.slice(start, end + 1));
+          } else {
+            const fallback: ArtTherapyResponse = this.normalizeResponse({ response_text: text }, currentPhase);
+            this.validateResponse(fallback);
+            if (responseId) onResponseId?.(responseId);
+            return fallback;
+          }
+        }
+
+        const normalized = this.normalizeResponse(parsed, currentPhase);
+        this.validateResponse(normalized);
+        if (responseId) onResponseId?.(responseId);
+        return normalized;
+      };
+
+      // React Native's fetch() doesn't expose a readable Response.body stream (no
+      // getReader()), so token-by-token deltas would never arrive there — the request
+      // would look identical to a non-streaming one and only render once it's fully done.
+      // XMLHttpRequest's responseText, on the other hand, does grow incrementally on native
+      // as bytes arrive, so we drive the exact same SSE parser off that instead, giving native
+      // the same progressive-typing behavior web already gets from the reader below.
+      if (Platform.OS !== 'web') {
+        return await new Promise<ArtTherapyResponse>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `${this.baseURL}/responses`);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.setRequestHeader('Authorization', `Bearer ${this.apiKey}`);
+          xhr.setRequestHeader('Accept', 'text/event-stream');
+
+          let processedLength = 0;
+          const pullNewText = () => {
+            const full = xhr.responseText || '';
+            if (full.length > processedLength) {
+              consumeChunk(full.slice(processedLength));
+              processedLength = full.length;
+            }
+          };
+
+          xhr.onprogress = () => {
+            try { pullNewText(); } catch (e) { reject(e); }
+          };
+          xhr.onload = () => {
+            if (xhr.status < 200 || xhr.status >= 300) {
+              reject(new Error(`Streaming request failed: ${xhr.status} ${xhr.responseText}`));
+              return;
+            }
+            try {
+              pullNewText();
+              resolve(finalizeResponse());
+            } catch (e) {
+              reject(e);
+            }
+          };
+          xhr.onerror = () => reject(new Error('Network error during streaming request'));
+          xhr.send(body);
+        });
       }
 
-      const text = finalText.trim();
-      if (!text) throw new Error('AI returned empty response.');
-
-      let parsed: any;
       try {
-        parsed = JSON.parse(text);
-      } catch (e) {
-        // If the model returned something else, try to salvage by locating a JSON object
-        const start = text.indexOf('{');
-        const end = text.lastIndexOf('}');
-        if (start >= 0 && end > start) {
-          parsed = JSON.parse(text.slice(start, end + 1));
-        } else {
-          // Plain text fallback
-          const fallback: ArtTherapyResponse = this.normalizeResponse({ response_text: text }, currentPhase);
-          this.validateResponse(fallback);
-          return fallback;
+        const res = await fetch(`${this.baseURL}/responses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Accept': 'text/event-stream'
+          },
+          body,
+          signal: controller.signal,
+        } as any);
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Streaming request failed: ${res.status} ${text}`);
+        }
+
+        if (!(res as any).body || !(res as any).body.getReader) {
+          // Web always supports this; if it's somehow missing, there's nothing left to fall
+          // back to here since the native path above already covers non-streaming platforms.
+          throw new Error('Streaming unsupported: response body is not readable.');
+        }
+
+        const reader = (res.body as any).getReader();
+        const decoder = new TextDecoder('utf-8');
+        let done = false;
+
+        while (!done) {
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+          consumeChunk(decoder.decode(value || new Uint8Array(), { stream: !done }));
+        }
+
+        return finalizeResponse();
+      } finally {
+        controller.abort();
+      }
+    };
+
+    try {
+      if (previousResponseId) {
+        try {
+          const incrementalInput = await buildIncrementalInput();
+          return await runRequest(incrementalInput, previousResponseId);
+        } catch (e: any) {
+          const msg = String(e?.message || '').toLowerCase();
+          // Only fall back for chain-specific failures (expired/unknown previous_response_id) —
+          // anything else (network, content, safety refusal) should surface normally.
+          const looksLikeStaleChain = msg.includes('previous_response') || (msg.includes('response') && msg.includes('not found'));
+          if (!looksLikeStaleChain) throw e;
+          console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
         }
       }
-
-      const normalized = this.normalizeResponse(parsed, currentPhase);
-      this.validateResponse(normalized);
-      return normalized;
+      const fullInput = await buildFullInput();
+      return await runRequest(fullInput, undefined);
     } catch (error: any) {
       // Map to same error handling as non-streaming
       console.error('Art Therapy Streaming Error:', error?.message || error);
@@ -851,8 +951,6 @@ class ArtTherapyService {
         throw new Error('სურათი ძალიან დიდია. გთხოვთ გამოიყენოთ უფრო პატარა სურათი ან დაიწყოთ ფოტო უფრო დაბალი რეზოლუციით.\n\n(Image is too large. Please use a smaller image or take a photo with lower resolution.)');
       }
       throw error;
-    } finally {
-      controller.abort();
     }
   }
 

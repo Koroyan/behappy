@@ -2,6 +2,7 @@ import CommonHeader from '@/components/CommonHeader';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { sendMessageToGPT } from '@/services/gptApi';
+import SubscriptionService from '@/services/subscriptionService';
 import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,7 +14,6 @@ import {
     Dimensions,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -22,6 +22,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface JournalEntry {
   id: string;
@@ -235,6 +236,19 @@ export default function JournalScreen() {
       return;
     }
 
+    // Journal stays free for everyone, but capped at one AI-reflected entry per day.
+    if (!(await SubscriptionService.canWriteJournalToday())) {
+      Alert.alert(
+        pick({ en: 'See you tomorrow', ka: 'ხვალ შევხვდებით', ru: 'До завтра' }, language),
+        pick({
+          en: 'You already wrote today’s entry. A new one unlocks tomorrow.',
+          ka: 'დღევანდელი ჩანაწერი უკვე დაწერეთ. ახალი ხვალ გაიხსნება.',
+          ru: 'Сегодняшняя запись уже сделана. Новая откроется завтра.',
+        }, language)
+      );
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -262,6 +276,7 @@ export default function JournalScreen() {
       const updatedEntries = [newEntry, ...entries];
       setEntries(updatedEntries);
       await AsyncStorage.setItem('journal_entries', JSON.stringify(updatedEntries));
+      await SubscriptionService.recordJournalEntry();
 
       setEntryText('');
       setIsWriting(false);
@@ -616,7 +631,7 @@ export default function JournalScreen() {
 
   if (isWriting) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         
         <CommonHeader 

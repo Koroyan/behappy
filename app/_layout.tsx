@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -21,6 +22,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
       <ThemeProvider>
         <LanguageProvider>
         <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -55,6 +57,7 @@ export default function RootLayout() {
       </NavigationThemeProvider>
     </LanguageProvider>
     </ThemeProvider>
+    </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

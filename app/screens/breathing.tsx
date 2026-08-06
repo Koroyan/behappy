@@ -8,13 +8,13 @@ import {
     Animated,
     Dimensions,
     Easing,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const CIRCLE_SIZE = Math.min(width * 0.72, 270);
@@ -305,7 +305,7 @@ export default function BreathingScreen() {
   // ── SELECTION SCREEN ──────────────────────────────────────────────────────
   if (!isActive && currentPhase === 'ready') {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
         <LinearGradient colors={['#030710', '#0a1225', '#030710']} style={StyleSheet.absoluteFill} />
         <CommonHeader title={p(T.headerTitle)} />
         <ScrollView contentContainerStyle={styles.selectionScroll} showsVerticalScrollIndicator={false}>

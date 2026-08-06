@@ -9,13 +9,13 @@ import {
   Alert,
   FlatList,
   Image,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Helper to pick translation
 const pick = <T extends Record<string, any>>(obj: T, lang: AppLanguage): string => {

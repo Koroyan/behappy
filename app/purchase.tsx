@@ -1,9 +1,11 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import PurchaseService, { PurchaseProduct } from '@/services/purchase';
+import SubscriptionService, { getPlanById } from '@/services/subscriptionService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 export default function PurchasePage() {
@@ -21,13 +23,21 @@ export default function PurchasePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedPlan = useMemo(() => getPlanById(product), [product]);
+
+  const orderDesc = useMemo(() => {
+    if (selectedPlan) return `beHappy Premium — ${selectedPlan.months} mo`;
+    if (product === 'art-therapy') return 'Art Therapy Unlock';
+    return 'beHappy Purchase';
+  }, [product, selectedPlan]);
+
   const title = useMemo(() => {
     const paramTest = String(params.test || '').toLowerCase();
     const isTestParam = paramTest === 'true' || paramTest === '1';
     const isTest = isTestParam || String(process.env.EXPO_PUBLIC_FLITT_TEST_MODE ?? 'true') === 'true' || (process.env.EXPO_PUBLIC_FLITT_MERCHANT_ID ? false : true);
-    const base = product === 'art-therapy' ? 'Unlock Art Therapy' : 'Complete Purchase';
+    const base = selectedPlan ? 'beHappy Premium' : product === 'art-therapy' ? 'Unlock Art Therapy' : 'Complete Purchase';
     return isTest ? `${base} (TEST)` : base;
-  }, [product, params.test]);
+  }, [product, params.test, selectedPlan]);
 
   const isTestMode = useMemo(() => {
     const paramTest = String(params.test || '').toLowerCase();
@@ -39,14 +49,18 @@ export default function PurchasePage() {
   const onSuccess = useCallback(async () => {
     try {
       setLoading(true);
-      await PurchaseService.markUnlocked(product);
+      if (selectedPlan) {
+        await SubscriptionService.activatePlan(selectedPlan.id);
+      } else {
+        await PurchaseService.markUnlocked(product);
+      }
       router.replace(returnTo as any);
     } catch (e: any) {
       setError(e?.message || 'Failed to finalize purchase');
     } finally {
       setLoading(false);
     }
-  }, [product, returnTo, router]);
+  }, [product, returnTo, router, selectedPlan]);
 
   const onWebNavChange = useCallback((navState: any) => {
     const url: string = navState?.url || '';
@@ -142,7 +156,7 @@ export default function PurchasePage() {
               merchant_id: ${merchantId},
               currency: '${currency}',
               amount: ${minor},
-              order_desc: 'Art Therapy Unlock',
+              order_desc: '${orderDesc}',
               response_url: '${respUrl}'
             }
           };
@@ -165,7 +179,7 @@ export default function PurchasePage() {
     </script>
   </body>
 </html>`;
-  }, [checkoutUrl, amount, currency, params.test, language, toFlittLocale]);
+  }, [checkoutUrl, amount, currency, params.test, language, toFlittLocale, orderDesc]);
 
   // Web-only: render checkout directly in DOM (no iframe) to avoid bank redirect issues
   useEffect(() => {
@@ -216,7 +230,7 @@ export default function PurchasePage() {
             merchant_id: merchantId,
             currency,
             amount: minor,
-            order_desc: 'Art Therapy Unlock',
+            order_desc: orderDesc,
             response_url: respUrl,
           },
         };
@@ -238,7 +252,7 @@ export default function PurchasePage() {
     }
 
     return () => { mounted = false; };
-  }, [checkoutUrl, amount, currency, params.test, language, toFlittLocale]);
+  }, [checkoutUrl, amount, currency, params.test, language, toFlittLocale, orderDesc]);
 
   return (
     <LinearGradient colors={["#111827","#1f2937"]} style={styles.container}>

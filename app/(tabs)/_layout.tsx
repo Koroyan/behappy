@@ -7,10 +7,9 @@ import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { TAB_BAR_CONTENT_HEIGHT, useBottomTabBarHeight } from '@/hooks/useBottomTabBarHeight';
 
 const { width } = Dimensions.get('window');
-const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 80 : 65;
-const BOTTOM_INSET = Platform.OS === 'ios' ? 34 : 16;
 
 const TAB_LABELS: Record<string, Record<string, string>> = {
   home:    { en:'Home', ru:'Главная', ka:'მთავარი', hy:'Հիմնական', tr:'Ana Sayfa', az:'Əsas', es:'Inicio', de:'Startseite', fr:'Accueil', pt:'Início', id:'Beranda', it:'Home', ar:'الرئيسية', hi:'होम', zh:'首页', ja:'ホーム', ko:'홈', uk:'Головна', pl:'Strona główna' },
@@ -22,7 +21,9 @@ const TAB_LABELS: Record<string, Record<string, string>> = {
 export default function TabLayout() {
   const { theme, isDark } = useTheme();
   const { language } = useLanguage();
-  const styles = React.useMemo(() => createStyles(isDark), [isDark]);
+  const tabBarHeight = useBottomTabBarHeight();
+  const bottomPad = tabBarHeight - TAB_BAR_CONTENT_HEIGHT;
+  const styles = React.useMemo(() => createStyles(isDark, bottomPad), [isDark, bottomPad]);
   const tl = (key: string) => TAB_LABELS[key]?.[language] ?? TAB_LABELS[key]?.en ?? key;
 
   // Create tab bar background with blur
@@ -118,13 +119,13 @@ export default function TabLayout() {
   );
 }
 
-const createStyles = (isDark: boolean) => StyleSheet.create({
+const createStyles = (isDark: boolean, bottomPad: number) => StyleSheet.create({
   background: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
   },
   tabBar: {
-    height: TAB_BAR_HEIGHT,
+    height: TAB_BAR_CONTENT_HEIGHT + bottomPad,
     backgroundColor: 'transparent',
     borderTopWidth: 0,
     elevation: 8,
@@ -137,7 +138,7 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 12,
-    paddingBottom: BOTTOM_INSET,
+    paddingBottom: bottomPad,
   },
   tabBarBackground: {
     borderTopLeftRadius: 24,

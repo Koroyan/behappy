@@ -18,6 +18,8 @@ import {
     View,
 } from 'react-native';
 import ArtTherapyProgramManager, { ArtTherapySession } from '../services/artTherapyProgramNew';
+import SubscriptionService from '../services/subscriptionService';
+import { useBottomTabBarHeight } from '../hooks/useBottomTabBarHeight';
 import ArtTherapyCompletedList from './ArtTherapyCompletedList';
 
 const { width } = Dimensions.get('window');
@@ -210,7 +212,9 @@ export default function ArtTherapyScreen() {
   const { theme, isDark } = useTheme();
   const [sessions, setSessions] = useState<ArtTherapySession[]>([]);
   const [completedSessions, setCompletedSessions] = useState<string[]>([]);
+  const [startedSessions, setStartedSessions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const tabBarHeight = useBottomTabBarHeight();
   const [error, setError] = useState<string | null>(null);
 
   // Animation values
@@ -227,9 +231,11 @@ export default function ArtTherapyScreen() {
       const completed = Array.from(progress.entries())
         .filter(([_, prog]) => prog.completed)
         .map(([sessionId, _]) => sessionId.toString());
-      
+      const started = Array.from(progress.keys()).map((sessionId) => sessionId.toString());
+
       setSessions(sessionData);
       setCompletedSessions(completed);
+      setStartedSessions(started);
       
       // Animate progress
       const progressValue = completed.length / sessionData.length;
@@ -252,8 +258,24 @@ export default function ArtTherapyScreen() {
     }, [loadSessions])
   );
 
-  const handleSessionPress = (session: ArtTherapySession) => {
+  const handleSessionPress = async (session: ArtTherapySession) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Resuming or reviewing a session already started today doesn't touch the
+    // free-session / daily-cap gate — only starting a brand-new one does.
+    const alreadyStarted = startedSessions.includes(session.id.toString());
+    if (alreadyStarted) {
+      router.push(`/art-therapy-session?sessionId=${session.id}`);
+      return;
+    }
+
+    const gate = await SubscriptionService.canStartArtTherapySession();
+    if (!gate.allowed) {
+      router.push({ pathname: '/subscription', params: { returnTo: '/art-therapy' } } as any);
+      return;
+    }
+
+    await SubscriptionService.recordArtTherapySessionStart();
     router.push(`/art-therapy-session?sessionId=${session.id}`);
   };
 
@@ -329,7 +351,7 @@ export default function ArtTherapyScreen() {
       {/* Sessions (current only) */}
       <ScrollView
         style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={styles.sessionList}
+        contentContainerStyle={[styles.sessionList, { paddingBottom: tabBarHeight + 24 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Completion Card */}

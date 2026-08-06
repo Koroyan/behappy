@@ -34,12 +34,15 @@ import aiTherapyService, {
     ChatMessage as ChatMessageType,
     SessionData
 } from '../../services/aiTherapyService';
+import SubscriptionService from '../../services/subscriptionService';
+import { useBottomTabBarHeight } from '../../hooks/useBottomTabBarHeight';
 import { TherapyColors, therapyStyles } from '../../styles/therapyStyles';
 
 const AITherapyChatScreen: React.FC = () => {
   const { language } = useLanguage();
   const { theme, isDark } = useTheme();
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
   const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const pick = (obj: Record<string, string>, lang: AppLanguage) => obj[lang] ?? obj.en;
   const t = {
@@ -530,6 +533,24 @@ const AITherapyChatScreen: React.FC = () => {
   const handleSendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
 
+    const gate = await SubscriptionService.canSendAiChatMessage();
+    if (!gate.allowed) {
+      if (gate.reason === 'daily-limit-reached') {
+        Alert.alert(
+          pick({ en: 'See you tomorrow', ka: 'ხვალ შევხვდებით', ru: 'До завтра' }, language),
+          pick({
+            en: 'You’ve reached today’s chat limit. It resets tomorrow.',
+            ka: 'დღევანდელი ჩათის ლიმიტი ამოწურულია. ხვალ განახლდება.',
+            ru: 'Вы достигли сегодняшнего лимита чата. Он обновится завтра.',
+          }, language)
+        );
+      } else {
+        router.push({ pathname: '/subscription', params: { returnTo: '/(tabs)/ai-therapy-chat' } } as any);
+      }
+      return;
+    }
+    await SubscriptionService.recordAiChatMessage();
+
     const userMessage: ChatMessageType = {
       id: `msg_${Date.now()}`,
       type: 'user',
@@ -579,6 +600,7 @@ const AITherapyChatScreen: React.FC = () => {
               timestamp: new Date(),
             },
           ],
+          lastResponseId: aiTherapyService.getLastResponseId(),
         };
         setCurrentSession(updatedSession);
         // Persist after every turn (not just on explicit "End Session") so nothing
@@ -759,6 +781,24 @@ const AITherapyChatScreen: React.FC = () => {
           Alert.alert(pick(t.alerts.errorTitle as any, language), pick(t.alerts.failedEncode as any, language));
           return;
         }
+
+        const imageGate = await SubscriptionService.canSendAiChatMessage();
+        if (!imageGate.allowed) {
+          if (imageGate.reason === 'daily-limit-reached') {
+            Alert.alert(
+              pick({ en: 'See you tomorrow', ka: 'ხვალ შევხვდებით', ru: 'До завтра' }, language),
+              pick({
+                en: 'You’ve reached today’s chat limit. It resets tomorrow.',
+                ka: 'დღევანდელი ჩათის ლიმიტი ამოწურულია. ხვალ განახლდება.',
+                ru: 'Вы достигли сегодняшнего лимита чата. Он обновится завтра.',
+              }, language)
+            );
+          } else {
+            router.push({ pathname: '/subscription', params: { returnTo: '/(tabs)/ai-therapy-chat' } } as any);
+          }
+          return;
+        }
+        await SubscriptionService.recordAiChatMessage();
 
         const imageMessage: ChatMessageType = {
           id: `msg_${Date.now()}_image`,
@@ -1143,7 +1183,7 @@ const AITherapyChatScreen: React.FC = () => {
             backgroundColor: theme.colors.card,
             borderTopWidth: 1,
             borderTopColor: theme.colors.border,
-            paddingBottom: isKeyboardVisible ? 10 : 75, // Less padding when keyboard is visible
+            paddingBottom: isKeyboardVisible ? 10 : tabBarHeight + 10, // Less padding when keyboard is visible (it pushes the tab bar off-screen); otherwise clear the floating tab bar
             shadowColor: theme.colors.shadow,
             shadowOffset: { width: 0, height: -2 },
             shadowOpacity: 0.1,

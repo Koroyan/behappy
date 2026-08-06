@@ -13,6 +13,9 @@ export interface SessionProgress {
   chatHistory: any[];
   clinicalSummary?: ArtTherapyResponse;
   emotionalJourney?: string[];
+  // Id of the most recent OpenAI response in this session's chain, so the next turn can
+  // continue via `previous_response_id` instead of resending the full conversation history.
+  lastResponseId?: string;
 }
 
 export interface ArtTherapySession {

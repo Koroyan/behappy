@@ -1,11 +1,12 @@
 import CommonHeader from '@/components/CommonHeader';
 import CommonSendButton from '@/components/CommonSendButton';
+import SOSButton from '@/components/SOSButton';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -21,6 +22,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -149,33 +151,32 @@ const buildEndSessionControlContext = (source: 'button' | 'text') => [
   'response_text should be a brief warm closure in the user language, followed by no new question.'
 ].join('\n');
 
+// Deliberately conservative: requires BOTH an "ending" word AND a word that clearly refers to
+// the session/conversation itself, near each other — not just one common word root anywhere in
+// the message. A client saying "I want to finish this drawing" or "დავასრულო ეს ნახატი" (finish
+// this drawing) must NOT match; only an explicit, unambiguous request to end the session should.
+// This is a soft hint for the model, not something that overrides its own judgment (see
+// `requestedClose` below) — false negatives here are fine, the model's own Early End Protocol
+// handles genuine end-requests; false positives are what caused sessions to close mid-conversation.
 const isEndSessionTextIntent = (text: string): boolean => {
   const normalized = text.toLowerCase();
+  // "საუბარ"/"საუბრ" covers both the nominative ("საუბარი") and declined ("საუბრის", genitive
+  // syncope) forms of the Georgian word for "conversation".
+  const sessionWord = '(session|conversation|chat|summary|summarize|сесси|бесед|разговор|итог|резюм|სესია|საუბარ|საუბრ|შეხვედრ|ceans|görüşme|conversación|sesión)';
+  // English needs \b so "close"/"stop" don't match inside unrelated words like "disclose" or
+  // "desktop". \b is ASCII-word-based and unreliable for Cyrillic/Georgian script, so those use
+  // bare stems instead (still safe: matched only in proximity to an explicit session word below) —
+  // stems, not full conjugated words, since e.g. Russian "завершим"/"завершить"/"завершаю" or
+  // Georgian "დავასრულო"/"დაასრულე"/"დავასრულოთ" conjugate by inserting a person marker between
+  // the "და/დავ" prefix and the root, so the stem is the bare root (სრულ/ხურ/წყვიტ), not the
+  // prefixed form.
+  const endingStem = '(\\b(end|finish|close|stop|wrap up)\\b|заверш|законч|закры|остановит|სრულ|ხურ|წყვიტ)';
   return [
-    /\b(end|finish|close|stop)\b.{0,40}\b(session|summary|summarize)\b/i,
-    /\b(session|summary|summarize)\b.{0,40}\b(end|finish|close|stop)\b/i,
-    /დავასრულ|დასრულება|შევაჯამ|შეჯამება/i,
-    /ավարտ|ամփոփ|փակել/i,
-    /заверш|законч|резюм|итог/i,
-    /terminar|finalizar|resumen/i,
-    /bitir|özet/i,
-  ].some(pattern => pattern.test(normalized));
-};
-
-const isLikelySummaryGenerationText = (text: string): boolean => {
-  const normalized = text.toLowerCase();
-  return isEndSessionTextIntent(text) || [
-    /ready.{0,40}(close|finish|end|summary)/i,
-    /(close|finish|end|summary).{0,40}ready/i,
-    /պատրաստ.{0,40}(փակ|ավարտ|ամփոփ)/i,
-    /(փակ|ավարտ|ամփոփ).{0,40}պատրաստ/i,
-    /վերցնել.{0,60}(ինձ հետ|հետ)/i,
-    /նախադասություն.{0,60}(վերցնել|ինձ հետ|հետ)/i,
-    /готов.{0,40}(закры|заверш|итог|резюм)/i,
-    /მზად.{0,40}(დასრულ|დახურ|შეჯამ)/i,
-    /(წამოვიღ|თან წავიღ).{0,60}(წინადად|განცდ|სიტყვ)/i,
-    /listo.{0,40}(cerrar|terminar|resumen)/i,
-    /(take|carry).{0,60}(with me|from this|sentence|feeling)/i,
+    new RegExp(`${endingStem}.{0,30}${sessionWord}`, 'i'),
+    new RegExp(`${sessionWord}.{0,30}${endingStem}`, 'i'),
+    /ավարտել.{0,30}(ceans|խոսակց)/i,
+    /terminar.{0,30}(sesión|conversación)/i,
+    /bitirmek.{0,30}(seans|görüşme)/i,
   ].some(pattern => pattern.test(normalized));
 };
 
@@ -387,6 +388,10 @@ export default function ArtTherapySessionChat() {
   const [isSessionComplete, setIsSessionComplete] = useState(false);
   const [lastImage, setLastImage] = useState<{ displayUri: string; base64: string } | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  // Tracks the OpenAI response id to continue this session's conversation via
+  // previous_response_id instead of resending the full history every turn. A ref (not
+  // state) because it must read-and-write synchronously within the same send handler.
+  const lastResponseIdRef = useRef<string | undefined>(undefined);
   const recordingRef = useRef<Audio.Recording | null>(null);
   // Web recording state (MediaRecorder)
   const webRecordingRef = useRef<{ mediaRecorder: any; chunks: BlobPart[]; stream: MediaStream | null } | null>(null);
@@ -394,6 +399,16 @@ export default function ArtTherapySessionChat() {
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
   const readOnly = isSessionComplete === true;
+
+  // Surface crisis resources whenever the model itself flags meaningful risk — previously this
+  // only produced a console.warn that no user would ever see.
+  const showCrisisSupport = useMemo(() => {
+    const lastRisk = [...messages]
+      .reverse()
+      .find(m => m.role === 'assistant' && m.clinicalData)
+      ?.clinicalData?.safety_assessment?.risk_level;
+    return lastRisk === 'high' || lastRisk === 'imminent';
+  }, [messages]);
 
   // Longitudinal memory preview (recent sessions aggregation)
   const [memoryPreview, setMemoryPreview] = useState<string>('');
@@ -500,30 +515,6 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
     })();
   }, [buildMemoryContext]);
 
-  // Check if AI response contains farewell/goodbye phrases
-  const isFarewellMessage = (text: string): boolean => {
-    const farewellPatterns = [
-      // English
-      /see you next time/i, /until next time/i, /take care/i, /goodbye/i, /bye for now/i,
-      /looking forward to our next session/i, /until we meet again/i,
-      /if you.*want.*work through/i, /ready when you are/i,
-      // Georgian
-      /გნახავ/i, /გიხდებით/i, /მომავალ სესიამდე/i, /შემდეგ შეხვედრამდე/i, /ნახვამდის/i,
-      /როცა მოინდომებ/i, /ახალ სესიაზე/i,
-      // Russian
-      /до следующей встречи/i, /до новых встреч/i, /увидимся/i, /до скорого/i,
-      /жду нашей следующей встречи/i, /до следующего раза/i, /всего доброго/i,
-      /если.*захотите.*поработать/i, /буду рад.*быть рядом/i, /рад.*быть рядом/i,
-      /спасибо.*что были в этом процессе/i, /благодарю за встречу/i,
-      // Armenian
-      /մինչև հաջորդ անգամ/i, /մինչև հաջորդ հանդիպում/i,
-      // Turkish
-      /görüşmek üzere/i, /bir sonraki sefere kadar/i,
-      // Add more patterns as needed
-    ];
-    
-    return farewellPatterns.some(pattern => pattern.test(text));
-  };
 
   const formatAssistantContent = useCallback((response: ArtTherapyResponse): string => {
     const responseText = response.response_text || '';
@@ -572,6 +563,7 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
       const sessionProgress = progress.get(session.id);
       setSessionProgress(sessionProgress || null);
       setIsSessionComplete(sessionProgress?.completed || false);
+      lastResponseIdRef.current = sessionProgress?.lastResponseId;
 
       console.log(`📚 Loading session ${session.id}:`, {
         hasProgress: !!sessionProgress,
@@ -628,6 +620,7 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
       }
       sp.chatHistory = msgs;
       sp.phase = phase;
+      if (lastResponseIdRef.current) sp.lastResponseId = lastResponseIdRef.current;
       if (response?.session_complete && response?.response_text) {
         sp.completed = true;
         sp.completedAt = new Date();
@@ -704,15 +697,18 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
         : 'General Art Therapy';
 
       const longitudinalCtx = await buildMemoryContext();
-      const requestedClose = Boolean(controlContext) || isEndSessionTextIntent(outgoingText);
-      const expectsSummaryGeneration = requestedClose || isLikelySummaryGenerationText(outgoingText);
+      // Explicit button press: unambiguous, deliberate — safe to force the outcome afterward.
+      const buttonRequestedClose = Boolean(controlContext);
+      // Free-text guess: only a hint fed to the model, never used to override its actual
+      // response below — see the note on isEndSessionTextIntent for why.
+      const textHintsClose = !buttonRequestedClose && isEndSessionTextIntent(outgoingText);
       const lastAssistantClinical = [...messages]
         .reverse()
         .find(m => m.role === 'assistant' && m.clinicalData)
         ?.clinicalData;
       const isModifiedImageUpload = Boolean(imageBase64 && !outgoingText && lastAssistantClinical?.required_input === 'image_v2');
-      setIsGeneratingSummary(expectsSummaryGeneration);
-      const effectiveControlContext = controlContext || (requestedClose ? buildEndSessionControlContext('text') : '');
+      setIsGeneratingSummary(buttonRequestedClose || textHintsClose);
+      const effectiveControlContext = controlContext || (textHintsClose ? buildEndSessionControlContext('text') : '');
       const requestContext = [longitudinalCtx, effectiveControlContext].filter(Boolean).join('\n\n');
       let response = await artTherapyService.sendMessageStream(
         newMessages,
@@ -727,7 +723,9 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
             setIsTyping(false); // hide dots as soon as real text starts streaming
           }
         },
-        requestContext
+        requestContext,
+        lastResponseIdRef.current,
+        (id) => { lastResponseIdRef.current = id; }
       );
 
       if (imageBase64 && !outgoingText) {
@@ -743,7 +741,8 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
         }
       }
 
-      if (requestedClose) {
+      if (buttonRequestedClose) {
+        // Explicit, deliberate user action — always honor it regardless of what the model said.
         response = {
           ...response,
           session_phase: 2,
@@ -752,6 +751,17 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
           required_input: 'none',
           action: 'close_session',
           session_summary: response.session_summary || response.phase_summary || pick(T.fallbackSessionSummary, language as AppLanguage),
+        };
+      } else if (response.session_complete && /[?？]\s*$/.test((response.response_text || '').trim())) {
+        // Safety net: the model marked the session done but its own reply still ends in a
+        // question — trust the visible question over the flag rather than showing a message
+        // that both asks something and locks the conversation as finished.
+        response = {
+          ...response,
+          session_complete: false,
+          phase_complete: false,
+          required_input: 'text',
+          action: 'continue_exploration',
         };
       }
 
@@ -771,18 +781,12 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
         console.log(`✅ Persisted AI response for session ${currentSession.id}, total messages: ${finalMessages.length}, phase: ${response.session_phase}`);
       }
 
-      // Check for session completion
-      // Complete session if either:
-      // 1. AI explicitly marks session_complete: true
-      // 2. AI's response contains farewell/goodbye phrases
-      const hasFarewell = isFarewellMessage(response.response_text || '');
+      // Complete the session only from the model's own structured signals (never from
+      // pattern-matching its prose — that's what previously caused sessions to end on innocent
+      // phrases that merely resembled a farewell).
       const completedFinalPhase = response.session_phase === 2 && response.phase_complete && Boolean(response.session_summary);
-      const shouldCompleteSession = response.session_complete || response.action === 'close_session' || hasFarewell || completedFinalPhase;
-      
-      if (hasFarewell) {
-        console.log('🔔 Farewell detected in AI response - auto-completing session');
-      }
-      
+      const shouldCompleteSession = response.session_complete || response.action === 'close_session' || completedFinalPhase;
+
       if (shouldCompleteSession && currentSession && !isSessionComplete) {
         console.log('✅ Completing session:', currentSession.id);
         await ArtTherapyProgramManager.completeSession(
@@ -1184,7 +1188,9 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
             setIsTyping(false);
           }
         },
-        longitudinalCtx
+        longitudinalCtx,
+        lastResponseIdRef.current,
+        (id) => { lastResponseIdRef.current = id; }
       );
 
       // Finalize AI message with full text and clinical data
@@ -1236,13 +1242,15 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom', 'left', 'right']}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.colors.background} />
       {/* Session accent bar */}
       {currentSession && (
         <View style={{ height: 3, backgroundColor: currentSession.color }} />
       )}
-      
+
+      {showCrisisSupport && <SOSButton variant="floating" />}
+
       {/* Header */}
       <CommonHeader 
         title={getHeaderTitle()}
@@ -1398,7 +1406,7 @@ Use this context as your internal clinical "cheat sheet" to inform empathy, dept
           />
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 

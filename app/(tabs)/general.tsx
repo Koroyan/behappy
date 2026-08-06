@@ -2,6 +2,8 @@ import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { DashboardProgress, emptyDashboardProgress, getDashboardProgress } from '@/services/activityAggregator';
 import PurchaseService from '@/services/purchase';
+import SubscriptionService from '@/services/subscriptionService';
+import { useBottomTabBarHeight } from '@/hooks/useBottomTabBarHeight';
 import { getUserProfile, UserProfile } from '@/services/userProfileService';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,7 +11,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -18,12 +19,16 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GeneralScreen() {
   const { theme, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const { language, setLanguage } = useLanguage();
+  const tabBarHeight = useBottomTabBarHeight();
   const [artTherapyUnlocked, setArtTherapyUnlocked] = useState(false);
+  const [premiumActive, setPremiumActive] = useState(false);
+  const [premiumExpiresAt, setPremiumExpiresAt] = useState<number | null>(null);
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const [dashboardProgress, setDashboardProgress] = useState<DashboardProgress>(emptyDashboardProgress);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -35,6 +40,10 @@ export default function GeneralScreen() {
   useFocusEffect(
     useCallback(() => {
       getUserProfile().then(setProfile);
+      SubscriptionService.isPremiumActive().then(async (active) => {
+        setPremiumActive(active);
+        setPremiumExpiresAt(active ? await SubscriptionService.getExpiresAt() : null);
+      });
     }, [])
   );
 
@@ -544,6 +553,11 @@ export default function GeneralScreen() {
       es: 'Restaurar', de: 'Wiederherstellen', fr: 'Restaurer', pt: 'Restaurar', ar: 'استعادة', id: 'Pulihkan',
       it: 'Ripristina', ja: '復元', zh: '恢复', hi: 'पुनर्स्थापित करें', ko: '복원', uk: 'Відновити', pl: 'Przywróć'
     },
+    premiumTitle: { en: 'Premium', ru: 'Premium', ka: 'Premium' },
+    premiumActive: { en: 'Premium active', ru: 'Premium активен', ka: 'Premium აქტიურია' },
+    premiumFreeAvailable: { en: 'Free session available', ru: 'Доступна бесплатная сессия', ka: 'ხელმისაწვდომია უფასო სესია' },
+    premiumFreeUsed: { en: 'Free session used', ru: 'Бесплатная сессия использована', ka: 'უფასო სესია გამოყენებულია' },
+    premiumManage: { en: 'View plans', ru: 'Смотреть тарифы', ka: 'ნახე პაკეტები' },
   };
 
   const formatStreak = () => `${dashboardProgress.streakDays} ${pick(profileCopy.streakLabel)}`;
@@ -605,7 +619,7 @@ export default function GeneralScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.background} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 24 }]}>
         {/* Profile Header */}
         <LinearGradient
           colors={isDark ? ['#111827', '#1F2937'] : ['#F8FAFC', '#E0F2FE']}
@@ -782,6 +796,36 @@ export default function GeneralScreen() {
                 })}
               </View>
             )}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={[styles.hubPanel, { backgroundColor: theme.colors.card, borderColor: premiumActive ? '#FBBF24' : theme.colors.border }]}>
+            <Text style={[styles.panelTitle, { color: theme.colors.text }]}>{pick(profileCopy.premiumTitle)}</Text>
+            <View style={styles.accessTopRow}>
+              <View style={[styles.accessIcon, { backgroundColor: premiumActive ? 'rgba(251,191,36,0.18)' : (isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6') }]}>
+                <MaterialCommunityIcons name="crown" size={18} color={premiumActive ? '#F59E0B' : theme.colors.textSecondary} />
+              </View>
+              <View style={styles.accessTextBlock}>
+                <Text style={[styles.accessTitle, { color: theme.colors.text }]}>
+                  {premiumActive ? pick(profileCopy.premiumActive) : pick(profileCopy.premiumFreeUsed)}
+                </Text>
+                <Text style={[styles.accessDesc, { color: theme.colors.textSecondary }]}>
+                  {premiumActive && premiumExpiresAt
+                    ? `${pick(profileCopy.accessDesc)} · ${new Date(premiumExpiresAt).toLocaleDateString()}`
+                    : pick(profileCopy.accessDesc)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.accessActions}>
+              <TouchableOpacity
+                style={[styles.accessPrimaryButton, { backgroundColor: theme.colors.primary }]}
+                onPress={() => router.push('/subscription' as any)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.accessPrimaryText}>{pick(profileCopy.premiumManage)}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 

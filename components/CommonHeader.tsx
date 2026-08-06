@@ -1,7 +1,8 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CommonHeaderProps {
   title: string;
@@ -13,6 +14,7 @@ interface CommonHeaderProps {
 export default function CommonHeader({ title, subtitle, onBack, rightActions }: CommonHeaderProps) {
   const { theme, isDark } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleBack = () => {
     if (onBack) {
@@ -23,7 +25,7 @@ export default function CommonHeader({ title, subtitle, onBack, rightActions }: 
   };
 
   return (
-    <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+    <View style={[styles.header, { paddingTop: insets.top + 10, borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
       <View style={styles.headerLeft}>
         <TouchableOpacity
           style={[styles.backButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}
@@ -58,8 +60,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    paddingTop: Platform.OS === 'ios' ? 10 : 14,
+    paddingBottom: 14,
     minHeight: 70,
     borderBottomWidth: 1,
     elevation: 8,

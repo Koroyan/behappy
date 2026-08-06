@@ -4,6 +4,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import DailyMotivationCard from '@/components/DailyMotivationCard';
 import PsychologistQuoteBar from '@/components/PsychologistQuoteBar';
 import { hasProfile } from '@/services/userProfileService';
+import { useBottomTabBarHeight } from '@/hooks/useBottomTabBarHeight';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,13 +13,13 @@ import { useEffect, useRef } from 'react';
 import {
   Animated,
   FlatList,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Feature = {
   id: string;
@@ -160,6 +161,15 @@ const t = {
     openNow: {
       en: 'Open now', ka: 'გახსენი ახლა', ru: 'Открыть сейчас', hy: 'Բացել հիմա', tr: 'Hemen aç', az: 'İndi aç', es: 'Abrir ahora', de: 'Jetzt öffnen', fr: 'Ouvrir maintenant', pt: 'Abrir agora', ar: 'افتح الآن', id: 'Buka sekarang', ja: '今すぐ開く', zh: '立即打开', it: 'Apri ora', hi: 'अब खोलें', ko: '지금 열기', uk: 'Відкрити зараз', pl: 'Otwórz teraz'
     }
+  },
+  premium: {
+    title: { en: 'Go Premium', ka: 'გახდი Premium', ru: 'Стань Premium' },
+    subtitle: {
+      en: 'First session free — then unlock every tool',
+      ka: 'პირველი სესია უფასოდ — შემდეგ გახსენი ყველა ხელსაწყო',
+      ru: 'Первая сессия бесплатно — затем открой все инструменты',
+    },
+    cta: { en: 'View plans', ka: 'ნახე პაკეტები', ru: 'Смотреть тарифы' },
   }
 } as const;
 
@@ -285,6 +295,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const { language } = useLanguage();
+  const tabBarHeight = useBottomTabBarHeight();
 
   // Safe translation picker with English fallback when a key is missing
   const pick = (obj: Record<string, string>, lang: AppLanguage): string => {
@@ -431,7 +442,7 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#0B0F1A' : '#F9FAFB' }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <Header />
-      <Animated.ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.scrollContainer, { paddingBottom: tabBarHeight + 24 }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fade, transform: [{ translateY: translate }] }}>
         {/* Daily AI motivation + psychologist quote */}
         <DailyMotivationCard />
@@ -471,6 +482,30 @@ export default function HomeScreen() {
             <FontAwesome5 name="flask" size={12} color={isDark ? '#A78BFA' : '#6D28D9'} />
             <Text style={[styles.badgeText, { color: isDark ? '#CBD5E1' : '#334155' }]}>{pick(t.badges.science as any, language)}</Text>
           </View>
+        </View>
+
+        {/* Premium banner */}
+        <View style={styles.premiumBannerWrapper}>
+          <TouchableOpacity activeOpacity={0.9} onPress={() => onPress('/subscription')}>
+            <LinearGradient
+              colors={isDark ? ['#3B0764', '#1E1147'] : ['#7C3AED', '#4C1D95']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.premiumBannerCard}
+            >
+              <View style={styles.premiumBannerIconWrap}>
+                <MaterialCommunityIcons name="crown" size={22} color="#FBBF24" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.premiumBannerTitle}>{pick(t.premium.title as any, language)}</Text>
+                <Text style={styles.premiumBannerSubtitle}>{pick(t.premium.subtitle as any, language)}</Text>
+              </View>
+              <View style={styles.premiumBannerBtn}>
+                <Text style={styles.premiumBannerBtnText}>{pick(t.premium.cta as any, language)}</Text>
+                <Ionicons name="chevron-forward" size={14} color="#111827" />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
         {/* Featured section */}
@@ -630,6 +665,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   badgeText: { fontSize: 12, fontWeight: '700' },
+  // Premium banner
+  premiumBannerWrapper: { paddingHorizontal: 16, marginTop: 16 },
+  premiumBannerCard: {
+    borderRadius: 18,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  premiumBannerIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(251,191,36,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  premiumBannerTitle: { color: '#fff', fontWeight: '800', fontSize: 14.5 },
+  premiumBannerSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 11.5, marginTop: 2 },
+  premiumBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: '#FBBF24',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  premiumBannerBtnText: { color: '#111827', fontWeight: '800', fontSize: 11.5 },
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',

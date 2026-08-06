@@ -19,6 +19,9 @@ export interface OngoingCardSession {
   startedAt: number; // timestamp
   lastUpdatedAt: number; // timestamp
   exchangeCount: number;
+  // Id of the most recent OpenAI response in this session's chain, so continuing later can
+  // resume via `previous_response_id` instead of resending the full conversation history.
+  lastResponseId?: string;
 }
 
 // Completed session interface

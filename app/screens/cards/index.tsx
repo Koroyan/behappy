@@ -1,10 +1,13 @@
 import CommonHeader from '@/components/CommonHeader';
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import SubscriptionService from '@/services/subscriptionService';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Dimensions, ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Dimensions, ImageBackground, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const pick = (obj: Record<string, string>, lang: AppLanguage) => obj[lang] ?? obj.en;
 
@@ -26,7 +29,40 @@ export default function CardsMainScreen() {
   const router = useRouter();
   const { theme, isDark } = useTheme();
   const { language } = useLanguage();
-  
+
+  const [loading, setLoading] = useState(true);
+  const [premiumActive, setPremiumActive] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setPremiumActive(await SubscriptionService.isPremiumActive());
+      setLoading(false);
+    })();
+  }, []);
+
+  const handleCardTypePress = async (path: string) => {
+    const gate = await SubscriptionService.canStartCardsSession();
+    if (!gate.allowed) {
+      if (gate.reason === 'daily-limit-reached') {
+        // They already have Premium and already used today's reading — no need to
+        // send them to a paywall for something they already own, just let them know.
+        Alert.alert(
+          pick({ en: 'See you tomorrow', ka: 'ხვალ შევხვდებით', ru: 'До завтра' }, language),
+          pick({
+            en: 'You already used today’s card reading. A new one unlocks tomorrow.',
+            ka: 'დღევანდელი ბარათების სესია უკვე გამოყენებულია. ახალი ხვალ გაიხსნება.',
+            ru: 'Сегодняшняя сессия с картами уже использована. Новая откроется завтра.',
+          }, language)
+        );
+        return;
+      }
+      router.push({ pathname: '/subscription', params: { returnTo: '/screens/cards' } } as any);
+      return;
+    }
+    await SubscriptionService.recordCardsSessionStart();
+    router.push(path as any);
+  };
+
   const cardTypes = [
     {
       id: 'emotion',
@@ -221,18 +257,59 @@ export default function CardsMainScreen() {
     },
   });
 
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]} edges={['bottom', 'left', 'right']}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!premiumActive) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.background} />
+        <CommonHeader title={pick(T.headerTitle, language)} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: theme.colors.card, borderRadius: 20, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border }}>
+            <MaterialCommunityIcons name="crown" size={36} color="#F59E0B" style={{ marginBottom: 12 }} />
+            <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: '800', marginBottom: 8, textAlign: 'center' }}>
+              {pick({ en: 'Cards Therapy is a Premium feature', ka: 'ბარათების თერაპია Premium ფუნქციაა', ru: 'Терапия картами доступна в Premium' }, language)}
+            </Text>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: 20 }}>
+              {pick({
+                en: 'Unlock card readings — plus Art Therapy and AI chat — with a Premium plan.',
+                ka: 'გახსენი ბარათების სესიები — პლუს არტ თერაპია და AI ჩათი — Premium პაკეტით.',
+                ru: 'Открой сессии с картами — а также арт-терапию и AI-чат — с планом Premium.',
+              }, language)}
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/subscription', params: { returnTo: '/screens/cards' } } as any)}
+              style={{ backgroundColor: theme.colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 14 }}
+              activeOpacity={0.9}
+            >
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>
+                {pick({ en: 'See Premium plans', ka: 'ნახე Premium პაკეტები', ru: 'Смотреть тарифы Premium' }, language)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar 
-        barStyle={isDark ? "light-content" : "dark-content"} 
-        backgroundColor={theme.colors.background} 
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.colors.background}
       />
-      
-      <CommonHeader 
+
+      <CommonHeader
         title={pick(T.headerTitle, language)}
         rightActions={
-          <TouchableOpacity 
-            onPress={() => router.push('/screens/cards/sessions-history')} 
+          <TouchableOpacity
+            onPress={() => router.push('/screens/cards/sessions-history')}
             style={styles.historyButton}
           >
             <MaterialCommunityIcons name="history" size={20} color={theme.colors.text} />
@@ -256,7 +333,7 @@ export default function CardsMainScreen() {
           {cardTypes.map((cardType) => (
             <TouchableOpacity
               key={cardType.id}
-              onPress={() => router.push(cardType.path as any)}
+              onPress={() => handleCardTypePress(cardType.path)}
               activeOpacity={0.8}
               style={styles.cardContainer}
             >

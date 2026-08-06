@@ -15,13 +15,13 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ClientSessionSummaryCard, { ClientSessionSummary } from '../../../components/ClientSessionSummaryCard';
 
 // Helper to pick translation
@@ -474,6 +474,10 @@ export default function CardTherapyChatScreen() {
   const [isRestoredSession, setIsRestoredSession] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
 
+  // Tracks the OpenAI response id to continue this session's conversation via
+  // previous_response_id instead of resending the full transcript every turn (matters a
+  // lot here since these sessions run 20-30 exchanges by design).
+  const lastResponseIdRef = useRef<string | undefined>(undefined);
   const flatListRef = useRef<FlatList>(null);
 
   // Extract card context from params
@@ -503,7 +507,8 @@ export default function CardTherapyChatScreen() {
             setMessages(ongoingSession.messages);
             setSessionStartTime(ongoingSession.startedAt);
             setIsRestoredSession(true);
-            
+            lastResponseIdRef.current = ongoingSession.lastResponseId;
+
             if (ongoingSession.cardImageBase64) setCardImageBase64(ongoingSession.cardImageBase64);
             if (ongoingSession.positiveImageBase64) setPositiveImageBase64(ongoingSession.positiveImageBase64);
             if (ongoingSession.negativeImageBase64) setNegativeImageBase64(ongoingSession.negativeImageBase64);
@@ -524,6 +529,7 @@ export default function CardTherapyChatScreen() {
                     setSessionStartTime(Date.now());
                     setMessages([]); // Clear messages for new session
                     setIsRestoredSession(false); // Mark as new session
+                    lastResponseIdRef.current = undefined;
                   },
                 },
                 {
@@ -534,7 +540,8 @@ export default function CardTherapyChatScreen() {
                     setMessages(ongoingSession.messages);
                     setSessionStartTime(ongoingSession.startedAt);
                     setIsRestoredSession(true);
-                    
+                    lastResponseIdRef.current = ongoingSession.lastResponseId;
+
                     if (ongoingSession.cardImageBase64) setCardImageBase64(ongoingSession.cardImageBase64);
                     if (ongoingSession.positiveImageBase64) setPositiveImageBase64(ongoingSession.positiveImageBase64);
                     if (ongoingSession.negativeImageBase64) setNegativeImageBase64(ongoingSession.negativeImageBase64);
@@ -549,7 +556,8 @@ export default function CardTherapyChatScreen() {
           const newId = cardSessionStorage.generateSessionId();
           setSessionId(newId);
           setSessionStartTime(Date.now());
-          
+          lastResponseIdRef.current = undefined;
+
           // If there was an ongoing session with different card, optionally notify user
           if (ongoingSession) {
             console.log('Starting new session with different card, previous session still saved');
@@ -813,7 +821,8 @@ export default function CardTherapyChatScreen() {
         cardContext,
         imageBase64,
         positiveBase64,
-        negativeBase64
+        negativeBase64,
+        (id) => { lastResponseIdRef.current = id; }
       );
       
       setMessages([
@@ -861,6 +870,7 @@ export default function CardTherapyChatScreen() {
           startedAt: sessionStartTime,
           lastUpdatedAt: Date.now(),
           exchangeCount: currentExchangeCount,
+          lastResponseId: lastResponseIdRef.current,
         });
       } catch (saveError) {
         console.error('Failed to save user message:', saveError);
@@ -883,12 +893,14 @@ export default function CardTherapyChatScreen() {
         cardContext,
         (delta) => {
           fullResponse += delta;
-          setMessages(prev => 
-            prev.map((m, i) => 
+          setMessages(prev =>
+            prev.map((m, i) =>
               i === prev.length - 1 ? { ...m, content: fullResponse } : m
             )
           );
-        }
+        },
+        lastResponseIdRef.current,
+        (id) => { lastResponseIdRef.current = id; }
       );
 
       // Check if this is a summary message
@@ -917,6 +929,7 @@ export default function CardTherapyChatScreen() {
             startedAt: sessionStartTime,
             lastUpdatedAt: Date.now(),
             exchangeCount: newExchangeCount,
+            lastResponseId: lastResponseIdRef.current,
           });
         } catch (saveError) {
           console.error('Failed to save session after AI response:', saveError);
@@ -960,7 +973,12 @@ export default function CardTherapyChatScreen() {
             setMessages(prev => [...prev, placeholderMessage]);
 
             try {
-              const summary = await cardTherapyService.requestSummary(messages, cardContext);
+              const summary = await cardTherapyService.requestSummary(
+                messages,
+                cardContext,
+                lastResponseIdRef.current,
+                (id) => { lastResponseIdRef.current = id; }
+              );
               
               const updatedMessages = [
                 ...messages,

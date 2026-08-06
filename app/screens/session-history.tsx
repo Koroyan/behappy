@@ -1,6 +1,6 @@
 import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { SessionData } from '@/services/aiTherapyService';
+import { normalizeEmotionTag, SessionData } from '@/services/aiTherapyService';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,7 +12,6 @@ import {
     FlatList,
     Modal,
     RefreshControl,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -20,6 +19,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ────────────────────────────────────────────────
 // Localisation helper
@@ -211,7 +211,10 @@ function formatTime(date: Date): string {
 
 function topEmotions(emotions: { emotion: string; intensity: number }[]): string[] {
   const counts: Record<string, number> = {};
-  emotions.forEach(e => { counts[e.emotion] = (counts[e.emotion] || 0) + 1; });
+  emotions.forEach(e => {
+    const tag = normalizeEmotionTag(e.emotion);
+    counts[tag] = (counts[tag] || 0) + 1;
+  });
   return Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)

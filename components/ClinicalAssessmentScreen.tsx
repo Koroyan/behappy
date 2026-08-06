@@ -4,7 +4,6 @@ import {
   Text,
   Modal,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -13,6 +12,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ClinicalAssessmentEngine, UserProfile } from '@/services/clinicalAssessment';

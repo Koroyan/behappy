@@ -44,6 +44,9 @@ export interface SessionData {
   endTime?: Date;
   insights: string[];
   emotions: { emotion: string; intensity: number; timestamp: Date }[];
+  // Id of the most recent OpenAI response in this session's chain, so the next turn can
+  // continue via `previous_response_id` instead of resending the full conversation history.
+  lastResponseId?: string;
 }
 
 const LANGUAGE_PATTERNS = {
@@ -61,11 +64,29 @@ const EMOTION_KEYWORDS = {
   positive: ['happy', 'good', 'great', 'excited'],
 };
 
+// The model's `clinical_assessment.emotional_state` field is meant to be a short mood tag
+// (e.g. "anxious"), but on hard sessions it can come back as a full clinical phrase
+// (e.g. "Heavy, Despairing State, Possible Self-Harm Risk"). That text must never reach the
+// client's session-history UI verbatim, so anything that isn't a single short word is
+// collapsed to a safe generic tag here, at the one place this field enters the app.
+export function normalizeEmotionTag(raw?: string | null): string {
+  if (!raw) return 'neutral';
+  const trimmed = raw.trim();
+  if (!trimmed) return 'neutral';
+  const isSimpleTag = !/[,;:.]/.test(trimmed) && trimmed.split(/\s+/).length === 1 && trimmed.length <= 20;
+  return isSimpleTag ? trimmed.toLowerCase() : 'neutral';
+}
+
 class AITherapyService {
   // API key is now sourced from .env (EXPO_PUBLIC_API_KEY); no AsyncStorage usage.
   private sessionHistory: ChatMessage[] = [];
   private currentSession: SessionData | null = null;
   private hasImageInSession: boolean = false; // Track if session contains images
+  // Id of the last Responses API call in this session, used to continue the conversation
+  // via previous_response_id (cheap, server-side context) instead of resending full history.
+  // Only used on the pure-text path — the image path uses Chat Completions, which has no
+  // equivalent chaining mechanism.
+  private lastResponseId?: string;
   // Cached prompt/instructions
   private promptInitialized: boolean = false;
   private promptInstructions: string | null = null;
@@ -245,41 +266,67 @@ class AITherapyService {
       }
       
       // For pure text sessions, use Responses API with Prompt
-      const recentHistory = this.sessionHistory.slice(-20).map(msg =>
-        `${msg.type === 'user' ? 'Client' : 'Therapist'}: ${msg.content}`
-      ).join('\n');
-
       const profileBlock = buildProfileContextBlock(await getUserProfile());
       const profilePrefix = profileBlock ? `${profileBlock}\n\n` : '';
 
-      const contextualMessage = recentHistory
-        ? `${profilePrefix}Session context:\n${recentHistory}\n\nCurrent message: ${userMessage}\n\n[Respond with valid JSON matching the clinical schema.]`
-        : `${profilePrefix}${userMessage}\n\n[Respond with valid JSON matching the clinical schema.]`;
-      
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-5-chat-latest',
-          prompt: {
-            id: this.PROMPT_ID,
-            version: this.PROMPT_VERSION
+      const buildFullContext = () => {
+        const recentHistory = this.sessionHistory.slice(-20).map(msg =>
+          `${msg.type === 'user' ? 'Client' : 'Therapist'}: ${msg.content}`
+        ).join('\n');
+        return recentHistory
+          ? `${profilePrefix}Session context:\n${recentHistory}\n\nCurrent message: ${userMessage}\n\n[Respond with valid JSON matching the clinical schema.]`
+          : `${profilePrefix}${userMessage}\n\n[Respond with valid JSON matching the clinical schema.]`;
+      };
+      // When continuing via previous_response_id, OpenAI already has every earlier turn —
+      // only the newest message needs to be sent.
+      const buildIncrementalContext = () =>
+        `${profilePrefix}${userMessage}\n\n[Respond with valid JSON matching the clinical schema.]`;
+
+      const doRequest = async (inputText: string, chainId?: string): Promise<any> => {
+        const resp = await fetch('https://api.openai.com/v1/responses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
           },
-          input: contextualMessage,
-          // Encourage JSON output using new Responses API field location
-          text: { format: { type: 'json_object' } }
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OpenAI API error:', response.status, errorText);
-        throw new Error(`OpenAI API error: ${response.status}`);
+          body: JSON.stringify({
+            model: 'gpt-5-chat-latest',
+            prompt: {
+              id: this.PROMPT_ID,
+              version: this.PROMPT_VERSION
+            },
+            input: inputText,
+            store: true,
+            ...(chainId ? { previous_response_id: chainId } : {}),
+            // Encourage JSON output using new Responses API field location
+            text: { format: { type: 'json_object' } }
+          })
+        });
+        if (!resp.ok) {
+          const errorText = await resp.text();
+          throw new Error(`OpenAI API error: ${resp.status} ${errorText}`);
+        }
+        return resp.json();
+      };
+
+      let data: any;
+      if (this.lastResponseId) {
+        try {
+          data = await doRequest(buildIncrementalContext(), this.lastResponseId);
+        } catch (e: any) {
+          const msg = String(e?.message || '').toLowerCase();
+          // Only fall back for chain-specific failures (expired/unknown previous_response_id) —
+          // anything else should surface normally.
+          const looksLikeStaleChain = msg.includes('previous_response') || (msg.includes('response') && msg.includes('not found'));
+          if (!looksLikeStaleChain) throw e;
+          console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
+          data = await doRequest(buildFullContext(), undefined);
+        }
+      } else {
+        data = await doRequest(buildFullContext(), undefined);
       }
-      const data = await response.json();
+      if (data?.id) this.lastResponseId = data.id;
+
       console.log('OpenAI Response:', data);
       return this.parseOpenAIResponse(data, userMessage);
     } catch (error) {
@@ -437,7 +484,9 @@ class AITherapyService {
             name: 'active_listening',
             description: 'Therapeutic support'
           },
-          detected_emotion: responseData.clinical_assessment?.emotional_state || this.detectEmotion(originalMessage),
+          detected_emotion: responseData.clinical_assessment?.emotional_state
+            ? normalizeEmotionTag(responseData.clinical_assessment.emotional_state)
+            : this.detectEmotion(originalMessage),
           key_insights: responseData.session_data ? [
             responseData.session_data.presenting_concern,
             responseData.session_data.treatment_target
@@ -669,6 +718,7 @@ class AITherapyService {
     };
     this.currentSession = session;
     this.sessionHistory = [];
+    this.lastResponseId = undefined;
     try {
       await AsyncStorage.setItem('current_session', JSON.stringify(session));
     } catch (error) {
@@ -803,7 +853,13 @@ class AITherapyService {
     this.sessionHistory = [];
     this.currentSession = null;
     this.hasImageInSession = false; // Reset image flag
+    this.lastResponseId = undefined;
     console.log('New session started - history cleared');
+  }
+
+  /** Current chain id for the live session, so the caller can persist it alongside SessionData. */
+  getLastResponseId(): string | undefined {
+    return this.lastResponseId;
   }
 
   /**
@@ -815,6 +871,7 @@ class AITherapyService {
     this.currentSession = session;
     this.sessionHistory = (session.messages || []).slice(-20);
     this.hasImageInSession = (session.messages || []).some(m => !!m.imageUri);
+    this.lastResponseId = session.lastResponseId;
   }
 
   async generateSessionSummary(messages: ChatMessage[], language: string = 'en'): Promise<any> {
