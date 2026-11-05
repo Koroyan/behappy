@@ -5,6 +5,7 @@ export type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 export interface UserProfile {
   name: string;
   gender: Gender;
+  /** 0 or missing = not provided. */
   age: number;
   healthConditions?: string;
   mainConcerns?: string;
@@ -51,13 +52,14 @@ export function buildProfileContextBlock(profile: UserProfile | null): string {
   if (!profile?.name) return '';
 
   const firstName = profile.name.trim().split(/\s+/)[0];
+  // Only details the person actually provided are shared.
   const parts = [
     `Name: ${profile.name.trim()}`,
-    `Gender: ${GENDER_LABEL[profile.gender] || 'not specified'}`,
-    `Age: ${profile.age}`,
-    `Health context: ${profile.healthConditions?.trim() || 'none provided'}`,
-    `What brought them here: ${profile.mainConcerns?.trim() || 'not specified'}`,
-  ];
+    profile.gender && profile.gender !== 'prefer_not_to_say' ? `Gender: ${GENDER_LABEL[profile.gender]}` : '',
+    profile.age && profile.age > 0 ? `Age: ${profile.age}` : '',
+    profile.healthConditions?.trim() ? `Health context: ${profile.healthConditions.trim()}` : '',
+    profile.mainConcerns?.trim() ? `What brought them here: ${profile.mainConcerns.trim()}` : '',
+  ].filter(Boolean);
 
   return `[Client Profile: ${parts.join('. ')}. Address the client as "${firstName}" naturally in conversation — not mechanically every turn. Let this context quietly inform your tone and understanding; never recite it back to the client as a list or treat it as a form to review aloud.]`;
 }

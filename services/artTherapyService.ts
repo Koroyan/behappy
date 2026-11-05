@@ -1,11 +1,10 @@
-import axios from 'axios';
-// Note: We'll use fetch for streaming SSE with the Responses API
-// and keep axios for non-stream JSON posts.
 import type { AppLanguage } from '@/contexts/LanguageContext';
+import { ANULIA_PERSONA_CONTEXT } from '@/features/anulia/persona';
+import { aiResponses, aiResponsesStream, aiSpeech, aiTranscribe, StaleChainError } from '@/lib/api/ai';
+import { canPersonalize } from '@/lib/privacy/consent';
 import { Audio } from 'expo-av';
-import Constants from 'expo-constants';
 // Use standard expo-file-system (legacy path breaks web export and Metro resolution)
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 import { buildProfileContextBlock, getUserProfile } from './userProfileService';
@@ -74,22 +73,19 @@ export interface ChatMessage {
 }
 
 class ArtTherapyService {
-  private apiKey: string;
+  // Hosted prompt on OpenAI. Requests go through the BeHappy server, which holds
+  // the API key and only allows this prompt for the "art" feature.
   private promptId: string = 'pmpt_690baa7920308196a2d94f41d4be76be0bd44ed1840b1049';
   private promptVersion: string = '21';
-  private baseURL: string = 'https://api.openai.com/v1';
+  private activeSessionId: number | undefined;
 
-  constructor() {
-    // Get API key from environment variables
-    this.apiKey =
-      Constants.expoConfig?.extra?.OPENAI_API_KEY ||
-      (process as any).env?.EXPO_PUBLIC_OPENAI_API_KEY ||
-      (process as any).env?.OPENAI_API_KEY ||
-      '';
-    
-    if (!this.apiKey) {
-      console.warn('⚠️ OpenAI API Key not found. Please set OPENAI_API_KEY in .env file');
-    }
+  /** The art session number (1–43) that the next requests belong to; the server meters per session. */
+  setActiveSession(sessionId: number | undefined) {
+    this.activeSessionId = sessionId;
+  }
+
+  private ctx() {
+    return { feature: 'art' as const, artSessionId: this.activeSessionId };
   }
 
   /**
@@ -131,9 +127,9 @@ class ArtTherapyService {
       ? '\nThe latest user message contains only an image. First determine whether it clearly appears to be the client\'s own hand-made artwork for this art therapy session. If it is an ordinary photo, selfie, screenshot, digital/generated character, document, object, room, person, pet, food, landscape, or otherwise not clearly hand-made artwork, politely reject it without psychological interpretation and ask for a hand-made drawing or painting. If it is ambiguous, ask the client to confirm whether they made it by hand for this session.'
       : '';
 
-    const profileBlock = buildProfileContextBlock(await getUserProfile());
+    const profileBlock = (await canPersonalize()) ? buildProfileContextBlock(await getUserProfile()) : '';
 
-    return `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${languageName}, Phase: ${currentPhase}. CRITICAL: You MUST respond in ${languageName} language for ALL text, including response_text, phase_summary, session_summary, next_steps, and any question. Do NOT respond in English unless Language is English.${imageOnlyInstruction} Respond with valid JSON matching the ArtTherapyResponse schema.]` + (profileBlock ? `\n${profileBlock}` : '') + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '');
+    return `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${languageName}, Phase: ${currentPhase}. CRITICAL: You MUST respond in ${languageName} language for ALL text, including response_text, phase_summary, session_summary, next_steps, and any question. Do NOT respond in English unless Language is English.${imageOnlyInstruction} Respond with valid JSON matching the ArtTherapyResponse schema.]` + (profileBlock ? `\n${profileBlock}` : '') + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '') + `\n${ANULIA_PERSONA_CONTEXT}`;
   }
 
   /**
@@ -278,105 +274,28 @@ class ArtTherapyService {
   /**
    * Transcribe recorded audio into text using OpenAI Transcriptions API.
    */
-  async transcribeAudio(audioFileUri: string): Promise<string> {
-    if (!this.apiKey) throw new Error('OpenAI API key is not configured');
-    try {
-      // Build multipart body. In browsers we must provide a File/Blob; in RN native we can provide { uri, name, type }.
-      const fd = new FormData();
-      let name = audioFileUri.split('/').pop() || 'audio.m4a';
-      const ext = (name.split('.').pop() || 'm4a').toLowerCase();
-  let mime = 'audio/m4a';
-  if (ext === 'wav') mime = 'audio/wav';
-  else if (ext === 'mp3') mime = 'audio/mpeg';
-  else if (ext === 'm4a' || ext === 'mp4') mime = 'audio/mp4';
-  else if (ext === 'webm') mime = 'audio/webm';
-  else if (ext === 'ogg' || ext === 'oga') mime = 'audio/ogg';
-
-      const uriLower = (audioFileUri || '').toLowerCase();
-      const looksLikeWeb = Platform.OS === 'web' || uriLower.startsWith('blob:') || uriLower.startsWith('data:') || uriLower.startsWith('http');
-
-      console.log('🎤 transcribeAudio - audioFileUri:', audioFileUri);
-      console.log('🎤 transcribeAudio - looksLikeWeb:', looksLikeWeb, 'Platform:', Platform.OS);
-
-      if (looksLikeWeb && typeof window !== 'undefined') {
-        // Web: convert the URI to a Blob and append as a File
-        let blob: Blob;
-        try {
-          console.log('🎤 Fetching blob from URI...');
-          const resp = await fetch(audioFileUri);
-          blob = await resp.blob();
-          console.log('🎤 Blob fetched, type:', blob.type, 'size:', blob.size);
-          // Prefer blob's type if available
-          if (blob.type) {
-            // Normalize codec-suffixed types like 'audio/webm;codecs=opus'
-            const t = blob.type.split(';')[0].trim();
-            mime = t || mime;
-          }
-        } catch (e) {
-          console.warn('⚠️ Failed to fetch audio URI as blob on web. Falling back to empty blob.', e);
-          blob = new Blob([], { type: mime });
-        }
-        // Ensure filename has proper extension to help server-side parsers
-        const hasDot = name.includes('.');
-        const extFromMime = mime.endsWith('webm') ? 'webm'
-          : mime.endsWith('wav') ? 'wav'
-          : mime.endsWith('mpeg') ? 'mp3'
-          : mime.endsWith('mp4') ? 'm4a'
-          : mime.endsWith('ogg') ? 'ogg'
-          : 'm4a';
-        if (!hasDot) name = `audio.${extFromMime}`;
-        else if (!name.toLowerCase().endsWith(`.${extFromMime}`)) name = `${name}.${extFromMime}`;
-        
-        console.log('🎤 Filename:', name, 'MIME:', mime);
-        
-        // Create File object for web
-        let file: File | Blob;
-        if (typeof File !== 'undefined') {
-          try {
-            file = new File([blob], name, { type: mime });
-            console.log('🎤 File created successfully');
-          } catch (e) {
-            console.warn('🎤 Failed to create File, using Blob:', e);
-            file = blob;
-          }
-        } else {
-          console.log('🎤 File constructor not available, using Blob');
-          file = blob;
-        }
-        
-        console.log('🎤 Appending to FormData...');
-        // @ts-ignore - RN web FormData supports (file, filename)
-        fd.append('file', file as any, name);
-      } else {
-        // React Native (iOS/Android): use URI-based file descriptor
-        // @ts-ignore React Native FormData supports { uri, name, type }
-        fd.append('file', { uri: audioFileUri, name, type: mime });
-      }
-
-      fd.append('model', 'gpt-4o-mini-transcribe'); // stable speech-to-text model
-      fd.append('response_format', 'text');
-
-      console.log('🎤 Sending transcription request...');
-      const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-        body: fd as any,
+  async transcribeAudio(audioFileUri: string, language?: string): Promise<string> {
+    const lower = (audioFileUri || '').toLowerCase();
+    let mime = 'audio/m4a';
+    let name = audioFileUri.split('/').pop() || 'audio.m4a';
+    let base64 = '';
+    if (Platform.OS === 'web' || lower.startsWith('blob:') || lower.startsWith('data:')) {
+      const blob = await (await fetch(audioFileUri)).blob();
+      mime = (blob.type || 'audio/webm').split(';')[0];
+      const ext = mime.endsWith('webm') ? 'webm' : mime.endsWith('mp4') ? 'm4a' : mime.endsWith('mpeg') ? 'mp3' : mime.endsWith('wav') ? 'wav' : mime.endsWith('ogg') ? 'ogg' : 'webm';
+      name = `audio.${ext}`;
+      base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Could not read recording'));
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.readAsDataURL(blob);
       });
-      console.log('🎤 Transcription response status:', res.status);
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error('🎤 Transcription error:', res.status, errText);
-        throw new Error(`Transcription failed: ${res.status} ${errText}`);
-      }
-      const text = await res.text();
-      console.log('🎤 Transcription successful, text length:', text?.length || 0);
-      return text?.trim?.() || '';
-    } catch (e) {
-      console.error('Transcription error:', e);
-      throw e;
+    } else {
+      const ext = (name.split('.').pop() || 'm4a').toLowerCase();
+      mime = ext === 'wav' ? 'audio/wav' : ext === 'mp3' ? 'audio/mpeg' : ext === 'webm' ? 'audio/webm' : ext === 'caf' ? 'audio/x-caf' : 'audio/mp4';
+      base64 = await FileSystem.readAsStringAsync(audioFileUri, { encoding: FileSystem.EncodingType.Base64 });
     }
+    return aiTranscribe(base64, mime, name, language);
   }
 
   /**
@@ -385,34 +304,10 @@ class ArtTherapyService {
    */
   async speakTextTTS(text: string, userLanguage: AppLanguage = 'ru'): Promise<void> {
     if (!text?.trim()) return;
-    if (!this.apiKey) throw new Error('OpenAI API key is not configured');
-
     // Choose a stable multilingual voice
-  const voice = userLanguage === 'en' ? 'alloy' : 'marin';
+    const voice = userLanguage === 'en' ? 'alloy' : 'marin';
     const format: 'mp3' | 'wav' = 'mp3';
-
-    // Request speech audio from OpenAI
-    const res = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-        'Accept': format === 'mp3' ? 'audio/mpeg' : 'audio/wav',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini-tts',
-        voice,
-        input: text,
-        format,
-      }),
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`TTS failed: ${res.status} ${errText}`);
-    }
-
-    // Convert to a playable source
-    const arrayBuf = await res.arrayBuffer();
+    const arrayBuf = await aiSpeech(text.slice(0, 2000), voice);
 
     if (Platform.OS === 'web') {
       const mime = format === 'mp3' ? 'audio/mpeg' : 'audio/wav';
@@ -504,10 +399,6 @@ class ArtTherapyService {
     currentPhase: 0 | 1 | 2 = 0,
     extraContext?: string
   ): Promise<ArtTherapyResponse> {
-    if (!this.apiKey) {
-      throw new Error('OpenAI API key is not configured');
-    }
-
     try {
       // Build Responses API input array
       const input: any[] = [];
@@ -553,17 +444,7 @@ class ArtTherapyService {
   text: { format: { type: 'json_object' } },
       };
 
-      const response = await axios.post(
-        `${this.baseURL}/responses`,
-        payload,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`
-          },
-          timeout: 60000
-        }
-      );
+      const response = { data: await aiResponses<any>(payload, this.ctx()) };
 
       // Expect output_text with JSON string. Reasoning-capable models prepend a 'reasoning'
       // item (with empty content) before the actual 'message' item, so find the message
@@ -689,10 +570,6 @@ class ArtTherapyService {
     previousResponseId?: string,
     onResponseId?: (id: string) => void
   ): Promise<ArtTherapyResponse> {
-    if (!this.apiKey) {
-      throw new Error('OpenAI API key is not configured');
-    }
-
     const languageName = this.getLanguageName(userLanguage);
     console.log('🌐 AI Stream Request Language:', languageName, `(${userLanguage})`);
 
@@ -749,7 +626,7 @@ class ArtTherapyService {
       input: any[],
       chainId: string | undefined
     ): Promise<ArtTherapyResponse> => {
-      const body = JSON.stringify({
+      const body = {
         input,
         prompt: { id: this.promptId, version: this.promptVersion },
         max_output_tokens: 2048,
@@ -758,9 +635,8 @@ class ArtTherapyService {
         ...(chainId ? { previous_response_id: chainId } : {}),
         // Encourage JSON, but we still handle plain-text gracefully
         text: { format: { type: 'json_object' } }
-      });
+      };
 
-      const controller = new AbortController();
       let buffer = '';
       let partialShown = '';
 
@@ -846,86 +722,10 @@ class ArtTherapyService {
         return normalized;
       };
 
-      // React Native's fetch() doesn't expose a readable Response.body stream (no
-      // getReader()), so token-by-token deltas would never arrive there — the request
-      // would look identical to a non-streaming one and only render once it's fully done.
-      // XMLHttpRequest's responseText, on the other hand, does grow incrementally on native
-      // as bytes arrive, so we drive the exact same SSE parser off that instead, giving native
-      // the same progressive-typing behavior web already gets from the reader below.
-      if (Platform.OS !== 'web') {
-        return await new Promise<ArtTherapyResponse>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', `${this.baseURL}/responses`);
-          xhr.setRequestHeader('Content-Type', 'application/json');
-          xhr.setRequestHeader('Authorization', `Bearer ${this.apiKey}`);
-          xhr.setRequestHeader('Accept', 'text/event-stream');
-
-          let processedLength = 0;
-          const pullNewText = () => {
-            const full = xhr.responseText || '';
-            if (full.length > processedLength) {
-              consumeChunk(full.slice(processedLength));
-              processedLength = full.length;
-            }
-          };
-
-          xhr.onprogress = () => {
-            try { pullNewText(); } catch (e) { reject(e); }
-          };
-          xhr.onload = () => {
-            if (xhr.status < 200 || xhr.status >= 300) {
-              reject(new Error(`Streaming request failed: ${xhr.status} ${xhr.responseText}`));
-              return;
-            }
-            try {
-              pullNewText();
-              resolve(finalizeResponse());
-            } catch (e) {
-              reject(e);
-            }
-          };
-          xhr.onerror = () => reject(new Error('Network error during streaming request'));
-          xhr.send(body);
-        });
-      }
-
-      try {
-        const res = await fetch(`${this.baseURL}/responses`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Accept': 'text/event-stream'
-          },
-          body,
-          signal: controller.signal,
-        } as any);
-
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Streaming request failed: ${res.status} ${text}`);
-        }
-
-        if (!(res as any).body || !(res as any).body.getReader) {
-          // Web always supports this; if it's somehow missing, there's nothing left to fall
-          // back to here since the native path above already covers non-streaming platforms.
-          throw new Error('Streaming unsupported: response body is not readable.');
-        }
-
-        const reader = (res.body as any).getReader();
-        const decoder = new TextDecoder('utf-8');
-        let done = false;
-
-        while (!done) {
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-          consumeChunk(decoder.decode(value || new Uint8Array(), { stream: !done }));
-        }
-
-        return finalizeResponse();
-      } finally {
-        controller.abort();
-      }
+      // Transport (web fetch stream / native XHR progress) lives in lib/api/ai.ts;
+      // the same SSE parser above consumes the chunks either way.
+      await aiResponsesStream(body, this.ctx(), consumeChunk);
+      return finalizeResponse();
     };
 
     try {
@@ -937,7 +737,7 @@ class ArtTherapyService {
           const msg = String(e?.message || '').toLowerCase();
           // Only fall back for chain-specific failures (expired/unknown previous_response_id) —
           // anything else (network, content, safety refusal) should surface normally.
-          const looksLikeStaleChain = msg.includes('previous_response') || (msg.includes('response') && msg.includes('not found'));
+          const looksLikeStaleChain = e instanceof StaleChainError || msg.includes('previous_response') || (msg.includes('response') && msg.includes('not found'));
           if (!looksLikeStaleChain) throw e;
           console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
         }

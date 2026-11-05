@@ -1,32 +1,49 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Redirect, useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
+import React from 'react';
+import { View } from 'react-native';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { AppText, BrandMark, Button, Screen, space } from '@/design';
+import { useT } from '@/i18n';
 
-export default function NotFoundScreen() {
+// Routes from BeHappy 1.x, so saved links and ads keep working.
+const LEGACY: [RegExp, string][] = [
+  [/^\/(\(tabs\)\/)?(screens\/)?ai-therapy-chat/, '/anulia'],
+  [/^\/screens\/session-history/, '/anulia/history'],
+  [/^\/screens\/journal/, '/journal'],
+  [/^\/screens\/breathing/, '/breathing'],
+  [/^\/screens\/meditation/, '/meditation'],
+  [/^\/screens\/cards\/sessions-history/, '/cards/history'],
+  [/^\/screens\/cards/, '/cards'],
+  [/^\/screens\/profile-setup/, '/profile/personal'],
+  [/^\/screens\/(recommendations|test-history)/, '/assessments'],
+  [/^\/screens\/ai-assistant/, '/anulia'],
+  [/^\/(\(tabs\)\/)?general/, '/profile'],
+  [/^\/(subscription|purchase)/, '/pricing'],
+  [/^\/(\(tabs\)\/)?art-therapy-sessions?/, '/art'],
+  [/^\/(\(tabs\)\/)?art-therapy/, '/art'],
+];
+
+export default function NotFound() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { t } = useT();
+  const search = useGlobalSearchParams<{ sessionId?: string }>();
+  // Old art session links carried the session number; keep it.
+  if (/^\/art-therapy-session/.test(pathname) && search.sessionId) return <Redirect href={`/art/session?sessionId=${search.sessionId}` as any} />;
+  const target = LEGACY.find(([re]) => re.test(pathname))?.[1];
+  if (target) return <Redirect href={target as any} />;
   return (
-    <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
-      <ThemedView style={styles.container}>
-        <ThemedText type="title">This screen does not exist.</ThemedText>
-        <Link href="/" style={styles.link}>
-          <ThemedText type="link">Go to home screen!</ThemedText>
-        </Link>
-      </ThemedView>
-    </>
+    <Screen width="reading" testID="screen-not-found">
+      <View style={{ alignItems: 'center', gap: space[4], paddingTop: space[12] }}>
+        <BrandMark size={56} />
+        <AppText variant="title1" align="center">
+          {t('notFound.title')}
+        </AppText>
+        <AppText variant="body" color="textSecondary" align="center">
+          {t('notFound.body')}
+        </AppText>
+        <Button label={t('notFound.home')} onPress={() => router.replace('/')} />
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-});

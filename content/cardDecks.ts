@@ -1,0 +1,213 @@
+/**
+ * Reflection card decks. Every image from the pre-2.0 app is preserved.
+ * - The "innerchild" images were bundled but never shown before 2.0 (the old
+ *   inner-child screen used the narrative images); they now have their own deck.
+ * - "moments" uses web-optimized JPEG copies of the original 2–3 MB PNGs in
+ *   assets/cards/*.png (originals kept untouched).
+ * Deck titles/descriptions for emotions, resources, narrative and lightShadow
+ * are the pre-2.0 translations (19 languages).
+ */
+/* eslint-disable @typescript-eslint/no-require-imports */
+import type { Localized } from './types';
+
+export type DeckId = 'emotions' | 'resources' | 'narrative' | 'innerchild' | 'lightShadow' | 'moments';
+export type CardType = 'emotion' | 'resource' | 'positive_negative' | 'narrative';
+
+export interface Deck {
+  id: DeckId;
+  mode: 'single' | 'pair';
+  cardType: CardType;
+  title: Localized;
+  description: Localized;
+  cover: number;
+  cards: number[];
+}
+
+export const DECKS: Deck[] = [
+  {
+    id: 'emotions',
+    mode: 'single',
+    cardType: 'emotion',
+    title: {"en":"Emotion Cards","ka":"ემოციების ბარათები","ru":"Эмоциональные карты","hy":"Հույզերի քարտեր","uk":"Емоційні картки","tr":"Duygu Kartları","az":"Emosiya Kartları","de":"Emotionskarten","fr":"Cartes d'émotions","es":"Cartas de emociones","it":"Carte delle emozioni","pt":"Cartas de emoções","pl":"Karty emocji","id":"Kartu Emosi","ar":"بطاقات العواطف","hi":"भावना कार्ड","zh":"情感卡片","ja":"感情カード","ko":"감정 카드"},
+    description: {"en":"Choose a card based on your emotion","ka":"აირჩიეთ ბარათი თქვენი ემოციის მიხედვით","ru":"Выберите карту согласно вашей эмоции","hy":"Ընտրեք քարտը ձեր հույզի համաձայն","uk":"Виберіть картку відповідно до вашої емоції","tr":"Duygunuza göre bir kart seçin","az":"Emosiyaya görə kart seçin","de":"Wählen Sie eine Karte basierend auf Ihrer Emotion","fr":"Choisissez une carte en fonction de votre émotion","es":"Elija una carta según su emoción","it":"Scegli una carta in base alla tua emozione","pt":"Escolha uma carta com base em sua emoção","pl":"Wybierz kartę na podstawie swojej emocji","id":"Pilih kartu berdasarkan emosi Anda","ar":"اختر بطاقة بناءً على عاطفتك","hi":"अपनी भावना के आधार पर कार्ड चुनें","zh":"根据您的情绪选择卡片","ja":"あなたの感情に基づいてカードを選択","ko":"당신의 감정에 따라 카드를 선택하세요"},
+    cover: require('../assets/cards/emotions/background.jpg'),
+    cards: [
+      require('../assets/cards/emotions/card1.jpg'),
+      require('../assets/cards/emotions/card2.jpg'),
+      require('../assets/cards/emotions/card3.jpg'),
+      require('../assets/cards/emotions/card4.jpg'),
+      require('../assets/cards/emotions/card5.jpg'),
+      require('../assets/cards/emotions/card6.jpg'),
+      require('../assets/cards/emotions/card7.jpg'),
+      require('../assets/cards/emotions/card8.jpg'),
+      require('../assets/cards/emotions/card9.jpg'),
+      require('../assets/cards/emotions/card10.jpg'),
+      require('../assets/cards/emotions/card11.jpg'),
+      require('../assets/cards/emotions/card12.jpg'),
+      require('../assets/cards/emotions/card13.jpg'),
+      require('../assets/cards/emotions/card14.jpg'),
+      require('../assets/cards/emotions/card15.jpg'),
+      require('../assets/cards/emotions/card16.jpg'),
+      require('../assets/cards/emotions/card17.jpg'),
+      require('../assets/cards/emotions/card18.jpg'),
+      require('../assets/cards/emotions/card19.jpg'),
+      require('../assets/cards/emotions/card20.jpg'),
+      require('../assets/cards/emotions/card21.jpg'),
+    ],
+  },
+  {
+    id: 'resources',
+    mode: 'single',
+    cardType: 'resource',
+    title: {"en":"Resource Cards","ka":"რესურსების ბარათები","ru":"Карты ресурсов","hy":"Ռեսուրսների քարտեր","uk":"Ресурсні картки","tr":"Kaynak Kartları","az":"Resurs Kartları","de":"Ressourcenkarten","fr":"Cartes de ressources","es":"Cartas de recursos","it":"Carte delle risorse","pt":"Cartas de recursos","pl":"Karty zasobów","id":"Kartu Sumber Daya","ar":"بطاقات الموارد","hi":"संसाधन कार्ड","zh":"资源卡片","ja":"リソースカード","ko":"자원 카드"},
+    description: {"en":"Explore your inner strength","ka":"გამოიკვლიეთ თქვენი შიდა ძალა","ru":"Исследуйте свою внутреннюю силу","hy":"Հետազոտեք ձեր ներքին ուժը","uk":"Досліджуйте свою внутрішню силу","tr":"İç gücünüzü keşfedin","az":"Daxili gücünüzü kəşf edin","de":"Erkunden Sie Ihre innere Stärke","fr":"Explorez votre force intérieure","es":"Explore su fuerza interior","it":"Esplora la tua forza interiore","pt":"Explore sua força interior","pl":"Odkryj swoją wewnętrzną siłę","id":"Jelajahi kekuatan batin Anda","ar":"استكشف قوتك الداخلية","hi":"अपनी आंतरिक शक्ति का अन्वेषण करें","zh":"探索您的内在力量","ja":"あなたの内なる強さを探る","ko":"내면의 힘을 탐구하세요"},
+    cover: require('../assets/cards/resources/background.jpg'),
+    cards: [
+      require('../assets/cards/resources/card1.jpg'),
+      require('../assets/cards/resources/card2.jpg'),
+      require('../assets/cards/resources/card3.jpg'),
+      require('../assets/cards/resources/card4.jpg'),
+      require('../assets/cards/resources/card5.jpg'),
+      require('../assets/cards/resources/card6.jpg'),
+      require('../assets/cards/resources/card7.jpg'),
+      require('../assets/cards/resources/card8.jpg'),
+      require('../assets/cards/resources/card9.jpg'),
+      require('../assets/cards/resources/card10.jpg'),
+      require('../assets/cards/resources/card11.jpg'),
+      require('../assets/cards/resources/card12.jpg'),
+      require('../assets/cards/resources/card13.jpg'),
+      require('../assets/cards/resources/card14.jpg'),
+      require('../assets/cards/resources/card15.jpg'),
+      require('../assets/cards/resources/card16.jpg'),
+      require('../assets/cards/resources/card17.jpg'),
+      require('../assets/cards/resources/card18.jpg'),
+      require('../assets/cards/resources/card19.jpg'),
+      require('../assets/cards/resources/card20.jpg'),
+      require('../assets/cards/resources/card21.jpg'),
+    ],
+  },
+  {
+    id: 'narrative',
+    mode: 'single',
+    cardType: 'narrative',
+    title: {"en":"Narrative Cards","ka":"ნარატიული ბარათები","ru":"Нарративные карты","hy":"Պատմողական քարտեր","uk":"Наративні картки","tr":"Anlatı Kartları","az":"Narrativ Kartlar","de":"Narrative Karten","fr":"Cartes narratives","es":"Cartas narrativas","it":"Carte narrative","pt":"Cartas narrativas","pl":"Karty narracyjne","id":"Kartu Narasi","ar":"بطاقات السرد","hi":"कथा कार्ड","zh":"叙事卡片","ja":"ナラティブカード","ko":"서사 카드"},
+    description: {"en":"Cards for narrative therapy","ka":"ბარათები ნარატიული თერაპიისთვის","ru":"Карты для нарративной терапии","hy":"Քարտեր պատմողական թերապիայի համար","uk":"Картки для наративної терапії","tr":"Anlatı terapisi için kartlar","az":"Narrativ terapiya üçün kartlar","de":"Karten für narrative Therapie","fr":"Cartes pour la thérapie narrative","es":"Cartas para terapia narrativa","it":"Carte per terapia narrativa","pt":"Cartas para terapia narrativa","pl":"Karty do terapii narracyjnej","id":"Kartu untuk terapi naratif","ar":"بطاقات للعلاج السردي","hi":"कथा चिकित्सा के लिए कार्ड","zh":"叙事治疗卡片","ja":"ナラティブセラピー用カード","ko":"서사 치료용 카드"},
+    cover: require('../assets/cards/narrative/background.jpg'),
+    cards: [
+      require('../assets/cards/narrative/1.jpg'),
+      require('../assets/cards/narrative/2.jpg'),
+      require('../assets/cards/narrative/3.jpg'),
+      require('../assets/cards/narrative/4.jpg'),
+      require('../assets/cards/narrative/5.jpg'),
+      require('../assets/cards/narrative/6.jpg'),
+      require('../assets/cards/narrative/7.jpg'),
+      require('../assets/cards/narrative/8.jpg'),
+      require('../assets/cards/narrative/9.jpg'),
+      require('../assets/cards/narrative/10.jpg'),
+      require('../assets/cards/narrative/11.jpg'),
+      require('../assets/cards/narrative/12.jpg'),
+      require('../assets/cards/narrative/13.jpg'),
+      require('../assets/cards/narrative/14.jpg'),
+      require('../assets/cards/narrative/15.jpg'),
+      require('../assets/cards/narrative/16.jpg'),
+      require('../assets/cards/narrative/17.jpg'),
+      require('../assets/cards/narrative/18.jpg'),
+      require('../assets/cards/narrative/19.jpg'),
+      require('../assets/cards/narrative/20.jpg'),
+      require('../assets/cards/narrative/21.jpg'),
+    ],
+  },
+  {
+    id: 'innerchild',
+    mode: 'single',
+    cardType: 'narrative',
+    title: {"en":"Inner child","ka":"შინაგანი ბავშვი","ru":"Внутренний ребёнок","hy":"Ներքին երեխա","uk":"Внутрішня дитина"},
+    description: {"en":"Gentle images about childhood, play and care.","ka":"ნაზი სურათები ბავშვობაზე, თამაშსა და ზრუნვაზე.","ru":"Мягкие образы о детстве, игре и заботе.","hy":"Մեղմ պատկերներ մանկության, խաղի և հոգատարության մասին։","uk":"М'які образи про дитинство, гру й турботу."},
+    cover: require('../assets/cards/innerchild/background.jpg'),
+    cards: [
+      require('../assets/cards/innerchild/1.jpg'),
+      require('../assets/cards/innerchild/2.jpg'),
+      require('../assets/cards/innerchild/3.jpg'),
+      require('../assets/cards/innerchild/4.jpg'),
+      require('../assets/cards/innerchild/5.jpg'),
+      require('../assets/cards/innerchild/6.jpg'),
+      require('../assets/cards/innerchild/7.jpg'),
+      require('../assets/cards/innerchild/8.jpg'),
+      require('../assets/cards/innerchild/9.jpg'),
+      require('../assets/cards/innerchild/10.jpg'),
+      require('../assets/cards/innerchild/11.jpg'),
+      require('../assets/cards/innerchild/12.jpg'),
+      require('../assets/cards/innerchild/13.jpg'),
+      require('../assets/cards/innerchild/14.jpg'),
+      require('../assets/cards/innerchild/15.jpg'),
+      require('../assets/cards/innerchild/16.jpg'),
+      require('../assets/cards/innerchild/17.jpg'),
+      require('../assets/cards/innerchild/18.jpg'),
+      require('../assets/cards/innerchild/19.jpg'),
+      require('../assets/cards/innerchild/20.jpg'),
+      require('../assets/cards/innerchild/21.jpg'),
+    ],
+  },
+  {
+    id: 'lightShadow',
+    mode: 'pair',
+    cardType: 'positive_negative',
+    title: {"en":"Mood Cards","ka":"განწყობის ბარათები","ru":"Карты настроения","hy":"Տրամադրության քարտեր","uk":"Картки настрою","tr":"Ruh Hali Kartları","az":"Əhval-ruhiyyə Kartları","de":"Stimmungskarten","fr":"Cartes d'humeur","es":"Cartas de humor","it":"Carte dell'umore","pt":"Cartas de humor","pl":"Karty nastroju","id":"Kartu Suasana Hati","ar":"بطاقات المزاج","hi":"मूड कार्ड","zh":"心情卡片","ja":"気分カード","ko":"기분 카드"},
+    description: {"en":"Choose positive and negative cards","ka":"აირჩიეთ დადებითი და უარყოფითი ბარათები","ru":"Выберите позитивную и негативную карты","hy":"Ընտրեք դրական և բացասական քարտեր","uk":"Виберіть позитивні та негативні картки","tr":"Pozitif ve negatif kartları seçin","az":"Müsbət və mənfi kartları seçin","de":"Wählen Sie positive und negative Karten","fr":"Choisissez des cartes positives et négatives","es":"Elija cartas positivas y negativas","it":"Scegli carte positive e negative","pt":"Escolha cartas positivas e negativas","pl":"Wybierz pozytywne i negatywne karty","id":"Pilih kartu positif dan negatif","ar":"اختر البطاقات الإيجابية والسلبية","hi":"सकारात्मक और नकारात्मक कार्ड चुनें","zh":"选择正面和负面卡片","ja":"ポジティブとネガティブのカードを選択","ko":"긍정적 및 부정적 카드 선택"},
+    cover: require('../assets/cards/positivenegative/background.jpg'),
+    cards: [
+      require('../assets/cards/positivenegative/1.jpg'),
+      require('../assets/cards/positivenegative/2.jpg'),
+      require('../assets/cards/positivenegative/3.jpg'),
+      require('../assets/cards/positivenegative/4.jpg'),
+      require('../assets/cards/positivenegative/5.jpg'),
+      require('../assets/cards/positivenegative/6.jpg'),
+      require('../assets/cards/positivenegative/7.jpg'),
+      require('../assets/cards/positivenegative/8.jpg'),
+      require('../assets/cards/positivenegative/9.jpg'),
+      require('../assets/cards/positivenegative/10.jpg'),
+      require('../assets/cards/positivenegative/11.jpg'),
+      require('../assets/cards/positivenegative/12.jpg'),
+      require('../assets/cards/positivenegative/13.jpg'),
+      require('../assets/cards/positivenegative/14.jpg'),
+      require('../assets/cards/positivenegative/15.jpg'),
+      require('../assets/cards/positivenegative/16.jpg'),
+      require('../assets/cards/positivenegative/17.jpg'),
+      require('../assets/cards/positivenegative/18.jpg'),
+      require('../assets/cards/positivenegative/19.jpg'),
+      require('../assets/cards/positivenegative/20.jpg'),
+    ],
+  },
+  {
+    id: 'moments',
+    mode: 'pair',
+    cardType: 'positive_negative',
+    title: {"en":"Moments","ka":"მომენტები","ru":"Моменты","hy":"Պահեր","uk":"Моменти"},
+    description: {"en":"Choose one image that feels light and one that feels heavy.","ka":"აირჩიე ერთი სურათი, რომელიც მსუბუქად გეჩვენება, და ერთი — მძიმედ.","ru":"Выберите одно изображение, которое ощущается лёгким, и одно — тяжёлым.","hy":"Ընտրիր մեկ պատկեր, որը թեթև է թվում, և մեկը՝ ծանր։","uk":"Оберіть одне зображення, що здається легким, і одне — важким."},
+    cover: require('../assets/cards/moments/background.jpg'),
+    cards: [
+      require('../assets/cards/moments/card1.jpg'),
+      require('../assets/cards/moments/card2.jpg'),
+      require('../assets/cards/moments/card3.jpg'),
+      require('../assets/cards/moments/card4.jpg'),
+      require('../assets/cards/moments/card5.jpg'),
+      require('../assets/cards/moments/card6.jpg'),
+      require('../assets/cards/moments/card7.jpg'),
+      require('../assets/cards/moments/card8.jpg'),
+      require('../assets/cards/moments/card9.jpg'),
+      require('../assets/cards/moments/card10.jpg'),
+      require('../assets/cards/moments/card11.jpg'),
+      require('../assets/cards/moments/card12.jpg'),
+      require('../assets/cards/moments/card13.jpg'),
+      require('../assets/cards/moments/card14.jpg'),
+      require('../assets/cards/moments/card15.jpg'),
+      require('../assets/cards/moments/card16.jpg'),
+      require('../assets/cards/moments/card17.jpg'),
+      require('../assets/cards/moments/card18.jpg'),
+      require('../assets/cards/moments/card19.jpg'),
+      require('../assets/cards/moments/card20.jpg'),
+    ],
+  },
+];
+
+export const getDeck = (id: string) => DECKS.find((d) => d.id === id);

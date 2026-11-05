@@ -1,5 +1,7 @@
 import { AppLanguage } from '@/contexts/LanguageContext';
-import Constants from 'expo-constants';
+import { ANULIA_PERSONA_CONTEXT } from '@/features/anulia/persona';
+import { aiResponses, aiResponsesStream, createResponseStreamParser, responseText, StaleChainError } from '@/lib/api/ai';
+import { canPersonalize } from '@/lib/privacy/consent';
 import { buildProfileContextBlock, getUserProfile } from './userProfileService';
 
 /**
@@ -109,396 +111,146 @@ const CONTEXT_MESSAGES = {
 }
 
 class CardTherapyService {
-  private apiKey: string;
-  private promptId: string = 'pmpt_690f8a73181481968bdf18821d56058203765a60aea147e6'; // Replace with your actual prompt ID
+  // Hosted prompt on OpenAI, reached only through the BeHappy server (which
+  // holds the key and allows this prompt for the "cards" feature only).
+  private promptId: string = 'pmpt_690f8a73181481968bdf18821d56058203765a60aea147e6';
   private version: string = '4';
 
-  constructor() {
-    this.apiKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_API_KEY
-      || process.env.EXPO_PUBLIC_API_KEY
-      || '';
+  private ctx(conversationId?: string) {
+    return { feature: 'cards' as const, conversationId: conversationId || 'cards-default' };
+  }
 
-    if (!this.apiKey) {
-      console.warn('⚠️ OpenAI API key not found');
-    }
+  private async request(input: any[], conversationId: string | undefined, chainId?: string, maxTokens = 1500): Promise<any> {
+    return aiResponses(
+      {
+        prompt: { id: this.promptId, version: this.version },
+        input,
+        max_output_tokens: maxTokens,
+        store: true,
+        ...(chainId ? { previous_response_id: chainId } : {}),
+      },
+      this.ctx(conversationId)
+    );
   }
 
   /**
-   * Start a new therapeutic card session
+   * Start a new card reflection. Card images are sent as data URIs.
    */
   async startSession(
     cardContext: CardContext,
     cardImageBase64?: string | null,
     positiveImageBase64?: string | null,
     negativeImageBase64?: string | null,
-    onResponseId?: (id: string) => void
+    onResponseId?: (id: string) => void,
+    conversationId?: string
   ): Promise<string> {
-    try {
-      const contextMessage = await this.buildContextMessage(cardContext);
+    const contextMessage = await this.buildContextMessage(cardContext);
+    const content: any[] = [{ type: 'input_text', text: contextMessage }];
+    if (cardImageBase64) content.push({ type: 'input_image', image_url: cardImageBase64 });
+    if (positiveImageBase64) content.push({ type: 'input_image', image_url: positiveImageBase64 });
+    if (negativeImageBase64) content.push({ type: 'input_image', image_url: negativeImageBase64 });
 
-      // Build content array with text and optional images
-      const content: any[] = [
-        {
-          type: 'input_text',
-          text: contextMessage,
-        },
-      ];
-
-      // Add card image if available (data URI format: data:image/jpeg;base64,...)
-      if (cardImageBase64) {
-        console.log('🎴 Attempting to add card image to request, length:', cardImageBase64.length);
-        try {
-          content.push({
-            type: 'input_image',
-            image_url: cardImageBase64, // Data URI format expected
-          });
-          console.log('✅ Card image added to content (data URI format)');
-        } catch (e) {
-          console.warn('⚠️ Failed to add card image:', e);
-        }
-      } else {
-        console.log('⚠️ No card image provided (cardImageBase64 is null/undefined)');
-      }
-
-      // Add positive/negative images if available
-      if (positiveImageBase64) {
-        console.log('🟢 Adding positive image to request');
-        content.push({
-          type: 'input_image',
-          image_url: positiveImageBase64, // Data URI format
-        });
-      }
-
-      if (negativeImageBase64) {
-        console.log('🔴 Adding negative image to request');
-        content.push({
-          type: 'input_image',
-          image_url: negativeImageBase64, // Data URI format
-        });
-      }
-
-      console.log('📤 Sending request with content items:', content.length);
-      console.log('Content types:', content.map(c => c.type).join(', '));
-
-      const requestBody = {
-        prompt: {
-          id: this.promptId,
-          version: this.version,
-        },
-        input: [
-          {
-            role: 'user',
-            content: content,
-          },
-        ],
-        max_output_tokens: 1500,
-        store: true,
-      };
-
-      console.log('📋 Full request preview:', JSON.stringify(requestBody, null, 2).substring(0, 500) + '...');
-      
-      // IMPORTANT: OpenAI Responses API may not support image inputs yet
-      // If you get "Unsupported content type" error, images need to be removed
-      // Alternative: Use Chat Completions API with vision model (gpt-4o-mini)
-
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('❌ API Error Response:', error);
-        throw new Error(`Failed to start session: ${response.status} ${error}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ Received response from API');
-      if (data?.id) onResponseId?.(data.id);
-
-      // Extract text from Responses API format
-      const assistantMessage = data.output?.[0];
-      if (assistantMessage?.content?.[0]?.type === 'output_text') {
-        const responseText = assistantMessage.content[0].text;
-        console.log('💬 AI Response preview:', responseText.substring(0, 100) + '...');
-        return responseText;
-      }
-      return data.response || 'Session started. How are you feeling?';
-    } catch (error) {
-      console.error('❌ Error starting card therapy session:', error);
-      throw error;
-    }
+    const data = await this.request([{ role: 'user', content }], conversationId);
+    if (data?.id) onResponseId?.(data.id);
+    return responseText(data) || data?.response || '';
   }
 
   /**
-   * Send a message in an ongoing session.
-   *
-   * Cost optimization: when `previousResponseId` is supplied (from the prior turn in this
-   * same session), only the newest user turn is sent, chained via OpenAI's server-side
-   * conversation state — the model still has full access to everything said before, but
-   * we're billed full price only for the new turn while the rest is served from OpenAI's
-   * input-token cache. This matters most here since card sessions run 20-30 exchanges by
-   * design, so resending the whole transcript every turn would otherwise be the dominant
-   * cost. If the stored id has expired, we fall back to resending the full local history
-   * once and report the new id back via `onResponseId` so the chain can continue from there.
+   * Send a message in an ongoing reflection. With `previousResponseId`, only
+   * the newest turn is sent (server-side chaining); a stale chain falls back
+   * to resending the full local transcript once.
    */
   async sendMessage(
     messages: ChatMessage[],
     cardContext: CardContext,
     onStream?: (delta: string) => void,
     previousResponseId?: string,
-    onResponseId?: (id: string) => void
+    onResponseId?: (id: string) => void,
+    conversationId?: string
   ): Promise<string> {
-    try {
-      const buildFullInput = async (): Promise<any[]> => {
-        // Add card context as system message if not already present. Note: convertMessagesToInput
-        // drops 'system' entries (the prompt already carries protocol instructions), so this
-        // context is really only meaningful the very first time via startSession's own call.
-        const hasContext = messages.some(m => m.role === 'system');
-        const messagesWithContext = hasContext
-          ? messages
-          : [
-              { role: 'system' as const, content: await this.buildContextMessage(cardContext) },
-              ...messages,
-            ];
-        return this.convertMessagesToInput(messagesWithContext);
-      };
-      const buildIncrementalInput = (): any[] => {
-        const last = messages[messages.length - 1];
-        if (!last || last.role !== 'user') return this.convertMessagesToInput(messages); // safety net
-        return [{ role: 'user', content: [{ type: 'input_text', text: last.content }] }];
-      };
+    const buildFullInput = async (): Promise<any[]> => {
+      const hasContext = messages.some((m) => m.role === 'system');
+      const withContext = hasContext ? messages : [{ role: 'system' as const, content: await this.buildContextMessage(cardContext) }, ...messages];
+      return this.convertMessagesToInput(withContext);
+    };
+    const buildIncrementalInput = (): any[] => {
+      const last = messages[messages.length - 1];
+      if (!last || last.role !== 'user') return this.convertMessagesToInput(messages);
+      return [{ role: 'user', content: [{ type: 'input_text', text: last.content }] }];
+    };
 
-      const isStaleChainError = (e: any) => {
-        const msg = String(e?.message || '').toLowerCase();
-        return msg.includes('previous_response') || (msg.includes('response') && msg.includes('not found'));
-      };
-
-      if (onStream) {
-        if (previousResponseId) {
-          try {
-            return await this.sendMessageStream(buildIncrementalInput(), onStream, previousResponseId, onResponseId);
-          } catch (e: any) {
-            if (!isStaleChainError(e)) throw e;
-            console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
-          }
-        }
-        return await this.sendMessageStream(await buildFullInput(), onStream, undefined, onResponseId);
-      } else {
-        const doRequest = async (input: any[], chainId?: string): Promise<any> => {
-          const response = await fetch('https://api.openai.com/v1/responses', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.apiKey}`,
-            },
-            body: JSON.stringify({
-              prompt: { id: this.promptId, version: this.version },
-              input,
-              max_output_tokens: 1500,
-              store: true,
-              ...(chainId ? { previous_response_id: chainId } : {}),
-            }),
-          });
-          if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Failed to send message: ${response.status} ${error}`);
-          }
-          return response.json();
-        };
-
-        let data: any;
-        if (previousResponseId) {
-          try {
-            data = await doRequest(buildIncrementalInput(), previousResponseId);
-          } catch (e: any) {
-            if (!isStaleChainError(e)) throw e;
-            console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
-            data = await doRequest(await buildFullInput(), undefined);
-          }
-        } else {
-          data = await doRequest(await buildFullInput(), undefined);
-        }
+    const run = async (input: any[], chainId?: string): Promise<string> => {
+      if (!onStream) {
+        const data = await this.request(input, conversationId, chainId);
         if (data?.id) onResponseId?.(data.id);
-
-        // Extract text from Responses API format
-        const assistantMessage = data.output?.[0];
-        if (assistantMessage?.content?.[0]?.type === 'output_text') {
-          return assistantMessage.content[0].text;
-        }
-        return data.response || '';
+        return responseText(data) || data?.response || '';
       }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send message with streaming support. `input` is already in Responses API format
-   * (either the full converted transcript or just the newest turn when chaining).
-   */
-  private async sendMessageStream(
-    input: any[],
-    onStream: (delta: string) => void,
-    previousResponseId?: string,
-    onResponseId?: (id: string) => void
-  ): Promise<string> {
-    try {
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
+      let emitted = '';
+      const parser = createResponseStreamParser({
+        onDelta: (full) => {
+          const delta = full.slice(emitted.length);
+          emitted = full;
+          if (delta) onStream(delta);
         },
-        body: JSON.stringify({
-          prompt: {
-            id: this.promptId,
-            version: this.version,
-          },
-          input: input,
-          max_output_tokens: 1500,
-          stream: true,
-          store: true,
-          ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
-        }),
+        onId: (id) => onResponseId?.(id),
       });
+      await aiResponsesStream(
+        {
+          prompt: { id: this.promptId, version: this.version },
+          input,
+          max_output_tokens: 1500,
+          store: true,
+          ...(chainId ? { previous_response_id: chainId } : {}),
+        },
+        this.ctx(conversationId),
+        (chunk) => parser.push(chunk)
+      );
+      const { text, id } = parser.finish();
+      if (id) onResponseId?.(id);
+      if (text.length > emitted.length) onStream(text.slice(emitted.length));
+      return text;
+    };
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Failed to stream message: ${response.status} ${error}`);
+    if (previousResponseId) {
+      try {
+        return await run(buildIncrementalInput(), previousResponseId);
+      } catch (e) {
+        if (!(e instanceof StaleChainError)) throw e;
       }
-
-      // Check if streaming is available
-      if (!response.body) {
-        console.warn('Streaming not available, falling back to non-streaming');
-        const data = await response.json();
-        if (data?.id) onResponseId?.(data.id);
-        const assistantMessage = data.output?.[0];
-        const fullText = assistantMessage?.content?.[0]?.text || '';
-        onStream(fullText);
-        return fullText;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullText = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n').filter(line => line.trim() !== '');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.response?.id) onResponseId?.(parsed.response.id);
-              // Responses API streaming format: { output: [{ content: [{ type, text }] }] }
-              const delta = parsed.output?.[0]?.content?.[0]?.text || parsed.delta || '';
-              if (delta) {
-                fullText += delta;
-                onStream(delta);
-              }
-            } catch (e) {
-              console.warn('Failed to parse SSE data:', e);
-            }
-          }
-        }
-      }
-
-      return fullText;
-    } catch (error) {
-      console.error('Error in streaming:', error);
-      throw error;
     }
+    return run(await buildFullInput(), undefined);
   }
 
   /**
-   * Request session summary (to be called after 20-30 exchanges). This is where chaining
-   * matters most: without it, the entire 20-30 exchange transcript would be resent one
-   * final time right when it's at its largest.
+   * Request the closing summary of a reflection.
    */
   async requestSummary(
     messages: ChatMessage[],
     cardContext: CardContext,
     previousResponseId?: string,
-    onResponseId?: (id: string) => void
+    onResponseId?: (id: string) => void,
+    conversationId?: string
   ): Promise<string> {
-    try {
-      const summaryRequest: ChatMessage = {
-        role: 'user',
-        content: 'We\'ve covered a lot of meaningful ground. I\'m ready for the session summary now. Please provide the comprehensive therapeutic summary.',
-      };
+    const summaryRequest: ChatMessage = {
+      role: 'user',
+      content: "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
+    };
+    const buildFullInput = async () =>
+      this.convertMessagesToInput([{ role: 'system' as const, content: await this.buildContextMessage(cardContext) }, ...messages, summaryRequest]);
 
-      const buildFullInput = async () => {
-        // Add context as first user message, then conversation, then summary request
-        const allMessages = [
-          { role: 'system' as const, content: await this.buildContextMessage(cardContext) },
-          ...messages,
-          summaryRequest,
-        ];
-        return this.convertMessagesToInput(allMessages);
-      };
-      const buildIncrementalInput = () => this.convertMessagesToInput([summaryRequest]);
-
-      const doRequest = async (input: any[], chainId?: string): Promise<any> => {
-        const response = await fetch('https://api.openai.com/v1/responses', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`,
-          },
-          body: JSON.stringify({
-            prompt: { id: this.promptId, version: this.version },
-            input,
-            max_output_tokens: 3000, // Higher limit for summary
-            store: true,
-            ...(chainId ? { previous_response_id: chainId } : {}),
-          }),
-        });
-        if (!response.ok) {
-          const error = await response.text();
-          throw new Error(`Failed to generate summary: ${response.status} ${error}`);
-        }
-        return response.json();
-      };
-
-      let data: any;
-      if (previousResponseId) {
-        try {
-          data = await doRequest(buildIncrementalInput(), previousResponseId);
-        } catch (e: any) {
-          const msg = String(e?.message || '').toLowerCase();
-          const looksLikeStaleChain = msg.includes('previous_response') || (msg.includes('response') && msg.includes('not found'));
-          if (!looksLikeStaleChain) throw e;
-          console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
-          data = await doRequest(await buildFullInput(), undefined);
-        }
-      } else {
-        data = await doRequest(await buildFullInput(), undefined);
+    let data: any;
+    if (previousResponseId) {
+      try {
+        data = await this.request(this.convertMessagesToInput([summaryRequest]), conversationId, previousResponseId, 3000);
+      } catch (e) {
+        if (!(e instanceof StaleChainError)) throw e;
+        data = await this.request(await buildFullInput(), conversationId, undefined, 3000);
       }
-      if (data?.id) onResponseId?.(data.id);
-
-      // Extract text from Responses API format
-      const assistantMessage = data.output?.[0];
-      if (assistantMessage?.content?.[0]?.type === 'output_text') {
-        return assistantMessage.content[0].text;
-      }
-      return data.response || '';
-    } catch (error) {
-      console.error('Error generating summary:', error);
-      throw error;
+    } else {
+      data = await this.request(await buildFullInput(), conversationId, undefined, 3000);
     }
+    if (data?.id) onResponseId?.(data.id);
+    return responseText(data) || data?.response || '';
   }
 
   /**
@@ -572,8 +324,9 @@ class CardTherapyService {
         base = defaultMessages[language as keyof typeof defaultMessages] || defaultMessages.en;
     }
 
-    const profileBlock = buildProfileContextBlock(await getUserProfile());
-    return profileBlock ? `${profileBlock}\n\n${base}` : base;
+    const profileBlock = (await canPersonalize()) ? buildProfileContextBlock(await getUserProfile()) : '';
+    const withPersona = `${base}\n\n${ANULIA_PERSONA_CONTEXT}`;
+    return profileBlock ? `${profileBlock}\n\n${withPersona}` : withPersona;
   }
 
   /**

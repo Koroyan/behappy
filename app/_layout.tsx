@@ -1,63 +1,59 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import React, { useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { LanguageProvider } from '@/contexts/LanguageContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { FeedbackProvider, ThemeProvider, useTheme } from '@/design';
+import { ConsentProvider } from '@/features/common/Consent';
+import { AppShell, FontGate } from '@/features/shell/AppShell';
+import { AccountProvider } from '@/lib/api/account';
+
+function Navigator() {
+  const { colors, isDark, reduceMotion } = useTheme();
+  const navTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: { ...base.colors, background: colors.bg, card: colors.surface, text: colors.text, border: colors.border, primary: colors.primary },
+    };
+  }, [isDark, colors]);
+
+  return (
+    <NavigationThemeProvider value={navTheme}>
+      <AppShell>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.bg },
+            animation: reduceMotion ? 'none' : 'fade_from_bottom',
+          }}
+        />
+      </AppShell>
+    </NavigationThemeProvider>
+  );
+}
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  if (!loaded) {
-    return null;
-  }
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-      <ThemeProvider>
         <LanguageProvider>
-        <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="art-therapy-session" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/session-history" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/ai-therapy-chat" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/profile-setup" options={{ headerShown: false }} />
-
-          {/* Other Screens */}
-          <Stack.Screen name="screens/meditation" options={{ headerShown: false }} />
-
-          <Stack.Screen name="screens/cards/index" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/cards/emotion" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/cards/resources" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/cards/innerchild" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/cards/positivenegative" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/cards/therapy-chat" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/cards/sessions-history" options={{ headerShown: false }} />
-
-
-          {/* Other Screens */}
-          <Stack.Screen name="screens/journal" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/breathing" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/recommendations" options={{ headerShown: false }} />
-          <Stack.Screen name="screens/ai-assistant" options={{ headerShown: false }} />
-
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </NavigationThemeProvider>
-    </LanguageProvider>
-    </ThemeProvider>
-    </SafeAreaProvider>
+          <ThemeProvider>
+            <FontGate>
+              <AccountProvider>
+                <FeedbackProvider>
+                  <ConsentProvider>
+                    <Navigator />
+                  </ConsentProvider>
+                </FeedbackProvider>
+              </AccountProvider>
+            </FontGate>
+          </ThemeProvider>
+        </LanguageProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

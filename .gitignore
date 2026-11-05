@@ -38,3 +38,14 @@ yarn-error.*
 
 app-example
 .vercel
+
+# BeHappy API server runtime data (accounts, orders)
+server/data/
+.server-data/
+
+# Build output (published separately; never commit bundles)
+dist/
+
+# QA screenshots
+qa-shots/
+scripts/pw-shots*/

@@ -1,0 +1,5 @@
+{
+  "profiles": {
+    "cap": { "anuliaMessages": 600, "artSessions": 30, "cardConversations": 30, "journalReflections": 90, "voiceClips": 600, "listens": 90 }
+  }
+}
