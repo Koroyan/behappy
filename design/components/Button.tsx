@@ -75,6 +75,9 @@ export function Button({
           alignItems: 'center',
           justifyContent: 'center',
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
+          // Never wider than the container: long labels (Georgian, German) wrap instead of overflowing.
+          maxWidth: '100%',
+          paddingVertical: size === 'sm' ? 4 : 6,
           gap: 8,
         },
         style,

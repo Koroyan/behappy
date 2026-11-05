@@ -83,7 +83,7 @@ export function Sidebar() {
         }}
       >
         <Icon name={active ? item.activeIcon : item.icon} size={22} color={active ? 'onPrimarySoft' : 'textSecondary'} />
-        <AppText variant={collapsed ? 'caption' : 'callout'} color={active ? 'onPrimarySoft' : 'textSecondary'} numberOfLines={collapsed ? 2 : 1} align={collapsed ? 'center' : undefined} style={collapsed ? { fontSize: 11 } : undefined}>
+        <AppText variant={collapsed ? 'caption' : 'callout'} color={active ? 'onPrimarySoft' : 'textSecondary'} numberOfLines={2} align={collapsed ? 'center' : undefined} style={collapsed ? { fontSize: 11 } : undefined}>
           {item.label}
         </AppText>
       </Press>

@@ -62,12 +62,16 @@ export default function JournalScreen() {
     return formatDate(`${k}T12:00:00`, { weekday: 'long', day: 'numeric', month: 'long' });
   };
 
-  const prompts = (
+  const promptChips = JOURNAL_PROMPTS.map((p) => (
+    <Chip key={p.id} action label={pickLocalized(p.title, language)} icon={p.icon as any} onPress={() => router.push(`/journal/editor?prompt=${p.id}`)} testID={`prompt-${p.id}`} />
+  ));
+  // Phones swipe a single row; wider screens (mouse) wrap so every prompt is visible.
+  const prompts = isCompact ? (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
-      {JOURNAL_PROMPTS.map((p) => (
-        <Chip key={p.id} label={pickLocalized(p.title, language)} icon={p.icon as any} onPress={() => router.push(`/journal/editor?prompt=${p.id}`)} testID={`prompt-${p.id}`} />
-      ))}
+      {promptChips}
     </ScrollView>
+  ) : (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{promptChips}</View>
   );
 
   const calendarCard = (

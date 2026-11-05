@@ -85,12 +85,13 @@ const issues = [];
 for (const width of widths) {
   const height = heightFor(width);
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: width < 500 ? 2 : 1 });
-  await ctx.addInitScript((l) => {
+  await ctx.addInitScript(({ l, th }) => {
     try {
       localStorage.setItem('@behappy_onboarding_v2', 'done');
       localStorage.setItem('@behappy_language', l);
+      if (th) localStorage.setItem('theme', th);
     } catch {}
-  }, lang);
+  }, { l: lang, th: opt('theme', '') });
   const page = await ctx.newPage();
   for (const route of routes) {
     const name = route.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'home';

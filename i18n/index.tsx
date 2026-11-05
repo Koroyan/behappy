@@ -22,6 +22,9 @@ import { hy } from './locales/hy';
 import { extraLocales } from './locales/extra';
 import { DATE_FALLBACK_LANGS, formatDateFallback, formatTimeFallback } from './dateFallback';
 
+// Languages that write decimals with a dot (others use a comma).
+const DOT_DECIMAL = new Set(['en', 'zh', 'ja', 'ko', 'hi', 'ar']);
+
 // Browsers without date data for these languages get our ICU-derived names.
 const needsDateFallback = (language: string) => Platform.OS === 'web' && DATE_FALLBACK_LANGS.has(language);
 
@@ -136,23 +139,25 @@ export function useT() {
     [locale, language]
   );
 
-  /** Formats a price from minor units. GEL is shown exactly, never converted. */
+  /**
+   * Formats a price from minor units. GEL is shown exactly, never converted,
+   * and always as "51 GEL" (the way Flitt's payment page shows it).
+   */
   const formatPrice = useCallback(
     (amountMinor: number, currency: string) => {
       const amount = amountMinor / 100;
+      const digits = amount % 1 === 0 ? 0 : 2;
+      let number: string;
       try {
-        return new Intl.NumberFormat(locale, {
-          style: 'currency',
-          currency,
-          currencyDisplay: currency === 'GEL' ? 'code' : 'symbol',
-          minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
-          maximumFractionDigits: 2,
-        }).format(amount);
+        const nf = new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: 2 });
+        // Browsers without data for this language fall back to English separators.
+        number = nf.resolvedOptions().locale.toLowerCase().startsWith(language) ? nf.format(amount) : amount.toFixed(digits).replace('.', DOT_DECIMAL.has(language) ? '.' : ',');
       } catch {
-        return `${amount.toFixed(amount % 1 === 0 ? 0 : 2)} ${currency}`;
+        number = amount.toFixed(digits);
       }
+      return `${number} ${currency}`;
     },
-    [locale]
+    [locale, language]
   );
 
   return useMemo(
