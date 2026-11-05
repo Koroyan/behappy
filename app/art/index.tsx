@@ -71,9 +71,10 @@ export default function ArtProgramScreen() {
 
   const access = (
     <Card tone={hasProgram ? 'sage' : 'muted'} padding={18}>
-      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+      {/* Wraps on narrow phones: long labels (Georgian, German) put the button under the text. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <Icon name={hasProgram ? 'checkmark-circle-outline' : 'lock-open-outline'} size={22} color={hasProgram ? 'success' : 'textSecondary'} />
-        <AppText variant="small" style={{ flex: 1 }}>
+        <AppText variant="small" style={{ flex: 1, minWidth: 160 }}>
           {entitlements.artProgram.owned ? t('art.access.owned') : entitlements.plus.active ? t('art.access.viaPlus') : t('art.access.freeFirst')}
         </AppText>
         {!hasProgram ? <Button label={t('art.access.cta')} size="sm" variant="secondary" onPress={() => router.push('/pricing')} /> : null}
@@ -88,7 +89,8 @@ export default function ArtProgramScreen() {
     if (st === 'inProgress') return <Badge label={t('art.status.inProgress')} tone="gold" />;
     if (st === 'locked') return <Icon name="lock-closed-outline" size={16} color="textTertiary" />;
     if (needsAccess(id, hasProgram)) return <Icon name="sparkles-outline" size={16} color="textTertiary" />;
-    return id === 1 && !hasProgram ? <Badge label={t('art.session.freeBadge')} tone="primary" /> : <Badge label={t('art.status.available')} tone="primary" />;
+    // On phones the short label leaves room for the session title.
+    return id === 1 && !hasProgram ? <Badge label={isCompact ? t('common.free') : t('art.session.freeBadge')} tone="primary" /> : <Badge label={t('art.status.available')} tone="primary" />;
   };
 
   return (
@@ -133,10 +135,10 @@ export default function ArtProgramScreen() {
                         >
                           <AppText style={{ fontSize: 22, width: 32, textAlign: 'center' }}>{s.icon}</AppText>
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <AppText variant="callout" numberOfLines={1}>
+                            <AppText variant="callout" numberOfLines={isCompact ? 2 : 1}>
                               {s.id}. {s.title}
                             </AppText>
-                            <AppText variant="caption" color="textSecondary" numberOfLines={1}>
+                            <AppText variant="caption" color="textSecondary" numberOfLines={isCompact ? 2 : 1}>
                               {s.theme} · {tp('common.minutes', s.estimatedDuration)}
                             </AppText>
                           </View>
