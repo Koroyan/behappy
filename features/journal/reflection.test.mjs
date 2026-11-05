@@ -11,7 +11,7 @@ const file = path.join(path.dirname(fileURLToPath(import.meta.url)), 'reflection
 const js = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
 const mod = { exports: {} };
 new Function('module', 'exports', 'require', js)(mod, mod.exports, () => ({}));
-const { withoutQuestions } = mod.exports;
+const { withoutQuestions, withoutStrayLatinLead, tidyReflection } = mod.exports;
 
 test('drops the closing question from a real reflection', () => {
   const reply =
@@ -36,4 +36,17 @@ test('keeps statements and paragraphs untouched', () => {
 
 test('never returns an empty reflection', () => {
   assert.equal(withoutQuestions('How are you feeling?'), 'How are you feeling.');
+});
+
+test('drops a stray Latin word that opens a Georgian reply', () => {
+  const seen = 'gabon, შენ გრძნობ გაბრაზებას და ეს შენთვის რთული მდგომარეობაა. ეს ბუნებრივია.';
+  assert.equal(withoutStrayLatinLead(seen), 'შენ გრძნობ გაბრაზებას და ეს შენთვის რთული მდგომარეობაა. ეს ბუნებრივია.');
+  assert.equal(tidyReflection(seen + ' რა გაბრაზებს?'), 'შენ გრძნობ გაბრაზებას და ეს შენთვის რთული მდგომარეობაა. ეს ბუნებრივია.');
+});
+
+test('keeps Latin words that belong to the text', () => {
+  const english = 'Nino, it sounds like this week has been heavy. Walking by the river helped.';
+  assert.equal(withoutStrayLatinLead(english), english);
+  const mixed = 'შენ წერ, რომ BeHappy-ში ჩანაწერი დაგეხმარა და ეს კარგი ნიშანია.';
+  assert.equal(withoutStrayLatinLead(mixed), mixed);
 });

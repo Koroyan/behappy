@@ -37,13 +37,15 @@ The pre-2.0 version of this document described hidden "patient" risk analysis sh
 
 ## 5. Respect for language and culture
 
-- Georgian, Russian and Armenian are complete. The other supported languages fall back to English key by key until reviewed translations exist, so the interface never invents wording.
-- Each language keeps a consistent, respectful register (Georgian «შენ», Russian «вы», Armenian «դուք»).
+- All 19 interface languages are complete (743 strings each, checked by `npm run qa:i18n`). If a string is ever missing, English is shown for that one string, never an empty label.
+- Each language keeps one consistent, respectful register (Georgian «შენ», Russian «вы», Armenian «դուք»; the others are noted at the top of each file in `i18n/locales/extra/`). Arabic avoids gendered address where it reads naturally, and Hindi uses impersonal forms so verbs do not assume the reader’s gender.
+- No translation has been reviewed by a native speaker yet. The questionnaire wording outside English is not clinically validated, and every questionnaire says so.
+- Arabic is laid out right to left, including sentences that start with a Latin name such as “Anulia”.
 
 ## 6. Before public launch
 
 1. Clinical review of all user-facing safety and questionnaire text by a licensed professional in Georgia.
-2. Professional review of the Georgian, Russian and Armenian questionnaire translations, or replacement with validated versions.
+2. Native-speaker review of every translation, starting with Georgian, Russian and Armenian, and professional review of the questionnaire translations or replacement with validated versions (official PHQ-9 and GAD-7 translations exist for most of the supported languages).
 3. Updating the hosted AI prompts to the Anulia persona (`docs/prompts/ANULIA_PERSONA_NOTE.md`) and red-team testing them for crisis, abuse and self-harm conversations in each main language.
 4. A way for people to report a harmful AI reply, and an owner who reviews reports.
 5. Re-checking every crisis number at least every three months.

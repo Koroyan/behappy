@@ -13,13 +13,14 @@
 import { useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 
-import { AppLanguage, useLanguage } from '@/contexts/LanguageContext';
+import { AppLanguage, RTL_LANGUAGES, useLanguage } from '@/contexts/LanguageContext';
 
 import { en } from './locales/en';
 import { ka } from './locales/ka';
 import { ru } from './locales/ru';
 import { hy } from './locales/hy';
 import { extraLocales } from './locales/extra';
+import { withRtlBase } from './bidi';
 import { DATE_FALLBACK_LANGS, formatDateFallback, formatTimeFallback } from './dateFallback';
 
 // Languages that write decimals with a dot (others use a comma).
@@ -60,6 +61,15 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
   return template.replace(/\{(\w+)\}/g, (m, name) => (vars[name] !== undefined ? String(vars[name]) : m));
 }
 
+/** Interface strings in right-to-left languages keep a right-to-left base direction (see bidi.ts). */
+const direction = (lang: AppLanguage, text: string) => (RTL_LANGUAGES.has(lang) ? withRtlBase(text) : text);
+const directionDeep = (lang: AppLanguage, item: unknown): unknown =>
+  typeof item === 'string'
+    ? direction(lang, item)
+    : item && typeof item === 'object'
+      ? Object.fromEntries(Object.entries(item).map(([k, v]) => [k, typeof v === 'string' ? direction(lang, v) : v]))
+      : item;
+
 export function translate(lang: AppLanguage, key: string, vars?: Record<string, string | number>): string {
   const local = lookup(CATALOG[lang], key);
   const value = typeof local === 'string' && local.trim() !== '' ? local : lookup(en, key);
@@ -67,14 +77,24 @@ export function translate(lang: AppLanguage, key: string, vars?: Record<string, 
     if (__DEV__) console.warn(`[i18n] missing key ${key}`);
     return key;
   }
-  return interpolate(value, vars);
+  return direction(lang, interpolate(value, vars));
 }
+
+// Catalogs are static: cache the right-to-left copies so lists keep a stable identity, as they do in other languages.
+const rtlLists = new Map<string, string[]>();
 
 export function translateList(lang: AppLanguage, key: string): string[] {
   const local = lookup(CATALOG[lang], key);
-  if (Array.isArray(local) && local.length) return local as string[];
-  const fallback = lookup(en, key);
-  return Array.isArray(fallback) ? (fallback as string[]) : [];
+  const list = Array.isArray(local) && local.length ? local : lookup(en, key);
+  if (!Array.isArray(list)) return [];
+  if (!RTL_LANGUAGES.has(lang)) return list as string[];
+  const cacheKey = lang + ":" + key;
+  let rtl = rtlLists.get(cacheKey);
+  if (!rtl) {
+    rtl = list.map((item) => directionDeep(lang, item)) as string[];
+    rtlLists.set(cacheKey, rtl);
+  }
+  return rtl;
 }
 
 const pluralRulesCache = new Map<string, Intl.PluralRules>();
@@ -107,7 +127,7 @@ export function useT() {
         (lookup(en, `${key}.${cat === 'one' ? 'one' : 'other'}`) as string) ||
         (lookup(en, `${key}.other`) as string) ||
         key;
-      return interpolate(tmpl, { count, ...vars });
+      return direction(language, interpolate(tmpl, { count, ...vars }));
     },
     [language, locale]
   );

@@ -9,7 +9,7 @@ BeHappy is not medical care, therapy or a crisis service. See [docs/ETHICS.md](d
 - **App**: Expo SDK 54, React Native 0.81, React 19, expo-router (iOS, Android, web)
 - **API server**: Node 24 + Express 5 (`server/`). Anonymous accounts, AI proxy, quotas, Flitt payments in **test mode only**
 - **AI**: OpenAI Responses API with hosted prompts, called only from the server
-- **Languages**: 19 interface languages (Georgian, English, Russian and Armenian complete), RTL for Arabic
+- **Languages**: 19 interface languages, all complete (743 strings each), right-to-left layout for Arabic
 
 ## Quick start
 
@@ -31,7 +31,7 @@ Native: `npm run ios` / `npm run android` (Expo Go or a development build). Poin
 | Command | What it does |
 |---|---|
 | `npm run server` / `server:dev` | Start the API (dev: restarts on changes in `server/`) |
-| `npm test` | Server tests (payments, AI proxy, quotas) and questionnaire scoring tests |
+| `npm test` | 43 tests: server (payments, AI proxy, quotas, metrics), questionnaire scoring, date fallback, journal reflection filter, risk language, Latin-letter Georgian, right-to-left text |
 | `npm run typecheck` | TypeScript |
 | `npm run lint` | ESLint (Expo config) |
 | `npm run qa:i18n` | Every used translation key exists; coverage per language |
@@ -39,6 +39,8 @@ Native: `npm run ios` / `npm run android` (Expo Go or a development build). Poin
 | `npm run qa:shots` | Screenshots for visual review |
 | `npm run qa:payments` | Real browser payment against the Flitt sandbox |
 | `npm run qa:ai` / `qa:art` | Live AI checks (use your OpenAI key) |
+| `npm run qa:journeys` | 19 real-user journeys in the browser, from onboarding to delete-everything (live AI and the Flitt sandbox; `--skip-ai`, `--skip-pay`) |
+| `npm run qa:desktop` | A second client on a laptop, in English: journal edit, search and delete, Anulia summary, a card pair, GAD-7, a declined then an approved Flitt test card, restore on a second device |
 | `npm run economics` | Unit economics and pricing sensitivity |
 | `npm run build:web` | Static web build in `dist/` (not committed) |
 

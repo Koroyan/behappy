@@ -44,12 +44,14 @@ export class FlittClient {
     this.fetch = fetchImpl;
   }
 
-  async post(path, request) {
+  // A hanging connection must never stall checkout, the result screen or the purchases list.
+  async post(path, request, timeoutMs = 15000) {
     const body = { request: { ...request, signature: sign(this.secretKey, request) } };
     const res = await this.fetch(`${this.apiBase}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     const text = await res.text();
     let json;
@@ -89,11 +91,15 @@ export class FlittClient {
 
   /** Server-to-server status check. The signed response is verified before use. */
   async getOrderStatus(orderId) {
-    const response = await this.post('/api/status/order_id', {
-      version: '1.0.1',
-      merchant_id: this.merchantId,
-      order_id: orderId,
-    });
+    const response = await this.post(
+      '/api/status/order_id',
+      {
+        version: '1.0.1',
+        merchant_id: this.merchantId,
+        order_id: orderId,
+      },
+      8000
+    );
     if (response.signature && !verifySignature(this.secretKey, response)) {
       throw new Error('Flitt status response has an invalid signature');
     }

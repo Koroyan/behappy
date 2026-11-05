@@ -306,6 +306,24 @@ describe('API', () => {
     assert.equal((await api(`/api/payments/orders/${order.id}`, { token: other.token })).status, 404, 'orders are private to their account');
   });
 
+  test('the purchases list shows a declined attempt and grants nothing', async () => {
+    const acct = await newAccount();
+    const { json } = await api('/api/payments/checkout', {
+      token: acct.token,
+      method: 'POST',
+      body: { productId: 'plus_30', returnTo: { platform: 'web', origin: 'http://app.test', path: '/checkout/result' } },
+    });
+    const order = store.orders[json.order.id];
+    // Flitt keeps the order open after a declined card; the decline is only in the response code.
+    flitt.statusById.set(order.id, { order_id: order.id, merchant_id: 1549901, amount: order.amountMinor, currency: 'GEL', order_status: 'processing', response_code: 1014, response_description: 'Declined by issuing bank' });
+    store.orders[order.id].lastStatusCheckAt = 0;
+    const list = await api('/api/payments/orders', { token: acct.token });
+    const row = list.json.orders.find((o) => o.id === order.id);
+    assert.equal(row.attemptDeclined, true);
+    assert.notEqual(row.status, 'approved');
+    assert.equal((await api('/api/account/me', { token: acct.token })).json.entitlements.plus.active, false);
+  });
+
   test('a refund (reversal) removes the entitlement', async () => {
     const acct = await newAccount();
     const { json } = await api('/api/payments/checkout', { token: acct.token, method: 'POST', body: { productId: 'plus_90' } });

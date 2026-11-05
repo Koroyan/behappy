@@ -169,7 +169,15 @@ export function createApp({ store, config, fetchImpl = globalThis.fetch, flittCl
     }
   });
 
-  app.get('/api/payments/orders', auth, (req, res) => {
+  app.get('/api/payments/orders', auth, async (req, res) => {
+    // Bring the newest open orders up to date with Flitt first (a declined attempt,
+    // an expiry), so the list never shows a stale "started". Each check is throttled
+    // inside refreshOrderFromFlitt and never throws.
+    const open = ordersForAccount(store, req.account.id)
+      .filter((o) => !isFinal(o.status))
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 3);
+    await Promise.all(open.map((o) => refreshOrderFromFlitt({ store, config, flitt, orderId: o.id }).catch(() => null)));
     const orders = ordersForAccount(store, req.account.id)
       .sort((a, b) => b.createdAt - a.createdAt)
       .map(publicOrder);

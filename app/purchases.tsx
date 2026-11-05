@@ -71,7 +71,7 @@ export default function PurchasesScreen() {
                   <View style={{ alignItems: 'flex-end', gap: 4 }}>
                     <AppText variant="smallStrong">{formatPrice(o.amountMinor, o.currency)}</AppText>
                     <View style={{ flexDirection: 'row', gap: 4 }}>
-                      <Badge label={t(`purchases.status.${o.status}`)} tone={statusTone(o.status) as any} />
+                      <Badge label={t(`purchases.status.${o.attemptDeclined ? 'declined' : o.status}`)} tone={statusTone(o.attemptDeclined ? 'declined' : o.status) as any} />
                       <Badge label={t('purchases.testLabel')} tone="gold" />
                     </View>
                   </View>

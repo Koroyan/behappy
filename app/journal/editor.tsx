@@ -7,7 +7,7 @@ import { pickLocalized } from '@/content/types';
 import { AppText, Banner, Button, Card, Icon, IconButton, Screen, space, TextField, useFeedback, useLayout, useTheme } from '@/design';
 import { useEnsureConsent } from '@/features/common/Consent';
 import { LimitNotice } from '@/features/common/LimitNotice';
-import { requestReflection, withoutQuestions } from '@/features/journal/reflection';
+import { requestReflection, tidyReflection } from '@/features/journal/reflection';
 import { MoodPicker } from '@/features/mood/MoodPicker';
 import { useT } from '@/i18n';
 import { NetworkError, QuotaError } from '@/lib/api/client';
@@ -108,7 +108,9 @@ export default function JournalEditor() {
     if (!ok) return;
     await deleteEntry(entry.id);
     toast(t('journal.entry.deleted'));
-    router.back();
+    // Opened directly (a reload, a bookmark) there is no screen to go back to.
+    if (router.canGoBack()) router.back();
+    else router.replace('/journal');
   };
 
   const discardDraft = async () => {
@@ -284,7 +286,7 @@ export default function JournalEditor() {
             </View>
             {entry.aiResponse ? (
               <>
-                <AppText variant="body">{withoutQuestions(entry.aiResponse)}</AppText>
+                <AppText variant="body">{tidyReflection(entry.aiResponse)}</AppText>
                 <AppText variant="caption" color="textSecondary" style={{ marginTop: space[3] }}>
                   {t('journal.reflection.note')}
                 </AppText>

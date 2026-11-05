@@ -38,6 +38,24 @@ export function withoutQuestions(text: string): string {
   return cleaned.join('\n\n');
 }
 
+const GEORGIAN_LETTERS = /[ა-ჿ]/gu;
+// One or two Latin words, then optional punctuation, right before Georgian text.
+const STRAY_LATIN_LEAD = /^[A-Za-z]{1,14}(?:\s+[A-Za-z]{1,14})?[,.:;!–-]*\s+(?=[ა-ჿ])/u;
+
+/**
+ * Replies to Georgian typed in Latin letters occasionally open with a stray
+ * Latin word ("gabon, შენ გრძნობ…") before the model settles into Georgian
+ * script. In a reply that is otherwise Georgian, that lead is dropped.
+ */
+export function withoutStrayLatinLead(text: string): string {
+  const s = String(text || '');
+  if ((s.match(GEORGIAN_LETTERS) || []).length < 20) return s;
+  return s.replace(STRAY_LATIN_LEAD, '');
+}
+
+/** What the journal shows: no questions, no stray Latin opening. */
+export const tidyReflection = (text: string) => withoutStrayLatinLead(withoutQuestions(text));
+
 /** The entry as sent to the model; Georgian typed in Latin letters gets a Georgian-script copy. */
 function userMessage(entry: JournalEntry, promptText?: string): string {
   const body = entry.content.slice(0, 6000);
@@ -47,6 +65,7 @@ function userMessage(entry: JournalEntry, promptText?: string): string {
     entry.title ? `Title: ${entry.title}` : '',
     `Entry${latinGeorgian ? ' (as typed, Georgian in Latin letters)' : ''}:\n${body}`,
     latinGeorgian ? `The same entry in Georgian script (automatic, may have small spelling slips):\n${latinToGeorgian(body)}` : '',
+    latinGeorgian ? 'Reply in Georgian script only (ქართული ასოებით), with no Latin letters.' : '',
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -84,7 +103,7 @@ export async function requestReflection(entry: JournalEntry, language: AppLangua
     },
     { feature: 'journal' }
   );
-  const text = withoutQuestions(String(data?.choices?.[0]?.message?.content || '').trim());
+  const text = tidyReflection(String(data?.choices?.[0]?.message?.content || '').trim());
   if (!text) throw new Error('empty reflection');
   return text;
 }

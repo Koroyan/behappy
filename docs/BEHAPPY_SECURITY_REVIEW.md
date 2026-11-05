@@ -52,7 +52,9 @@ These cannot be fixed in code. They need the account owner.
 - An unsigned return URL never approves. The server asks Flitt for the order status directly instead.
 - `assertTestModeOnly()` refuses to start unless Flitt is in test mode with the test merchant.
 - Refunds go through `POST /api/admin/orders/:id/refund` with `ADMIN_TOKEN`. A reversal removes the entitlement.
-- 20 server tests cover forged, tampered and replayed callbacks, a grant happening only once, unsigned returns, refunds, AI validation, chain ownership and quotas.
+- A declined card leaves the order open at Flitt, so the purchases list re-checks the newest open orders with Flitt and shows the attempt as declined. Nothing is granted.
+- Every Flitt API call has a timeout (15 s; status checks 8 s), so a hanging connection cannot stall checkout, the result screen or the purchases list.
+- 21 server tests cover forged, tampered and replayed callbacks, a grant happening only once, unsigned returns, declined attempts, refunds, AI validation, chain ownership and quotas.
 
 ## Privacy
 

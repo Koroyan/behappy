@@ -243,7 +243,16 @@ if (!skipPay) {
     await page.fill('input[name="f-expiry_date"]', '1230');
     await page.fill('input[name="f-cvv2"]', '123');
     await page.locator('button', { hasText: /[\d.,]+\s*GEL/i }).first().click();
-    await page.waitForURL(/\/checkout\/result/, { timeout: 120000 });
+    // The sandbox sometimes asks for a 3-D Secure confirmation; a real person presses Continue.
+    const deadline = Date.now() + 150000;
+    while (!/\/checkout\/result/.test(page.url())) {
+      if (Date.now() > deadline) throw new Error(`still on ${new URL(page.url()).host} after paying`);
+      for (const frame of page.frames()) {
+        const button = frame.getByRole('button', { name: /^Continue$/ });
+        if (await button.isVisible().catch(() => false)) await button.click().catch(() => {});
+      }
+      await page.waitForTimeout(1000);
+    }
     await page.waitForFunction(() => /დადასტურდა/.test(document.querySelector('[data-testid="checkout-result-title"]')?.textContent || ''), null, { timeout: 90000 });
     const token = await page.evaluate(() => JSON.parse(localStorage.getItem('@behappy_account_v1') || '{}').token);
     const me = await (await fetch(`${api}/api/account/me`, { headers: { Authorization: `Bearer ${token}` } })).json();
@@ -283,12 +292,45 @@ await step('export my data', async () => {
   return `${Math.round(fs.statSync(saved).size / 1024)} KB`;
 });
 
+// The drawing photo from the art session lives in IndexedDB on the web.
+const countPhotos = () =>
+  page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const req = indexedDB.open('behappy', 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('artworks', { keyPath: 'id' });
+        req.onerror = () => resolve(-1);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('artworks')) return resolve(0);
+          const count = db.transaction('artworks', 'readonly').objectStore('artworks').count();
+          count.onsuccess = () => resolve(count.result);
+          count.onerror = () => resolve(-1);
+        };
+      })
+  );
+
 await step('delete everything', async () => {
+  const photosBefore = await countPhotos();
+  if (!skipAi && photosBefore < 1) throw new Error('the art photo was not stored before deleting');
+  const oldToken = await page.evaluate(() => JSON.parse(localStorage.getItem('@behappy_account_v1') || '{}').token);
   await page.click(tid('profile-delete'));
   await page.click(tid('confirm-accept'));
   await page.waitForSelector(tid('screen-onboarding'), { timeout: 30000 });
-  const left = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('@behappy') && !['@behappy_language'].includes(k)));
-  return `left in storage: ${left.length ? left.join(', ') : 'nothing'}`;
+  const old = await fetch(`${api}/api/account/me`, { headers: { Authorization: `Bearer ${oldToken}` } });
+  if (old.status !== 401) throw new Error(`the deleted account still answers (${old.status})`);
+  const { keys, token } = await page.evaluate(() => ({
+    keys: Object.keys(localStorage).filter((k) => k.startsWith('@behappy')),
+    token: JSON.parse(localStorage.getItem('@behappy_account_v1') || '{}').token,
+  }));
+  if (token && token === oldToken) throw new Error('the old account token is still stored');
+  // On start-up the app creates a fresh, empty anonymous account and its caches; nothing personal may survive.
+  const startup = ['@behappy_language', '@behappy_account_v1', '@behappy_me_cache_v1', '@behappy_mood_checkins_migrated'];
+  const survived = keys.filter((k) => !startup.includes(k));
+  if (survived.length) throw new Error(`still stored: ${survived.join(', ')}`);
+  const photosAfter = await countPhotos();
+  if (photosAfter !== 0) throw new Error(`artwork photos left: ${photosAfter}`);
+  return `server account gone (401), ${photosBefore} photo(s) removed, only a fresh empty account remains`;
 });
 
 await browser.close();

@@ -57,7 +57,7 @@ Severity: **Critical** = harm to users or money now. **High** = broken core flow
 | C3 | Built web bundle (`dist/`) committed to git. | Medium | Untracked and git-ignored. |
 | C4 | `package.json` scripts pointed at files that no longer existed (`server/realtime-session.js`). | Low | Scripts rewritten: `server`, `server:dev`, `test`, `qa:*`, `economics`. |
 | C5 | 26 Expo packages out of line with SDK 54, including `expo-file-system` one major version behind. | Medium | Aligned with `expo install --fix`. File-system calls now import `expo-file-system/legacy`. |
-| C6 | Hard-coded strings, partial i18n. | High | Typed catalog: 674 English strings, complete Georgian, Russian and Armenian, key-by-key English fallback, RTL for Arabic. |
+| C6 | Hard-coded strings, partial i18n. | High | Typed catalog: 743 English strings, complete in all 19 languages, key-by-key English fallback, right-to-left layout for Arabic. |
 | C7 | `expo-av` is deprecated (removed in SDK 55). | Low | Still used for recording and playback. Migrating to `expo-audio` is required before SDK 55. |
 
 ## 6. What still needs an owner decision

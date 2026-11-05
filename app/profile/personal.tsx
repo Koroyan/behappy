@@ -42,7 +42,8 @@ export default function PersonalDetails() {
     });
     setSaving(false);
     toast(t('personal.saved'));
-    router.back();
+    if (router.canGoBack()) router.back();
+    else router.replace('/profile');
   };
 
   return (
