@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleProp, View, ViewStyle } from 'react-native';
+import { Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleProp, View, ViewStyle, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useT } from '@/i18n';
@@ -42,15 +42,17 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer, max
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={dismissible ? onClose : undefined} statusBarTranslucent>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('common.close')}
-          onPress={dismissible ? onClose : undefined}
-          style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: isCompact ? 'flex-end' : 'center', alignItems: 'center', padding: isCompact ? 0 : 24 }}
-        >
+        <View style={{ flex: 1, justifyContent: isCompact ? 'flex-end' : 'center', alignItems: 'center', padding: isCompact ? 0 : 24 }}>
+          {/* The backdrop is a sibling of the panel, so buttons inside the sheet are never nested in another button. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+            onPress={dismissible ? onClose : undefined}
+            style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay }]}
+          />
           <Animated.View
             testID={testID}
-            onStartShouldSetResponder={() => true}
+            accessibilityViewIsModal
             style={[
               {
                 width: '100%',
@@ -87,7 +89,7 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer, max
             </ScrollView>
             {footer ? <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16, gap: 10 }}>{footer}</View> : null}
           </Animated.View>
-        </Pressable>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );

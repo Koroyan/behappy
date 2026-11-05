@@ -171,13 +171,12 @@ export default function AssessmentRunner() {
         <Card padding={22}>
           {simple ? (
             <View style={{ gap: 8 }}>
-              <AppText variant="display" testID="assessment-score">
-                {simple.total}
-                <AppText variant="title2" color="textTertiary">
-                  {' '}
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }} testID="assessment-score" accessibilityLabel={t('assessments.scoreLabel', { score: simple.total, max: simple.max })}>
+                <AppText variant="display">{simple.total}</AppText>
+                <AppText variant="callout" color="textTertiary">
                   / {simple.max}
                 </AppText>
-              </AppText>
+              </View>
               <AppText variant="title3">{t(`assessments.bands.${simple.band}`)}</AppText>
               <ProgressBar value={simple.total / simple.max} />
             </View>

@@ -7,11 +7,12 @@ import { pickLocalized } from '@/content/types';
 import { AppText, Banner, Button, Card, Icon, IconButton, Screen, space, TextField, useFeedback, useLayout, useTheme } from '@/design';
 import { useEnsureConsent } from '@/features/common/Consent';
 import { LimitNotice } from '@/features/common/LimitNotice';
-import { requestReflection } from '@/features/journal/reflection';
+import { requestReflection, withoutQuestions } from '@/features/journal/reflection';
 import { MoodPicker } from '@/features/mood/MoodPicker';
 import { useT } from '@/i18n';
 import { NetworkError, QuotaError } from '@/lib/api/client';
 import { ConsentRequiredError } from '@/lib/privacy/consent';
+import { mentionsSelfHarm } from '@/lib/safety/riskLanguage';
 import { clearDraft, createEntry, deleteEntry, getEntry, JournalEntry, loadDraft, MoodLevel, saveDraft, updateEntry, wordCount } from '@/lib/storage/journal';
 
 export default function JournalEditor() {
@@ -35,6 +36,7 @@ export default function JournalEditor() {
   const [reflectError, setReflectError] = useState<null | 'failed' | 'limit' | 'offline'>(null);
   const [limitReset, setLimitReset] = useState<number | null>(null);
   const [editing, setEditing] = useState(!params.id);
+  const [safetyDismissed, setSafetyDismissed] = useState(false);
   const loadedRef = useRef(false);
 
   const prompt = JOURNAL_PROMPTS.find((p) => p.id === promptId);
@@ -140,7 +142,7 @@ export default function JournalEditor() {
   };
 
   const readOnly = Boolean(entry) && !editing;
-  const headerTitle = entry ? formatDate(entry.timestamp, { weekday: 'long', day: 'numeric', month: 'long' }) : t('journal.newEntry');
+  const headerTitle = entry ? formatDate(entry.timestamp, isCompact ? { weekday: 'short', day: 'numeric', month: 'short' } : { weekday: 'long', day: 'numeric', month: 'long' }) : t('journal.newEntry');
 
   return (
     <Screen
@@ -250,6 +252,28 @@ export default function JournalEditor() {
           </View>
         )}
 
+        {entry && readOnly && !safetyDismissed && mentionsSelfHarm(`${entry.title || ''} ${entry.content}`) ? (
+          <Card tone="danger" padding={20} testID="journal-safety">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Icon name="heart-circle-outline" size={20} color="onDangerSoft" />
+              <AppText variant="title3" color="onDangerSoft" style={{ flex: 1 }}>
+                {t('journalSafety.title')}
+              </AppText>
+            </View>
+            <AppText variant="body" style={{ marginTop: space[2] }}>
+              {t('journalSafety.body')}
+            </AppText>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: space[4] }}>
+              <Button label={t('journalSafety.help')} icon="call-outline" variant="danger" onPress={() => router.push('/safety')} testID="journal-safety-help" />
+              <Button label={t('journalSafety.plan')} icon="shield-checkmark-outline" variant="secondary" onPress={() => router.push('/safety-plan')} />
+              <Button label={t('journalSafety.dismiss')} variant="quiet" onPress={() => setSafetyDismissed(true)} />
+            </View>
+            <AppText variant="caption" color="textSecondary" style={{ marginTop: space[3] }}>
+              {t('journalSafety.note')}
+            </AppText>
+          </Card>
+        ) : null}
+
         {entry && readOnly ? (
           <Card tone="primary" padding={20} testID="journal-reflection">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: space[2] }}>
@@ -260,7 +284,7 @@ export default function JournalEditor() {
             </View>
             {entry.aiResponse ? (
               <>
-                <AppText variant="body">{entry.aiResponse}</AppText>
+                <AppText variant="body">{withoutQuestions(entry.aiResponse)}</AppText>
                 <AppText variant="caption" color="textSecondary" style={{ marginTop: space[3] }}>
                   {t('journal.reflection.note')}
                 </AppText>

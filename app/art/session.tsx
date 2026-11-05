@@ -395,6 +395,7 @@ export default function ArtSessionScreen() {
                         time={formatTime(m.timestamp)}
                         onListen={m.role === 'assistant' ? () => listen(m.id, main) : undefined}
                         listening={speakingId === m.id}
+                        testID={m.role === 'user' ? 'msg-user' : 'msg-ai'}
                       />
                       {summary ? (
                         <Card tone="primary" padding={16} style={{ marginStart: 40, marginBottom: space[4] }}>

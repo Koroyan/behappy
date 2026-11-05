@@ -6,6 +6,7 @@ import { Linking, View } from 'react-native';
 import { COUNTRIES, defaultCountryFor, HELPLINE_DIRECTORY } from '@/content/safety';
 import { AppText, Badge, Button, Card, Icon, Press, Screen, Sheet, space, useTheme } from '@/design';
 import { useT } from '@/i18n';
+import { loadSafetyPlan, planItemCount } from '@/lib/storage/safetyPlan';
 
 const COUNTRY_KEY = '@behappy_safety_country';
 
@@ -15,6 +16,10 @@ export default function SafetyScreen() {
   const { t, tl, language, locale } = useT();
   const { colors } = useTheme();
   const [code, setCode] = useState(defaultCountryFor(language));
+  const [planCount, setPlanCount] = useState(0);
+  useEffect(() => {
+    loadSafetyPlan().then((p) => setPlanCount(planItemCount(p))).catch(() => {});
+  }, []);
   const [picker, setPicker] = useState(false);
 
   useEffect(() => {
@@ -95,6 +100,19 @@ export default function SafetyScreen() {
           <Button label={t('safety.findHelpline')} icon="open-outline" variant="outline" onPress={() => Linking.openURL(HELPLINE_DIRECTORY)} />
         </View>
 
+        <Card padding={20} testID="safety-plan-card">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Icon name="shield-checkmark-outline" size={22} color="primary" />
+            <AppText variant="title3" style={{ flex: 1 }}>
+              {t('safetyPlan.title')}
+            </AppText>
+          </View>
+          <AppText variant="body" color="textSecondary" style={{ marginTop: 6 }}>
+            {t('safetyPlan.cardBody')}
+          </AppText>
+          <Button label={planCount ? t('safetyPlan.open') : t('safetyPlan.create')} icon="shield-checkmark-outline" variant="secondary" onPress={() => router.push('/safety-plan')} style={{ marginTop: space[4] }} testID="safety-plan-open" />
+        </Card>
+
         <Card tone="sage" padding={20}>
           <AppText variant="title3">{t('safety.stepsTitle')}</AppText>
           <View style={{ gap: 10, marginTop: space[3] }}>
@@ -109,7 +127,10 @@ export default function SafetyScreen() {
               </View>
             ))}
           </View>
-          <Button label={t('safety.breathe')} icon="leaf-outline" variant="secondary" onPress={() => router.push('/breathing')} style={{ marginTop: space[4] }} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: space[4] }}>
+            <Button label={t('safety.breathe')} icon="leaf-outline" variant="secondary" onPress={() => router.push('/breathing')} />
+            <Button label={t('safety.groundingCta')} icon="hand-left-outline" variant="outline" onPress={() => router.push('/grounding')} testID="safety-grounding" />
+          </View>
         </Card>
 
         <AppText variant="bodyStrong" align="center">

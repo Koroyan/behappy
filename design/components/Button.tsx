@@ -80,19 +80,14 @@ export function Button({
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={colors[palette.fg]} />
-      ) : (
-        <>
-          {icon ? <Icon name={icon} size={size === 'sm' ? 16 : 19} color={palette.fg} /> : null}
-          <View style={{ flexShrink: 1 }}>
-            <AppText variant={size === 'sm' ? 'smallStrong' : 'button'} color={palette.fg} numberOfLines={2} align="center">
-              {label}
-            </AppText>
-          </View>
-          {iconRight ? <Icon name={iconRight} size={size === 'sm' ? 16 : 19} color={palette.fg} /> : null}
-        </>
-      )}
+      {/* While loading the label stays (it can say what is happening); the spinner takes the icon's place. */}
+      {loading ? <ActivityIndicator size="small" color={colors[palette.fg]} /> : icon ? <Icon name={icon} size={size === 'sm' ? 16 : 19} color={palette.fg} /> : null}
+      <View style={{ flexShrink: 1 }}>
+        <AppText variant={size === 'sm' ? 'smallStrong' : 'button'} color={palette.fg} numberOfLines={2} align="center">
+          {label}
+        </AppText>
+      </View>
+      {iconRight && !loading ? <Icon name={iconRight} size={size === 'sm' ? 16 : 19} color={palette.fg} /> : null}
     </Press>
   );
 }

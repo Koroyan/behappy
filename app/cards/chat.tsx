@@ -217,7 +217,7 @@ export default function CardChatScreen() {
               </Card>
             ) : null}
             {messages.map((m, i) => (
-              <MessageBubble key={i} role={m.role === 'user' ? 'user' : 'assistant'} text={m.content} />
+              <MessageBubble key={i} role={m.role === 'user' ? 'user' : 'assistant'} text={m.content} testID={m.role === 'user' ? 'msg-user' : 'msg-ai'} />
             ))}
             {sending ? streamText ? <MessageBubble role="assistant" text={streamText} streaming /> : <TypingDots label={t('anulia.thinking')} /> : null}
             {closed ? (

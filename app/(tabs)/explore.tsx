@@ -52,6 +52,7 @@ export default function ExploreScreen() {
       tiles: [
         { key: 'breathing', icon: 'leaf-outline', tone: 'sage', route: '/breathing' },
         { key: 'meditation', icon: 'flower-outline', tone: 'lavender', route: '/meditation' },
+        { key: 'grounding', icon: 'hand-left-outline', tone: 'primary', route: '/grounding' },
       ],
     },
     {
@@ -75,6 +76,7 @@ export default function ExploreScreen() {
       key: 'support',
       tiles: [
         { key: 'safety', icon: 'heart-circle-outline', tone: 'danger', route: '/safety' },
+        { key: 'safetyPlan', icon: 'shield-checkmark-outline', tone: 'sage', route: '/safety-plan' },
         { key: 'about', icon: 'information-circle-outline', tone: 'muted', route: '/about' },
         { key: 'pricing', icon: 'sparkles-outline', tone: 'gold', route: '/pricing', badge: entitlements.plus.active ? t('profile.plusPlan') : undefined },
       ],
