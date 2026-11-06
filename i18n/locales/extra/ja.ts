@@ -663,6 +663,12 @@ export const ja: PartialMessages = {
     exported: 'データのファイルができました。',
     deleteData: 'すべてのデータを削除',
     deleteHint: 'この端末から日記、会話、作品、設定を削除します。',
+    deleteFailedOffline: 'オフラインのようです。何も削除されていません。インターネットに接続してから、もう一度お試しください。',
+    deleteFailedServer: 'サーバーが今アカウントを削除できなかったため、何も削除されていません。少し時間をおいてお試しください。',
+    deleteNotSignedInTitle: 'この端末はログインしていません',
+    deleteNotSignedInBody: 'サーバーがこの端末のログインを認識できないため（例：別の端末でアカウントが復元された）、ここからサーバー上のアカウントは削除できません。この端末に保存されたものはすべて削除できます。',
+    deleteNotSignedInCta: 'この端末から削除',
+
     deleteConfirmTitle: 'すべて削除しますか？',
     deleteConfirmBody: 'この端末上の BeHappy のデータと、サーバー上の匿名アカウントが完全に削除されます。復元コードを保存していない場合、あとから購入を復元することはできません。',
     deleteConfirmCta: 'すべて削除',
