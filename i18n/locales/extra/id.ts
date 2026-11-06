@@ -663,6 +663,12 @@ export const id: PartialMessages = {
     exported: 'Berkas datamu sudah siap.',
     deleteData: 'Hapus semua data',
     deleteHint: 'Menghapus jurnal, percakapan, karya, dan pengaturan dari perangkat ini.',
+    deleteFailedOffline: 'Sepertinya kamu sedang offline, jadi tidak ada yang dihapus. Sambungkan ke internet lalu coba lagi.',
+    deleteFailedServer: 'Server belum bisa menghapus akunmu saat ini, jadi tidak ada yang dihapus. Coba lagi sebentar lagi.',
+    deleteNotSignedInTitle: 'Perangkat ini sudah tidak masuk',
+    deleteNotSignedInBody: 'Server tidak mengenali login perangkat ini (misalnya akun dipulihkan di perangkat lain), jadi akun di server tidak bisa dihapus dari sini. Kamu tetap bisa menghapus semua yang tersimpan di perangkat ini.',
+    deleteNotSignedInCta: 'Hapus di perangkat ini',
+
     deleteConfirmTitle: 'Hapus semuanya?',
     deleteConfirmBody: 'Ini akan menghapus permanen semua data BeHappy di perangkat ini dan akun anonimmu di server. Tanpa kode pemulihan yang tersimpan, pembelian tidak bisa dipulihkan.',
     deleteConfirmCta: 'Hapus semuanya',
