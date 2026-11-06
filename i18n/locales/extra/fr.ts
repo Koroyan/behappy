@@ -663,6 +663,12 @@ export const fr: PartialMessages = {
     exported: 'Votre fichier de données est prêt.',
     deleteData: 'Supprimer toutes les données',
     deleteHint: 'Efface de cet appareil le journal, les conversations, les œuvres et les réglages.',
+    deleteFailedOffline: 'Vous semblez hors ligne : rien n’a été supprimé. Connectez-vous à Internet et réessayez.',
+    deleteFailedServer: 'Le serveur n’a pas pu supprimer votre compte pour le moment : rien n’a été supprimé. Réessayez dans un instant.',
+    deleteNotSignedInTitle: 'Cet appareil n’est plus connecté',
+    deleteNotSignedInBody: 'Le serveur ne reconnaît plus la connexion de cet appareil (par exemple, le compte a été restauré sur un autre appareil) : le compte serveur ne peut donc pas être supprimé d’ici. Vous pouvez quand même supprimer tout ce qui est enregistré sur cet appareil.',
+    deleteNotSignedInCta: 'Supprimer sur cet appareil',
+
     deleteConfirmTitle: 'Tout supprimer ?',
     deleteConfirmBody: 'Cela supprime définitivement toutes les données BeHappy de cet appareil et votre compte anonyme sur le serveur. Sans code de récupération enregistré, vos achats ne pourront plus être récupérés.',
     deleteConfirmCta: 'Tout supprimer',
