@@ -402,7 +402,7 @@ export const en3 = {
     focus: 'Focus',
     anyFocus: 'Any focus',
     format: 'Format',
-    anyFormat: 'Online or in person',
+    anyFormat: 'All formats',
     online: 'Online',
     inPerson: 'In person',
     price: 'Price',

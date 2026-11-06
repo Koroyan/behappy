@@ -18,6 +18,7 @@ Branch `behappy-3.0`, 6–7 November 2026, Windows 11, Node 24, Chrome (Playwrig
 | Languages at 320 px | 4 screens × 19 languages | No overflow after one fix (below); Arabic renders right-to-left |
 | Native bundles | `npx expo export --platform android --platform ios` | Android 1,969 modules (7.84 MB Hermes bytecode), iOS 1,979 modules (7.85 MB) |
 | Secrets in native bundles | value check against `server/.env` and the root `.env` | Not present |
+| Android runtime | Expo Go 54.0.6 on an Android 12 emulator (Nexus 5X), Metro + API over `adb reverse` | Onboarding → Today (five tabs) → Specialists list loaded from the API → Community account gate with "Get help now" |
 
 ## `npm test` (88 tests)
 
@@ -66,10 +67,11 @@ Final runs: localhost 17/17, tunnel 17/17; the paid period ended on 20 December 
 | Code review | The appeal of a suspension could be decided by the moderator who issued it | Server refuses (`own_decision`); tested |
 | Code review | "Choose another time" created a second booking | It now reschedules in one transaction |
 | Code review | The private-messages notice said staff can never read messages | Corrected: staff see a message only if it is reported |
+| Android emulator | "Online or in person" was cut off on phones | Shorter label "All formats" |
 
 ## Not covered yet
 
-- Running the native apps on physical devices or emulators (bundles compile for iOS and Android; runtime behaviour was tested on the web build).
+- iOS at runtime (no Mac available; the iOS bundle compiles) and physical phones (the Android check ran on an emulator; the full journeys ran on the web build).
 - Real email and SMS delivery (providers not configured; the dev server uses the code 123456).
 - Live payments (Flitt stays in TEST by design).
 - Load and soak tests of the real-time rooms; Safari and Firefox; a screen-reader audit.
