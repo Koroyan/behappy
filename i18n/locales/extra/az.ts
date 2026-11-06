@@ -663,6 +663,12 @@ export const az: PartialMessages = {
     exported: 'Məlumat faylınız hazırdır.',
     deleteData: 'Bütün məlumatları sil',
     deleteHint: 'Bu cihazdan gündəliyi, söhbətləri, işləri və parametrləri silir.',
+    deleteFailedOffline: 'Deyəsən, internet bağlantısı yoxdur, ona görə də heç nə silinmədi. İnternetə qoşulub yenidən cəhd edin.',
+    deleteFailedServer: 'Server hazırda hesabınızı silə bilmədi, ona görə də heç nə silinmədi. Bir az sonra yenidən cəhd edin.',
+    deleteNotSignedInTitle: 'Bu cihaz artıq daxil olmayıb',
+    deleteNotSignedInBody: 'Server bu cihazın girişini tanımır (məsələn, hesab başqa cihazda bərpa edilib), ona görə də serverdəki hesabı buradan silmək mümkün deyil. Bu cihazda saxlanılan hər şeyi isə silə bilərsiniz.',
+    deleteNotSignedInCta: 'Bu cihazda sil',
+
     deleteConfirmTitle: 'Hər şey silinsin?',
     deleteConfirmBody: 'Bu, bu cihazdakı bütün BeHappy məlumatlarını və serverdəki anonim hesabınızı həmişəlik silir. Bərpa kodunu saxlamamısınızsa, sonra alışları bərpa etmək mümkün olmayacaq.',
     deleteConfirmCta: 'Hər şeyi sil',
