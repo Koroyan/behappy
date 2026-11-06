@@ -133,7 +133,7 @@ export default function ProMembership() {
         {m.state === 'expired' ? <Banner tone="warning" body={t('membership.expiredInfo')} /> : null}
         {m.state === 'payment_failed' ? <Banner tone="warning" body={t('membership.paymentFailed')} /> : null}
         {m.state === 'not_started' ? <Banner tone="info" body={t('membership.notStarted')} /> : null}
-        {m.trialRefused ? <Banner tone="info" body={t('membership.trialRefused')} testID="membership-trial-refused" /> : null}
+        {m.trialRefused ? <Banner tone="info" body={t('membership.trialRefused')} /> : null}
 
         {!blocked ? (
           <View style={{ gap: 8 }}>

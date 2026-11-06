@@ -5,6 +5,7 @@ import { Platform, View } from 'react-native';
 
 import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@/contexts/LanguageContext';
 import { AppText, Avatar, Badge, Banner, Button, Card, Divider, Icon, ListRow, ProgressBar, Press, Screen, Segmented, SectionHeader, Sheet, space, TEXT_SCALES, Toggle, useFeedback, useLayout, useTheme } from '@/design';
+import { MoreMenu } from '@/features/shell/MoreMenu';
 import { useT } from '@/i18n';
 import { AccountDeletionError, useAccount, useIdentity } from '@/lib/api/account';
 import { setAiConsent, setPersonalize, useConsent } from '@/lib/privacy/consent';
@@ -14,7 +15,7 @@ import { getUserProfile } from '@/services/userProfileService';
 export default function ProfileScreen() {
   const router = useRouter();
   const { t, tl, formatDate } = useT();
-  const { hasContextPanel } = useLayout();
+  const { hasContextPanel, hasSideNav } = useLayout();
   const { language, setLanguage, restartNeededForDirection } = useLanguage();
   const theme = useTheme();
   const { me, entitlements, refresh, offline } = useAccount();
@@ -217,6 +218,7 @@ export default function ProfileScreen() {
             />
           </View>
         </Card>
+        {!hasSideNav ? <MoreMenu /> : null}
         {!hasContextPanel ? membership : null}
         {preferences}
         {privacy}
