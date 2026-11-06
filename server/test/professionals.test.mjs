@@ -162,7 +162,10 @@ describe('Professionals', () => {
     const res = await approve(again);
     assert.equal(res.json.trial.granted, false);
     assert.equal(res.json.trial.reason, 'trial_used_before');
-    assert.equal((await call(again, '/api/pro/me')).json.membership.state, 'expired', 'verified, but no free period');
+    const again_ = (await call(again, '/api/pro/me')).json.membership;
+    assert.equal(again_.state, 'not_started', 'verified, but no free period');
+    assert.equal(again_.trialRefused, true, 'the professional is told why there is no trial');
+    assert.equal(again_.active, false);
   });
 
   test('membership checkout: 79 GEL / 30 days from the server catalog; approve, duplicate, refund', async () => {

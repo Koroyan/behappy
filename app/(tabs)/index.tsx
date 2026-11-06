@@ -365,6 +365,32 @@ export default function TodayScreen() {
     </Card>
   ) : null;
 
+  const connectCard = (
+    <View>
+      <SectionHeader title={t('todayConnect.title')} style={{ marginBottom: space[2] }} />
+      <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: space[3] }}>
+        {[
+          { icon: 'chatbubbles-outline' as IconName, label: t('todayConnect.community'), sub: t('todayConnect.communityBody'), route: '/community', id: 'today-community' },
+          { icon: 'people-outline' as IconName, label: t('todayConnect.specialists'), sub: t('todayConnect.specialistsBody'), route: '/specialists', id: 'today-specialists' },
+          { icon: 'book-outline' as IconName, label: t('todayConnect.journal'), sub: t('todayConnect.journalBody'), route: '/journal', id: 'today-journal' },
+        ].map((item) => (
+          <Card key={item.route} padding={16} onPress={() => router.push(item.route as any)} accessibilityLabel={item.label} testID={item.id} style={isDesktop ? { flex: 1 } : undefined}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Icon name={item.icon} size={22} color="primary" />
+              <View style={{ flex: 1 }}>
+                <AppText variant="bodyStrong">{item.label}</AppText>
+                <AppText variant="caption" color="textSecondary">
+                  {item.sub}
+                </AppText>
+              </View>
+              <Icon name="chevron-forward" size={16} color="textTertiary" />
+            </View>
+          </Card>
+        ))}
+      </View>
+    </View>
+  );
+
   const aside = (
     <>
       {weekCard}
@@ -393,6 +419,7 @@ export default function TodayScreen() {
         </View>
         {artCard}
         {recentCard}
+        {connectCard}
         <View style={{ alignItems: 'center', marginTop: space[4] }}>
           <Button label={t('today.exploreAll')} variant="ghost" iconRight="arrow-forward" onPress={() => router.push('/explore')} />
         </View>

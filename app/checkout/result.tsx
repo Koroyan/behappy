@@ -67,7 +67,9 @@ export default function CheckoutResult() {
           tone: colors.success,
           title: t('checkout.result.approvedTitle'),
           body:
-            order?.productKind === 'plus'
+            order?.productKind === 'professional'
+              ? t('membership.checkoutApproved')
+              : order?.productKind === 'plus'
               ? t('checkout.result.approvedPlus', { date: entitlements.plus.expiresAt ? formatDate(entitlements.plus.expiresAt, { day: 'numeric', month: 'long', year: 'numeric' }) : '…' })
               : t('checkout.result.approvedArt'),
         }
@@ -83,6 +85,7 @@ export default function CheckoutResult() {
                 ? { icon: 'hourglass-outline', tone: colors.textSecondary, title: t('checkout.result.pendingTitle'), body: t('checkout.result.pendingBody') }
                 : { icon: 'sync-outline', tone: colors.brand, title: t('checkout.result.checking'), body: t('checkout.result.checkingBody') };
 
+  const pro = order?.productKind === 'professional';
   const waiting = !status || (!FINAL_ORDER_STATUSES.includes(status) && !order?.attemptDeclined && !timedOut && !missing);
 
   return (
@@ -105,11 +108,11 @@ export default function CheckoutResult() {
         ) : null}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginTop: space[2] }}>
           {status === 'approved' ? (
-            <Button label={t('checkout.result.continue')} onPress={() => router.replace(order?.productKind === 'art' ? '/art' : '/')} testID="checkout-continue" />
+            <Button label={t('checkout.result.continue')} onPress={() => router.replace(pro ? ('/pro/membership' as any) : order?.productKind === 'art' ? '/art' : '/')} testID="checkout-continue" />
           ) : status === 'declined' || status === 'expired' || order?.attemptDeclined ? (
-            <Button label={t('checkout.result.tryAgain')} onPress={() => router.replace('/pricing')} />
+            <Button label={t('checkout.result.tryAgain')} onPress={() => router.replace(pro ? ('/pro/membership' as any) : '/pricing')} />
           ) : null}
-          <Button label={t('checkout.result.viewPurchases')} variant="quiet" onPress={() => router.replace('/purchases')} />
+          <Button label={pro ? t('membership.backToMembership') : t('checkout.result.viewPurchases')} variant="quiet" onPress={() => router.replace(pro ? ('/pro/membership' as any) : '/purchases')} />
         </View>
       </Card>
     </Screen>

@@ -7,7 +7,7 @@ import { AppText, Icon, Press, useTheme, useLayout } from '@/design';
 
 import { usePrimaryNav } from './Sidebar';
 
-const ROUTE_TO_KEY: Record<string, string> = { index: 'today', community: 'community', anulia: 'anulia', journal: 'journal', profile: 'profile' };
+const ROUTE_TO_KEY: Record<string, string> = { index: 'today', community: 'community', anulia: 'anulia', specialists: 'specialists', profile: 'profile' };
 
 /** Phone navigation: five calm destinations, large touch targets, labels always visible. */
 export function MobileTabBar({ state, navigation }: BottomTabBarProps) {

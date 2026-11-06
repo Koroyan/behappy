@@ -55,8 +55,14 @@ export function createMembership({ db, config, clock = { now: () => Date.now() }
         "select 1 from orders where professional_id = $1 and created_at > $2 and (status in ('declined', 'error') or (attempt_declined and status not in ('approved', 'reversed', 'partially_reversed'))) limit 1",
         [p.id, ts(now - 7 * DAY)]
       );
-      s = failed.rowCount ? 'payment_failed' : 'expired';
+      // Never had a period (e.g. the free trial was already used with the same
+      // phone, email or licence): "not started", not "expired".
+      s = failed.rowCount ? 'payment_failed' : lastEnd ? 'expired' : 'not_started';
     }
+    const trialRefused =
+      !trialUsed && !PENDING_VERIFICATION.has(p.status)
+        ? (await q.query("select 1 from verification_events where professional_id = $1 and actor_kind = 'system' and message = 'trial_not_granted' limit 1", [p.id])).rowCount > 0
+        : false;
     return {
       state: s,
       active: Boolean(current) || s === 'grace',
@@ -65,6 +71,7 @@ export function createMembership({ db, config, clock = { now: () => Date.now() }
       daysLeft,
       graceUntil,
       trialUsed,
+      trialRefused,
       periods: list,
       product: getProfessionalCatalog(pro())[0],
       remindersEnabled: p.reminders_enabled,

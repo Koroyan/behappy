@@ -98,7 +98,7 @@ export default function JournalScreen() {
 
   return (
     <Screen
-      tab
+      back
       title={t('journal.title')}
       subtitle={t('journal.subtitle')}
       headerRight={<Button label={t('journal.newEntry')} icon="add" size="sm" onPress={() => router.push('/journal/editor')} testID="journal-new" />}

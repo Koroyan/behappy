@@ -18,7 +18,7 @@ let status: ConnectionStatus = 'idle';
 const statusListeners = new Set<(s: ConnectionStatus) => void>();
 const eventListeners = new Map<string, Set<(payload: any) => void>>();
 
-const FORWARDED = ['message:new', 'message:update', 'room:update', 'anulia:thinking', 'anulia:unavailable', 'safety:notice', 'notification:new', 'account:suspended'];
+const FORWARDED = ['message:new', 'message:update', 'room:update', 'anulia:thinking', 'anulia:unavailable', 'safety:notice', 'notification:new', 'account:suspended', 'thread:message'];
 
 function setStatus(next: ConnectionStatus) {
   if (status === next) return;

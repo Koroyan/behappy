@@ -17,7 +17,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: t('nav.today') }} />
       <Tabs.Screen name="community" options={{ title: t('shell.community_tab') }} />
       <Tabs.Screen name="anulia" options={{ title: t('nav.anulia') }} />
-      <Tabs.Screen name="journal" options={{ title: t('nav.journal') }} />
+      <Tabs.Screen name="specialists" options={{ title: t('shell.specialists') }} />
       <Tabs.Screen name="profile" options={{ title: t('nav.profile') }} />
     </Tabs>
   );

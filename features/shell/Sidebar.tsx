@@ -40,7 +40,10 @@ export function usePrimaryNav() {
   const journal: NavItem = { key: 'journal', label: t('nav.journal'), icon: 'book-outline', activeIcon: 'book', href: '/journal', match: (p) => p.startsWith('/journal') };
   const profile: NavItem = { key: 'profile', label: t('nav.profile'), icon: 'person-circle-outline', activeIcon: 'person-circle', href: '/profile', match: (p) => p.startsWith('/profile') || p.startsWith('/settings') || p.startsWith('/account') };
 
-  const primary: NavItem[] = [today, community, anulia, journal, profile];
+  const specialists: NavItem = { key: 'specialists', label: t('shell.specialists'), icon: 'medkit-outline', activeIcon: 'medkit', href: '/specialists', match: (p) => p.startsWith('/specialists') };
+  const primary: NavItem[] = [today, community, anulia, specialists, profile];
+  const client = me?.client as { unreadMessages?: number } | undefined;
+  const professional = me?.professional as { status?: string } | null | undefined;
 
   const sections: NavSection[] = [
     {
@@ -72,22 +75,50 @@ export function usePrimaryNav() {
       ],
     },
     {
-      key: 'account',
-      title: t('shell.account'),
+      key: 'help',
+      title: t('shell.professionalHelp'),
       items: [
-        { key: 'membership', label: t('shell.membership'), icon: 'ribbon-outline', activeIcon: 'ribbon', href: '/pricing', match: (p) => p.startsWith('/pricing') || p.startsWith('/purchases') || p.startsWith('/checkout') },
-        profile,
+        { ...specialists, label: t('shell.findPsychologists') },
+        { key: 'appointments', label: t('shell.appointments'), icon: 'calendar-outline', activeIcon: 'calendar', href: '/appointments', match: (p) => p.startsWith('/appointments') },
+        { key: 'messages', label: t('shell.messages'), icon: 'mail-outline', activeIcon: 'mail', href: '/messages', match: (p) => p.startsWith('/messages'), badge: client?.unreadMessages || 0 },
       ],
     },
   ];
 
-  if (isStaffIdentity(identity, 'moderator') || isStaffIdentity(identity, 'admin')) {
+  if (professional) {
     sections.push({
-      key: 'staff',
-      title: t('shell.staff'),
-      items: [{ key: 'moderation', label: t('shell.moderation'), icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark', href: '/moderation', match: (p) => p.startsWith('/moderation') }],
+      key: 'workspace',
+      title: t('shell.workspace'),
+      items: [
+        { key: 'pro-dashboard', label: t('shell.dashboard'), icon: 'grid-outline', activeIcon: 'grid', href: '/pro', match: (p) => p === '/pro' },
+        { key: 'pro-bookings', label: t('shell.proBookings'), icon: 'calendar-number-outline', activeIcon: 'calendar-number', href: '/pro/bookings', match: (p) => p.startsWith('/pro/bookings') },
+        { key: 'pro-profile', label: t('shell.proProfile'), icon: 'id-card-outline', activeIcon: 'id-card', href: '/pro/apply', match: (p) => p.startsWith('/pro/apply') },
+        { key: 'pro-membership', label: t('shell.proMembership'), icon: 'card-outline', activeIcon: 'card', href: '/pro/membership', match: (p) => p.startsWith('/pro/membership') || p.startsWith('/pro/receipt') },
+      ],
     });
   }
+
+  sections.push({
+    key: 'account',
+    title: t('shell.account'),
+    items: [
+      { key: 'membership', label: t('shell.membership'), icon: 'ribbon-outline', activeIcon: 'ribbon', href: '/pricing', match: (p) => p.startsWith('/pricing') || p.startsWith('/purchases') || p.startsWith('/checkout') },
+      { key: 'notifications', label: t('shell.notifications'), icon: 'notifications-outline', activeIcon: 'notifications', href: '/notifications', match: (p) => p.startsWith('/notifications'), badge: me?.notifications?.unread || 0 },
+      profile,
+      ...(professional ? [] : [{ key: 'for-pros', label: t('shell.forProfessionals'), icon: 'briefcase-outline', activeIcon: 'briefcase', href: '/pro', match: (p: string) => p === '/pro' } as NavItem]),
+      { key: 'about', label: t('shell.help'), icon: 'help-circle-outline', activeIcon: 'help-circle', href: '/about', match: (p) => p.startsWith('/about') },
+    ],
+  });
+
+  const staffItems: NavItem[] = [];
+  if (isStaffIdentity(identity, 'admin')) {
+    staffItems.push({ key: 'admin', label: t('shell.admin'), icon: 'stats-chart-outline', activeIcon: 'stats-chart', href: '/admin', match: (p) => p === '/admin' });
+    staffItems.push({ key: 'applications', label: t('shell.applications'), icon: 'document-text-outline', activeIcon: 'document-text', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') });
+  }
+  if (isStaffIdentity(identity, 'moderator') || isStaffIdentity(identity, 'admin')) {
+    staffItems.push({ key: 'moderation', label: t('shell.moderation'), icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark', href: '/moderation', match: (p) => p.startsWith('/moderation') });
+  }
+  if (staffItems.length) sections.push({ key: 'staff', title: t('shell.staff'), items: staffItems });
 
   return { primary, sections };
 }

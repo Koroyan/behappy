@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
 
 import { apiJson } from './client';
 
-export type ProductKind = 'plus' | 'art';
+export type ProductKind = 'plus' | 'art' | 'professional';
 
 export interface Product {
   id: string;
