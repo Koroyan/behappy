@@ -663,6 +663,12 @@ export const pl: PartialMessages = {
     exported: 'Plik z twoimi danymi jest gotowy.',
     deleteData: 'Usuń wszystkie dane',
     deleteHint: 'Usuwa z tego urządzenia dziennik, rozmowy, prace i ustawienia.',
+    deleteFailedOffline: 'Wygląda na to, że nie ma połączenia z internetem, więc nic nie zostało usunięte. Połącz się z internetem i spróbuj ponownie.',
+    deleteFailedServer: 'Serwer nie mógł teraz usunąć twojego konta, więc nic nie zostało usunięte. Spróbuj ponownie za chwilę.',
+    deleteNotSignedInTitle: 'To urządzenie nie jest już zalogowane',
+    deleteNotSignedInBody: 'Serwer nie rozpoznaje logowania z tego urządzenia (na przykład konto przywrócono na innym urządzeniu), więc konta na serwerze nie da się usunąć stąd. Nadal możesz usunąć wszystko, co jest zapisane na tym urządzeniu.',
+    deleteNotSignedInCta: 'Usuń z tego urządzenia',
+
     deleteConfirmTitle: 'Usunąć wszystko?',
     deleteConfirmBody: 'To trwale usunie wszystkie dane BeHappy z tego urządzenia i twoje anonimowe konto z serwera. Bez zachowanego kodu odzyskiwania nie da się później przywrócić zakupów.',
     deleteConfirmCta: 'Usuń wszystko',
