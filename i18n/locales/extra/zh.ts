@@ -663,6 +663,12 @@ export const zh: PartialMessages = {
     exported: '你的数据文件已准备好。',
     deleteData: '删除所有数据',
     deleteHint: '从这台设备上删除日记、对话、作品和设置。',
+    deleteFailedOffline: '你似乎处于离线状态，所以没有删除任何内容。请连接网络后重试。',
+    deleteFailedServer: '服务器暂时无法删除你的账户，所以没有删除任何内容。请稍后重试。',
+    deleteNotSignedInTitle: '这台设备已不再处于登录状态',
+    deleteNotSignedInBody: '服务器无法识别这台设备的登录（例如账户已在另一台设备上恢复），因此无法从这里删除服务器上的账户。你仍然可以删除这台设备上保存的所有内容。',
+    deleteNotSignedInCta: '在这台设备上删除',
+
     deleteConfirmTitle: '要删除全部内容吗？',
     deleteConfirmBody: '这将永久删除这台设备上的所有 BeHappy 数据，以及服务器上的匿名账户。如果没有保存恢复码，之后将无法恢复购买。',
     deleteConfirmCta: '全部删除',

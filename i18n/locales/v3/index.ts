@@ -21,5 +21,6 @@ import { pt3 } from './pt';
 import { ru3 } from './ru';
 import { tr3 } from './tr';
 import { uk3 } from './uk';
+import { zh3 } from './zh';
 
-export const v3Locales: Partial<Record<AppLanguage, PartialMessages>> = { az: az3, de: de3, es: es3, fr: fr3, hy: hy3, id: id3, it: it3, ja: ja3, ka: ka3, ko: ko3, pl: pl3, pt: pt3, ru: ru3, tr: tr3, uk: uk3 };
+export const v3Locales: Partial<Record<AppLanguage, PartialMessages>> = { az: az3, de: de3, es: es3, fr: fr3, hy: hy3, id: id3, it: it3, ja: ja3, ka: ka3, ko: ko3, pl: pl3, pt: pt3, ru: ru3, tr: tr3, uk: uk3, zh: zh3 };
