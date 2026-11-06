@@ -28,7 +28,8 @@
     "predeploy": "npm run build:web",
     "deploy": "gh-pages -d dist",
     "economics": "node scripts/unit-economics.mjs",
-    "admin:grant": "node server/scripts/grant-role.mjs"
+    "admin:grant": "node server/scripts/grant-role.mjs",
+    "server:local": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON server/index.mjs --dev-tools"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.15",

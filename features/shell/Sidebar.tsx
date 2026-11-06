@@ -4,36 +4,92 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, BrandMark, Icon, IconButton, IconName, Press, radius, space, useLayout, useTheme } from '@/design';
+import { AppText, Badge, BrandMark, Icon, IconButton, IconName, Press, radius, space, useLayout, useTheme } from '@/design';
 import { useT } from '@/i18n';
-import { useAccount } from '@/lib/api/account';
+import { isStaffIdentity, useAccount, useIdentity } from '@/lib/api/account';
 
-interface NavItem {
+export interface NavItem {
   key: string;
   label: string;
   icon: IconName;
   activeIcon: IconName;
   href: string;
   match: (path: string) => boolean;
+  badge?: number;
 }
 
+export interface NavSection {
+  key: string;
+  title: string;
+  items: NavItem[];
+}
+
+/**
+ * Navigation model. Phones: five tabs. Desktop/tablet: a sidebar grouped into
+ * Personal, Community and Account (plus staff tools for moderators/admins).
+ */
 export function usePrimaryNav() {
   const { t } = useT();
-  const primary: NavItem[] = [
-    { key: 'today', label: t('nav.today'), icon: 'sunny-outline', activeIcon: 'sunny', href: '/', match: (p) => p === '/' || p === '/index' },
-    { key: 'explore', label: t('nav.explore'), icon: 'compass-outline', activeIcon: 'compass', href: '/explore', match: (p) => p.startsWith('/explore') },
-    { key: 'anulia', label: t('nav.anulia'), icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses', href: '/anulia', match: (p) => p.startsWith('/anulia') },
-    { key: 'journal', label: t('nav.journal'), icon: 'book-outline', activeIcon: 'book', href: '/journal', match: (p) => p.startsWith('/journal') },
-    { key: 'profile', label: t('nav.profile'), icon: 'person-circle-outline', activeIcon: 'person-circle', href: '/profile', match: (p) => p.startsWith('/profile') || p.startsWith('/settings') || p.startsWith('/purchases') },
+  const { me } = useAccount();
+  const identity = useIdentity();
+  const unreadRooms = (me?.community as { unreadRooms?: number } | undefined)?.unreadRooms || 0;
+
+  const today: NavItem = { key: 'today', label: t('nav.today'), icon: 'sunny-outline', activeIcon: 'sunny', href: '/', match: (p) => p === '/' || p === '/index' };
+  const community: NavItem = { key: 'community', label: t('shell.community_tab'), icon: 'people-outline', activeIcon: 'people', href: '/community', match: (p) => p.startsWith('/community'), badge: unreadRooms };
+  const anulia: NavItem = { key: 'anulia', label: t('nav.anulia'), icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses', href: '/anulia', match: (p) => p.startsWith('/anulia') };
+  const journal: NavItem = { key: 'journal', label: t('nav.journal'), icon: 'book-outline', activeIcon: 'book', href: '/journal', match: (p) => p.startsWith('/journal') };
+  const profile: NavItem = { key: 'profile', label: t('nav.profile'), icon: 'person-circle-outline', activeIcon: 'person-circle', href: '/profile', match: (p) => p.startsWith('/profile') || p.startsWith('/settings') || p.startsWith('/account') };
+
+  const primary: NavItem[] = [today, community, anulia, journal, profile];
+
+  const sections: NavSection[] = [
+    {
+      key: 'personal',
+      title: t('shell.personal'),
+      items: [
+        today,
+        anulia,
+        journal,
+        { key: 'art', label: t('explore.items.art.title'), icon: 'color-palette-outline', activeIcon: 'color-palette', href: '/art', match: (p) => p.startsWith('/art') },
+        { key: 'cards', label: t('explore.items.cards.title'), icon: 'albums-outline', activeIcon: 'albums', href: '/cards', match: (p) => p.startsWith('/cards') },
+        {
+          key: 'exercises',
+          label: t('shell.exercises'),
+          icon: 'leaf-outline',
+          activeIcon: 'leaf',
+          href: '/explore',
+          match: (p) => ['/explore', '/breathing', '/meditation', '/grounding', '/assessments', '/goals', '/safety-plan'].some((x) => p.startsWith(x)),
+        },
+        { key: 'insights', label: t('explore.items.insights.title'), icon: 'analytics-outline', activeIcon: 'analytics', href: '/insights', match: (p) => p.startsWith('/insights') },
+      ],
+    },
+    {
+      key: 'community',
+      title: t('shell.community'),
+      items: [
+        { ...community, label: t('shell.myCommunities') },
+        { key: 'topics', label: t('shell.exploreTopics'), icon: 'compass-outline', activeIcon: 'compass', href: '/community/topics', match: (p) => p.startsWith('/community/topics') },
+      ],
+    },
+    {
+      key: 'account',
+      title: t('shell.account'),
+      items: [
+        { key: 'membership', label: t('shell.membership'), icon: 'ribbon-outline', activeIcon: 'ribbon', href: '/pricing', match: (p) => p.startsWith('/pricing') || p.startsWith('/purchases') || p.startsWith('/checkout') },
+        profile,
+      ],
+    },
   ];
-  const secondary: NavItem[] = [
-    { key: 'art', label: t('explore.items.art.title'), icon: 'color-palette-outline', activeIcon: 'color-palette', href: '/art', match: (p) => p.startsWith('/art') },
-    { key: 'cards', label: t('explore.items.cards.title'), icon: 'albums-outline', activeIcon: 'albums', href: '/cards', match: (p) => p.startsWith('/cards') },
-    { key: 'breathing', label: t('explore.items.breathing.title'), icon: 'leaf-outline', activeIcon: 'leaf', href: '/breathing', match: (p) => p.startsWith('/breathing') },
-    { key: 'meditation', label: t('explore.items.meditation.title'), icon: 'flower-outline', activeIcon: 'flower', href: '/meditation', match: (p) => p.startsWith('/meditation') },
-    { key: 'insights', label: t('explore.items.insights.title'), icon: 'analytics-outline', activeIcon: 'analytics', href: '/insights', match: (p) => p.startsWith('/insights') },
-  ];
-  return { primary, secondary };
+
+  if (isStaffIdentity(identity, 'moderator') || isStaffIdentity(identity, 'admin')) {
+    sections.push({
+      key: 'staff',
+      title: t('shell.staff'),
+      items: [{ key: 'moderation', label: t('shell.moderation'), icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark', href: '/moderation', match: (p) => p.startsWith('/moderation') }],
+    });
+  }
+
+  return { primary, sections };
 }
 
 const COLLAPSE_KEY = '@behappy_sidebar_collapsed';
@@ -45,7 +101,7 @@ export function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { t, formatDate } = useT();
-  const { primary, secondary } = usePrimaryNav();
+  const { sections } = usePrimaryNav();
   const { entitlements } = useAccount();
   const [collapsedPref, setCollapsedPref] = useState(false);
 
@@ -62,30 +118,46 @@ export function Sidebar() {
     AsyncStorage.setItem(COLLAPSE_KEY, String(next)).catch(() => {});
   };
 
+  // The most specific match wins (Community vs Explore topics).
+  const activeKey = (() => {
+    let best: { key: string; len: number } | null = null;
+    for (const s of sections)
+      for (const item of s.items)
+        if (item.match(pathname)) {
+          const len = item.href.length;
+          if (!best || len > best.len) best = { key: item.key, len };
+        }
+    return best?.key;
+  })();
+
   const renderItem = (item: NavItem) => {
-    const active = item.match(pathname);
+    const active = item.key === activeKey;
     return (
       <Press
-        key={item.key}
+        key={`${item.key}-${item.href}`}
         onPress={() => router.navigate(item.href as any)}
         accessibilityRole="link"
         accessibilityState={{ selected: active }}
-        accessibilityLabel={item.label}
+        accessibilityLabel={item.badge ? `${item.label} (${item.badge})` : item.label}
         testID={`nav-${item.key}`}
         style={{
           flexDirection: collapsed ? 'column' : 'row',
           alignItems: 'center',
           gap: collapsed ? 4 : 12,
-          paddingVertical: collapsed ? 10 : 10,
+          paddingVertical: collapsed ? 9 : 9,
           paddingHorizontal: collapsed ? 4 : 12,
           borderRadius: radius.md,
           backgroundColor: active ? colors.primarySoft : 'transparent',
         }}
       >
-        <Icon name={active ? item.activeIcon : item.icon} size={22} color={active ? 'onPrimarySoft' : 'textSecondary'} />
-        <AppText variant={collapsed ? 'caption' : 'callout'} color={active ? 'onPrimarySoft' : 'textSecondary'} numberOfLines={2} align={collapsed ? 'center' : undefined} style={collapsed ? { fontSize: 11 } : undefined}>
+        <View>
+          <Icon name={active ? item.activeIcon : item.icon} size={22} color={active ? 'onPrimarySoft' : 'textSecondary'} />
+          {item.badge && collapsed ? <View style={{ position: 'absolute', top: -2, end: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: colors.brand }} /> : null}
+        </View>
+        <AppText variant={collapsed ? 'caption' : 'callout'} color={active ? 'onPrimarySoft' : 'textSecondary'} numberOfLines={2} align={collapsed ? 'center' : undefined} style={[collapsed ? { fontSize: 11 } : null, !collapsed ? { flex: 1 } : null]}>
           {item.label}
         </AppText>
+        {item.badge && !collapsed ? <Badge label={String(Math.min(item.badge, 99))} tone="primary" /> : null}
       </Press>
     );
   };
@@ -102,7 +174,7 @@ export function Sidebar() {
         paddingBottom: Math.max(insets.bottom, 12),
       }}
     >
-      <View style={{ flexDirection: collapsed ? 'column' : 'row', alignItems: 'center', gap: 10, paddingHorizontal: collapsed ? 0 : 20, marginBottom: space[6] }}>
+      <View style={{ flexDirection: collapsed ? 'column' : 'row', alignItems: 'center', gap: 10, paddingHorizontal: collapsed ? 0 : 20, marginBottom: space[4] }}>
         <Press onPress={() => router.navigate('/')} accessibilityRole="link" accessibilityLabel="BeHappy" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: collapsed ? undefined : 1 }}>
           <BrandMark size={collapsed ? 34 : 32} />
           {!collapsed ? <AppText variant="title3">BeHappy</AppText> : null}
@@ -110,13 +182,22 @@ export function Sidebar() {
         {isDesktop ? <IconButton icon={collapsed ? 'chevron-forward' : 'chevron-back'} label={collapsed ? t('nav.expand') : t('nav.collapse')} onPress={toggle} size={34} /> : null}
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: collapsed ? 8 : 12, gap: 4 }} showsVerticalScrollIndicator={false}>
-        {primary.map(renderItem)}
-        <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: space[3], marginHorizontal: collapsed ? 8 : 12 }} />
-        {secondary.map(renderItem)}
+      <ScrollView contentContainerStyle={{ paddingHorizontal: collapsed ? 8 : 12, gap: 2, paddingBottom: space[3] }} showsVerticalScrollIndicator={false}>
+        {sections.map((s, i) => (
+          <View key={s.key} style={{ gap: 2, marginTop: i ? space[3] : 0 }}>
+            {collapsed ? (
+              i ? <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: space[2], marginHorizontal: 8 }} /> : null
+            ) : (
+              <AppText variant="label" color="textTertiary" style={{ paddingHorizontal: 12, marginBottom: 4, textTransform: 'uppercase' }}>
+                {s.title}
+              </AppText>
+            )}
+            {s.items.map(renderItem)}
+          </View>
+        ))}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: collapsed ? 8 : 12, gap: 8, marginTop: space[3] }}>
+      <View style={{ paddingHorizontal: collapsed ? 8 : 12, gap: 8, marginTop: space[2] }}>
         {!collapsed ? (
           <Press onPress={() => router.navigate('/pricing')} accessibilityRole="link" style={{ padding: 12, borderRadius: radius.md, backgroundColor: colors.surfaceMuted }}>
             <AppText variant="smallStrong">{entitlements.plus.active ? t('profile.plusPlan') : t('profile.freePlan')}</AppText>

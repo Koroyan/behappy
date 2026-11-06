@@ -15,7 +15,7 @@ export default function TabLayout() {
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.bg } }}
     >
       <Tabs.Screen name="index" options={{ title: t('nav.today') }} />
-      <Tabs.Screen name="explore" options={{ title: t('nav.explore') }} />
+      <Tabs.Screen name="community" options={{ title: t('shell.community_tab') }} />
       <Tabs.Screen name="anulia" options={{ title: t('nav.anulia') }} />
       <Tabs.Screen name="journal" options={{ title: t('nav.journal') }} />
       <Tabs.Screen name="profile" options={{ title: t('nav.profile') }} />

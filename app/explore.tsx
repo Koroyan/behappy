@@ -84,7 +84,7 @@ export default function ExploreScreen() {
   ];
 
   return (
-    <Screen tab title={t('explore.title')} subtitle={t('explore.subtitle')} testID="screen-explore">
+    <Screen back title={t('explore.title')} subtitle={t('explore.subtitle')} testID="screen-explore">
       <View style={{ gap: space[8] }}>
         {sections.map((section) => (
           <View key={section.key}>
