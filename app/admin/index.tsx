@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { AppText, Badge, Banner, Button, Card, EmptyState, Screen, SectionHeader, Segmented, Skeleton, space } from '@/design';
+import { StaffGate } from '@/features/account/StaffGate';
 import { MembershipBadge } from '@/features/pro/ProParts';
 import { useT } from '@/i18n';
 import { isStaffIdentity, useIdentity } from '@/lib/api/account';
@@ -54,7 +55,7 @@ export default function AdminHome() {
   if (!allowed) {
     return (
       <Screen back title={t('admin.title')} width="reading" testID="screen-admin">
-        <EmptyState icon="lock-closed-outline" title={t('admin.staffOnly')} />
+        <StaffGate role="admin" returnTo="/admin" />
       </Screen>
     );
   }

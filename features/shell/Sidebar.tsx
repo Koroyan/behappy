@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Badge, BrandMark, Icon, IconButton, IconName, Press, radius, space, useLayout, useTheme } from '@/design';
 import { useT } from '@/i18n';
-import { isStaffIdentity, useAccount, useIdentity } from '@/lib/api/account';
+import { useAccount, useIdentity } from '@/lib/api/account';
 
 export interface NavItem {
   key: string;
@@ -111,11 +111,12 @@ export function usePrimaryNav() {
   });
 
   const staffItems: NavItem[] = [];
-  if (isStaffIdentity(identity, 'admin')) {
+  // Shown to anyone with the role; the screens ask for a password sign-in when needed.
+  if (identity.roles.includes('admin')) {
     staffItems.push({ key: 'admin', label: t('shell.admin'), icon: 'stats-chart-outline', activeIcon: 'stats-chart', href: '/admin', match: (p) => p === '/admin' });
     staffItems.push({ key: 'applications', label: t('shell.applications'), icon: 'document-text-outline', activeIcon: 'document-text', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') });
   }
-  if (isStaffIdentity(identity, 'moderator') || isStaffIdentity(identity, 'admin')) {
+  if (identity.roles.includes('moderator') || identity.roles.includes('admin')) {
     staffItems.push({ key: 'moderation', label: t('shell.moderation'), icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark', href: '/moderation', match: (p) => p.startsWith('/moderation') });
   }
   if (staffItems.length) sections.push({ key: 'staff', title: t('shell.staff'), items: staffItems });

@@ -3,7 +3,8 @@ import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { LANGUAGE_NAMES } from '@/contexts/LanguageContext';
-import { AppText, Banner, Button, Card, Divider, EmptyState, Icon, Press, Screen, SectionHeader, Skeleton, space, TextField, useFeedback } from '@/design';
+import { AppText, Banner, Button, Card, Divider, Icon, Press, Screen, SectionHeader, Skeleton, space, TextField, useFeedback } from '@/design';
+import { StaffGate } from '@/features/account/StaffGate';
 import { InfoRow, MembershipBadge, ProAvatar, VerificationBadge } from '@/features/pro/ProParts';
 import { useT } from '@/i18n';
 import { isStaffIdentity, useIdentity } from '@/lib/api/account';
@@ -69,7 +70,7 @@ export default function AdminApplication() {
   if (!allowed) {
     return (
       <Screen back title={t('admin.applications.title')} width="reading" testID="screen-admin-application">
-        <EmptyState icon="lock-closed-outline" title={t('admin.staffOnly')} />
+        <StaffGate role="admin" returnTo={`/admin/applications/${id}`} />
       </Screen>
     );
   }
