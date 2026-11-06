@@ -207,7 +207,10 @@ export default function RoomScreen() {
               <Button label={t('community.setup.title')} onPress={() => router.replace('/community' as any)} fullWidth />
             ) : suspended ? (
               <Banner tone="warning" title={t('community.suspension.title')} body={suspended.kind === 'permanent' ? t('community.suspension.permanent', { reason: suspended.reason }) : t('community.suspension.temporary', { date: formatDate(suspended.endsAt || 0, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }), reason: suspended.reason })} />
-            ) : r.room && !r.room.joined ? (
+            ) : !r.room ? (
+              // Still loading: don't offer a composer that may turn into "Join room".
+              <View style={{ height: 52 }} />
+            ) : !r.room.joined ? (
               <View style={{ gap: 6 }}>
                 <AppText variant="small" color="textSecondary" align="center">
                   {t('community.room.joinToWrite')}

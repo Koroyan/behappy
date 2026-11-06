@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 
 import { assertAiConsent } from '@/lib/privacy/consent';
 
-import { API_BASE_URL, ApiError, apiFetch, ensureAccount, NetworkError, parseError, QuotaError } from './client';
+import { API_BASE_URL, ApiError, apiFetch, ensureAccount, NetworkError, parseError, QuotaError, TUNNEL_HEADERS } from './client';
 
 export type AiFeature = 'anulia' | 'art' | 'cards' | 'journal' | 'summary' | 'motivation' | 'transcribe' | 'speech';
 
@@ -86,6 +86,7 @@ export async function aiResponsesStream(body: Record<string, unknown>, ctx: AiCo
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'text/event-stream',
+    ...TUNNEL_HEADERS,
     Authorization: `Bearer ${account.token}`,
     ...ctxHeaders(ctx),
   };

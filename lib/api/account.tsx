@@ -26,6 +26,8 @@ export interface Identity {
   sessionKind: 'device' | 'password';
   status: 'active' | 'suspended';
   emailAvailable: boolean;
+  /** Development servers only: the fixed test code (never set in production). */
+  testCode?: string | null;
 }
 
 export interface Me {

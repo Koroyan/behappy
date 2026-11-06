@@ -8,7 +8,7 @@
  */
 import { io, Socket } from 'socket.io-client';
 
-import { API_BASE_URL, getStoredAccount, onAccountChange } from '@/lib/api/client';
+import { API_BASE_URL, getStoredAccount, onAccountChange, TUNNEL_HEADERS } from '@/lib/api/client';
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'online' | 'offline';
 
@@ -36,7 +36,10 @@ export async function getSocket(): Promise<Socket | null> {
   const s = io(API_BASE_URL, {
     path: '/socket.io',
     auth: { token: account.token },
-    transports: ['websocket'],
+    // WebSocket first; long-polling if a network or tunnel blocks it.
+    transports: ['websocket', 'polling'],
+    tryAllTransports: true,
+    extraHeaders: TUNNEL_HEADERS,
     reconnection: true,
     reconnectionDelay: 800,
     reconnectionDelayMax: 8000,

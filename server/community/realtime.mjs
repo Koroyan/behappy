@@ -138,6 +138,12 @@ export function startRealtime({ server, deps, community }) {
     for (const s of await io.in(`user:${accountId}`).fetchSockets()) await refreshRelations(s);
   });
 
+  // Other modules (private messages, bookings) push to a person's devices.
+  deps.realtime = {
+    toUser: (accountId, event, payload) => io.to(`user:${accountId}`).emit(event, payload),
+    connections: () => io.engine.clientsCount,
+  };
+
   return {
     io,
     stop: () =>

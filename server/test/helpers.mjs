@@ -28,6 +28,7 @@ export function makeConfig(overrides = {}) {
     encryption: { documentsKey: '', messagesKey: '', identifierSalt: '' },
     professional: { amountMinor: 7900, currency: 'GEL', durationDays: 30, trialDays: 14, graceDays: 0, verificationValidDays: 365 },
     community: { aiModeration: false, anuliaHourlyRoomCap: 30, anuliaDailyGlobalCap: 2000 },
+    limits: { accountsPerHourPerIp: 1000, loginsPer15MinPerIp: 1000, resetsPerHourPerIp: 1000 },
     ...overrides,
   };
 }

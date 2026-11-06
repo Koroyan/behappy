@@ -55,6 +55,22 @@ export function buildReturnUrl(config, returnTo = {}) {
   return `${base}${pathPart}`;
 }
 
+/**
+ * The public address of this API for the current request. When the API is
+ * served on the app's own origin (dev proxy, tunnel, production proxy) and that
+ * origin is an allowed app URL, Flitt sends the payer and its callbacks back
+ * there; otherwise PUBLIC_API_URL is used. Only allowed origins are accepted.
+ */
+export function requestApiBase(config, req) {
+  const host = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
+  const proto = String(req.get('x-forwarded-proto') || 'http').split(',')[0].trim();
+  const origin = host ? `${proto}://${host}` : '';
+  return origin && config.appPublicUrls.includes(origin) ? origin : config.publicApiUrl;
+}
+
+/** Development tools answer only on this machine, never through a tunnel. */
+const isLocalRequest = (req) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip);
+
 const withQuery = (url, params) => {
   const qs = new URLSearchParams(params).toString();
   return url.includes('?') ? `${url}&${qs}` : `${url}?${qs}`;
@@ -108,7 +124,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
     next();
   });
 
-  const accountCreation = new IpWindow(20, 60 * 60 * 1000);
+  const accountCreation = new IpWindow(config.limits?.accountsPerHourPerIp ?? 20, 60 * 60 * 1000);
   const restoreAttempts = new IpWindow(10, 15 * 60 * 1000);
   const auth = requireAccount(db, { clock });
   const json = express.json({ limit: '10kb' });
@@ -162,7 +178,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
       usage: await usageSummary({ db, accountId: a.id, entitlements, now }),
       payments: { provider: 'flitt', mode: 'test' },
       ai: { available: Boolean(config.openai.apiKey) },
-      identity: { registered: a.registered, email: a.email, emailVerified: a.emailVerified, roles: a.roles, sessionKind: a.sessionKind, status: a.status, emailAvailable: mail.available },
+      identity: { registered: a.registered, email: a.email, emailVerified: a.emailVerified, roles: a.roles, sessionKind: a.sessionKind, status: a.status, emailAvailable: mail.available, testCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null },
       notifications: { unread: await unreadCount(db, a.id) },
       ...Object.fromEntries(await Promise.all(deps.meSections.map(async (s) => [s.name, await s.fn(db, a, now)]))),
     });
@@ -188,7 +204,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
   });
 
   // ---------- Email + password ----------
-  app.use('/api/auth', createAuthRouter({ db, mailer: mail, clock }));
+  app.use('/api/auth', createAuthRouter({ db, mailer: mail, clock, limits: config.limits || {}, devFixedCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null }));
 
   // ---------- Notifications ----------
   app.get('/api/notifications', auth, async (req, res) => {
@@ -218,6 +234,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
         lang: String(req.body?.lang || 'en'),
         returnUrl,
         now: clock.now(),
+        apiBase: requestApiBase(config, req),
       });
       res.status(201).json({ order: publicOrder(order), checkoutUrl, product, mode: 'test' });
     } catch (error) {
@@ -333,6 +350,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
 
   // ---------- Development tools (never in production) ----------
   if (config.devTools && !config.isProduction) {
+    app.use('/api/dev', (req, res, next) => (isLocalRequest(req) ? next() : res.status(403).json({ error: 'local_only' })));
     app.get('/api/dev/outbox', (req, res) => {
       const m = mail.lastTo(String(req.query.to || ''));
       res.json({ message: m });

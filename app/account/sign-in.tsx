@@ -77,6 +77,7 @@ export default function SignIn() {
             <AppText variant="body" color="textSecondary">
               {t('account.resetBody')}
             </AppText>
+            {identity.testCode ? <Banner tone="test" body={t('account.testCode', { code: identity.testCode })} /> : null}
             <CodeField value={code} onChangeText={setCode} />
             <PasswordField label={t('account.newPassword')} value={password} onChangeText={setPassword} helper={t('account.passwordHint')} autoComplete="new-password" textContentType="newPassword" />
             {error ? <Banner tone="danger" body={error} /> : null}

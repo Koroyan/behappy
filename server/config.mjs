@@ -38,6 +38,10 @@ const DEV_TOOLS = !IS_PRODUCTION && (process.argv.includes('--dev-tools') || boo
 export const config = {
   isProduction: IS_PRODUCTION,
   devTools: DEV_TOOLS,
+  // Development only: while no email/SMS provider is connected, every
+  // verification code is this fixed value (and the app says so on screen).
+  // Never active in production: DEV_TOOLS is always false there.
+  devFixedCode: DEV_TOOLS ? (env.DEV_FIXED_CODE || '123456').replace(/\D/g, '').slice(0, 6).padStart(6, '0') : null,
   // PostgreSQL connection string. Without it the server uses an embedded
   // PostgreSQL (PGlite) in DATA_DIR/pg, for development only.
   databaseUrl: env.DATABASE_URL || '',

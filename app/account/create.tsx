@@ -95,6 +95,7 @@ export default function CreateAccount() {
             <AppText variant="body" color="textSecondary">
               {t('account.verifyBody', { email: email.trim() })}
             </AppText>
+            {identity.testCode ? <Banner tone="test" body={t('account.testCode', { code: identity.testCode })} /> : null}
             <CodeField value={code} onChangeText={setCode} testID="create-code" />
             {error ? <Banner tone="danger" body={error} /> : null}
             <Button label={t('account.verifyCta')} onPress={confirmCode} loading={busy} disabled={code.length !== 6} fullWidth testID="create-confirm" />

@@ -11,15 +11,23 @@ import { Platform } from 'react-native';
 
 const ACCOUNT_KEY = '@behappy_account_v1';
 
+/**
+ * Where the API lives. Web: the page's own origin, because the API is served
+ * on the same origin (the dev proxy, scripts/dev/proxy.mjs, and the
+ * production TLS proxy route /api and /socket.io), so the app works the same
+ * on localhost and through a tunnel on a phone. Set EXPO_PUBLIC_API_URL when
+ * the API is on another origin (and for native builds).
+ */
 function defaultBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
   if (fromEnv) return fromEnv.replace(/\/$/, '');
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') return `${protocol}//${hostname}:8787`;
-  }
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
   return 'http://localhost:8787';
 }
+
+/** ngrok's free tunnels show a warning page to browsers unless this header is sent. */
+export const TUNNEL_HEADERS: Record<string, string> =
+  Platform.OS === 'web' && typeof window !== 'undefined' && /ngrok(-free)?\.(app|io|dev)$/.test(window.location?.hostname || '') ? { 'ngrok-skip-browser-warning': 'true' } : {};
 
 export const API_BASE_URL = defaultBaseUrl();
 
@@ -130,7 +138,7 @@ export async function getStoredAccount(): Promise<StoredAccount | null> {
 
 async function rawFetch(path: string, init: RequestInit = {}): Promise<Response> {
   try {
-    return await fetch(`${API_BASE_URL}${path}`, init);
+    return await fetch(`${API_BASE_URL}${path}`, { ...init, headers: { ...TUNNEL_HEADERS, ...((init.headers as Record<string, string>) || {}) } });
   } catch {
     throw new NetworkError();
   }

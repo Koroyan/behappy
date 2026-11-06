@@ -78,7 +78,7 @@ const historyEntry = (at, status, via, note) => JSON.stringify([{ at, status, vi
  * `returnUrl` must already be validated by the caller. `professionalId` ties a
  * membership order to a professional profile (checked by the caller).
  */
-export async function createCheckout({ db, config, flitt, accountId, productId, lang, returnUrl, professionalId = null, now = Date.now(), audience = 'consumer' }) {
+export async function createCheckout({ db, config, flitt, accountId, productId, lang, returnUrl, professionalId = null, now = Date.now(), audience = 'consumer', apiBase = config.publicApiUrl }) {
   const product = findProduct(config.catalog, productId, { audience, professional: config.professional });
   if (!product) {
     const err = new Error('Unknown product');
@@ -106,8 +106,8 @@ export async function createCheckout({ db, config, flitt, accountId, productId, 
       amountMinor: product.amountMinor,
       currency: product.currency,
       description: orderDescription(product),
-      responseUrl: `${config.publicApiUrl}/api/payments/flitt/return?orderId=${encodeURIComponent(orderId)}`,
-      callbackUrl: `${config.publicApiUrl}/api/payments/flitt/callback`,
+      responseUrl: `${apiBase}/api/payments/flitt/return?orderId=${encodeURIComponent(orderId)}`,
+      callbackUrl: `${apiBase}/api/payments/flitt/callback`,
       lifetimeSeconds: config.flitt.orderLifetimeSeconds,
       lang: ['ka', 'en', 'ru', 'uk', 'pl', 'de', 'fr', 'es', 'it', 'az'].includes(lang) ? lang : 'en',
       productId: product.id,

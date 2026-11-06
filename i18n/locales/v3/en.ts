@@ -52,6 +52,7 @@ export const en3 = {
     verifyCta: 'Confirm',
     resend: 'Send a new code',
     resent: 'A new code is on its way.',
+    testCode: 'Test mode: this server doesn’t send emails or SMS yet. Your code is {code}.',
     created: 'Your account is ready.',
     signInTitle: 'Sign in',
     signInBody: 'Use the email and password of your BeHappy account.',

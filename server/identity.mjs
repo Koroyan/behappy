@@ -65,9 +65,12 @@ export function passwordProblem(password, email = '') {
 const sixDigits = () => String(crypto.randomInt(0, 1000000)).padStart(6, '0');
 const codeHash = (purpose, target, code) => sha256(`${purpose}:${target}:${code}`);
 
-/** Creates a fresh code (older open codes of the same purpose stop working). */
-export async function createCode(q, { accountId, purpose, target, now }) {
-  const code = sixDigits();
+/**
+ * Creates a fresh code (older open codes of the same purpose stop working).
+ * `fixedCode` is the development-only test code (config.devFixedCode).
+ */
+export async function createCode(q, { accountId, purpose, target, now, fixedCode = null }) {
+  const code = fixedCode && /^\d{6}$/.test(fixedCode) ? fixedCode : sixDigits();
   await q.query('update verification_codes set consumed_at = $3 where account_id = $1 and purpose = $2 and consumed_at is null', [accountId, purpose, ts(now)]);
   await q.query('insert into verification_codes (id, account_id, purpose, target, code_hash, created_at, expires_at) values ($1, $2, $3, $4, $5, $6, $7)', [
     newId('vc'),
@@ -118,12 +121,12 @@ class Window {
 
 const langOf = (req) => (typeof req.body?.lang === 'string' && /^[a-z]{2}$/.test(req.body.lang) ? req.body.lang : 'en');
 
-export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() } }) {
+export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }, devFixedCode = null, limits = {} }) {
   const router = express.Router();
   const auth = requireAccount(db, { clock });
-  const loginByIp = new Window(20, 15 * MINUTE);
-  const codesByAccount = new Window(5, 60 * MINUTE);
-  const forgotByIp = new Window(10, 60 * MINUTE);
+  const loginByIp = new Window(limits.loginsPer15MinPerIp ?? 20, 15 * MINUTE);
+  const codesByAccount = new Window(limits.codesPerHourPerAccount ?? 5, 60 * MINUTE);
+  const forgotByIp = new Window(limits.resetsPerHourPerIp ?? 10, 60 * MINUTE);
   const json = express.json({ limit: '10kb' });
   const fail = (res, status, error, extra = {}) => res.status(status).json({ error, ...extra });
 
@@ -148,10 +151,10 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
     const passwordHash = await hashPassword(req.body.password);
     const code = await db.tx(async (t) => {
       await t.query('update accounts set password_hash = $2, password_changed_at = $3 where id = $1', [req.account.id, passwordHash, ts(now)]);
-      return createCode(t, { accountId: req.account.id, purpose: 'verify_email', target: email, now });
+      return createCode(t, { accountId: req.account.id, purpose: 'verify_email', target: email, now, fixedCode: devFixedCode });
     });
     await sendCode(email, 'verify', code, langOf(req));
-    res.json({ ok: true, verification: 'sent', email });
+    res.json({ ok: true, verification: 'sent', email, ...(devFixedCode ? { testCode: devFixedCode } : {}) });
   });
 
   router.post('/resend', json, auth, async (req, res) => {
@@ -161,9 +164,9 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
     const target = r.rows[0]?.target;
     if (!target || req.account.registered) return fail(res, 409, 'nothing_to_verify');
     if (!codesByAccount.allow(req.account.id, now)) return fail(res, 429, 'rate_limited');
-    const code = await db.tx((t) => createCode(t, { accountId: req.account.id, purpose: 'verify_email', target, now }));
+    const code = await db.tx((t) => createCode(t, { accountId: req.account.id, purpose: 'verify_email', target, now, fixedCode: devFixedCode }));
     await sendCode(target, 'verify', code, langOf(req));
-    res.json({ ok: true, verification: 'sent' });
+    res.json({ ok: true, verification: 'sent', ...(devFixedCode ? { testCode: devFixedCode } : {}) });
   });
 
   // Step 2: the code from the email. The account becomes "registered".
@@ -225,10 +228,10 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
     const r = await db.query('select id from accounts where email = $1 and email_verified_at is not null', [email]);
     const id = r.rows[0]?.id;
     if (id && codesByAccount.allow(id, now)) {
-      const code = await db.tx((t) => createCode(t, { accountId: id, purpose: 'reset_password', target: email, now }));
+      const code = await db.tx((t) => createCode(t, { accountId: id, purpose: 'reset_password', target: email, now, fixedCode: devFixedCode }));
       await sendCode(email, 'reset', code, langOf(req));
     }
-    res.json({ ok: true });
+    res.json({ ok: true, ...(devFixedCode ? { testCode: devFixedCode } : {}) });
   });
 
   router.post('/password/reset', json, async (req, res) => {
