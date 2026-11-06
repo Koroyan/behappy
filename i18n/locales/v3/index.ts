@@ -7,5 +7,7 @@ import type { AppLanguage } from '@/contexts/LanguageContext';
 
 import type { PartialMessages } from '../../index';
 import { ka3 } from './ka';
+import { hy3 } from './hy';
+import { ru3 } from './ru';
 
-export const v3Locales: Partial<Record<AppLanguage, PartialMessages>> = { ka: ka3 };
+export const v3Locales: Partial<Record<AppLanguage, PartialMessages>> = { ka: ka3, ru: ru3, hy: hy3 };
