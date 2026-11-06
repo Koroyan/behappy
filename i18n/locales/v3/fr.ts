@@ -352,6 +352,7 @@ export const fr3: PartialMessages = {
     },
     staffOnly: 'Cet espace est réservé aux modérateurs BeHappy.',
     signInAsStaff: 'Connectez-vous avec votre e-mail et votre mot de passe pour utiliser les outils de modération.',
+    ownDecision: 'Une autre personne de la modération doit trancher, car la décision initiale vient de vous.',
   },
 
   notifications: {

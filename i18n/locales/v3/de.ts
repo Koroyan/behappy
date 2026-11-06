@@ -352,6 +352,7 @@ export const de3: PartialMessages = {
     },
     staffOnly: 'Dieser Bereich ist für die BeHappy-Moderation.',
     signInAsStaff: 'Melde dich mit E-Mail und Passwort an, um die Moderationswerkzeuge zu nutzen.',
+    ownDecision: 'Darüber muss eine andere Person aus der Moderation entscheiden, weil die ursprüngliche Entscheidung von dir stammt.',
   },
 
   notifications: {

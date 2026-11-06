@@ -228,6 +228,11 @@ export function createModeration({ db, clock = { now: () => Date.now() }, bus })
     if (!['upheld', 'overturned'].includes(decision)) fail(400, 'bad_decision');
     const now = clock.now();
     const target = await db.tx(async (t) => {
+      // A review request is decided by someone other than the moderator who
+      // issued the suspension (members are told "a different moderator will read it").
+      const cur = await t.query("select a.status, s.created_by from appeals a left join suspensions s on s.id = a.suspension_id where a.id = $1 for update of a", [Number(appealId)]);
+      if (!cur.rowCount || cur.rows[0].status !== 'open') fail(404, 'not_found');
+      if (cur.rows[0].created_by && cur.rows[0].created_by === actor.id) fail(409, 'own_decision');
       const r = await t.query("update appeals set status = $2, decided_at = $3, decided_by = $4, decision_note = $5 where id = $1 and status = 'open' returning account_id, suspension_id", [Number(appealId), decision, ts(now), actor.id, note ? String(note).slice(0, 1000) : null]);
       if (!r.rowCount) fail(404, 'not_found');
       const { account_id: accountId, suspension_id: suspensionId } = r.rows[0];

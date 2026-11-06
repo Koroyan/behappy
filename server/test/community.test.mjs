@@ -53,6 +53,7 @@ describe('Community', () => {
   let luka;
   let mari;
   let mod;
+  let mod2;
 
   before(async () => {
     t = await startTestServer({ extend: [mountCommunity], services: [startCommunityRealtime], openai });
@@ -61,6 +62,8 @@ describe('Community', () => {
     mari = await member('Mari');
     mod = await member('Gentle Owl');
     await t.grantRole(mod.accountId, 'moderator');
+    mod2 = await member('Quiet Fox');
+    await t.grantRole(mod2.accountId, 'moderator');
   });
   after(() => t.stop());
 
@@ -229,7 +232,10 @@ describe('Community', () => {
     assert.equal(appeal.status, 200);
     const appeals = (await t.api('/api/moderation/appeals', { token: mod.token })).json.appeals;
     assert.equal(appeals[0].pseudonym, 'Luka');
-    assert.equal((await t.api(`/api/moderation/appeals/${appeal.json.appealId}/decide`, { token: mod.token, method: 'POST', body: { decision: 'overturned', note: 'apology accepted' } })).status, 200);
+    const own = await t.api(`/api/moderation/appeals/${appeal.json.appealId}/decide`, { token: mod.token, method: 'POST', body: { decision: 'upheld' } });
+    assert.equal(own.status, 409, 'the moderator who suspended cannot decide the review');
+    assert.equal(own.json.error, 'own_decision');
+    assert.equal((await t.api(`/api/moderation/appeals/${appeal.json.appealId}/decide`, { token: mod2.token, method: 'POST', body: { decision: 'overturned', note: 'apology accepted' } })).status, 200);
     t.clock.advance(31 * SECOND);
     assert.equal((await say(luka, 'general:en', 'Thank you for the second chance.')).status, 200);
     const hist = await t.api(`/api/moderation/history?member=${luka.ref}`, { token: mod.token });

@@ -361,6 +361,7 @@ export const en3 = {
     },
     staffOnly: 'This area is for BeHappy moderators.',
     signInAsStaff: 'Sign in with your email and password to use moderation tools.',
+    ownDecision: 'Another moderator needs to decide this, because you made the original decision.',
   },
 
   notifications: {

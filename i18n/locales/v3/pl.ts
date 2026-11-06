@@ -352,6 +352,7 @@ export const pl3: PartialMessages = {
     },
     staffOnly: 'Ta sekcja jest dla moderacji BeHappy.',
     signInAsStaff: 'Zaloguj się e-mailem i hasłem, aby korzystać z narzędzi moderacji.',
+    ownDecision: 'O tym musi zdecydować inna osoba z moderacji, bo pierwotna decyzja była twoja.',
   },
 
   notifications: {

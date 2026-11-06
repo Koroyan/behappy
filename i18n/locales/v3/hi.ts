@@ -355,6 +355,7 @@ export const hi3: PartialMessages = {
     },
     staffOnly: 'यह जगह BeHappy मॉडरेटरों के लिए है।',
     signInAsStaff: 'मॉडरेशन टूल इस्तेमाल करने के लिए ईमेल और पासवर्ड से साइन इन करें।',
+    ownDecision: 'मूल फ़ैसला आपने लिया था, इसलिए इस अनुरोध पर फ़ैसला किसी दूसरे मॉडरेटर को करना होगा।',
   },
 
   notifications: {

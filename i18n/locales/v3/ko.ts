@@ -352,6 +352,7 @@ export const ko3: PartialMessages = {
     },
     staffOnly: 'BeHappy 운영진 전용 공간이에요.',
     signInAsStaff: '운영 도구를 쓰려면 이메일과 비밀번호로 로그인해 주세요.',
+    ownDecision: '처음 결정을 내린 분이 본인이므로, 이 요청은 다른 운영진이 결정해야 해요.',
   },
 
   notifications: {

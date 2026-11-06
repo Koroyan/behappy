@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { AppText, Badge, Banner, Button, Card, EmptyState, Screen, Segmented, space, TextField, useFeedback } from '@/design';
 import { useT } from '@/i18n';
 import { isStaffIdentity, useIdentity } from '@/lib/api/account';
+import { ApiError } from '@/lib/api/client';
 import * as mod from '@/lib/api/moderation';
 import type { ModAction, ModAppeal, ModReport, ResolveAction } from '@/lib/api/moderation';
 
@@ -91,8 +92,8 @@ function AppealCard({ appeal, onDone }: { appeal: ModAppeal; onDone: () => void 
       await mod.decideAppeal(appeal.id, d, note.trim() || undefined);
       toast(t('moderation.done'));
       onDone();
-    } catch {
-      toast(t('community.errors.generic'));
+    } catch (e) {
+      toast(e instanceof ApiError && e.code === 'own_decision' ? t('moderation.ownDecision') : t('community.errors.generic'));
     }
   };
   return (

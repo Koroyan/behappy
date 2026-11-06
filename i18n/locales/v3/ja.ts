@@ -352,6 +352,7 @@ export const ja3: PartialMessages = {
     },
     staffOnly: 'このエリアは BeHappy のモデレーター専用です。',
     signInAsStaff: 'モデレーションツールを使うには、メールアドレスとパスワードでログインしてください。',
+    ownDecision: '最初の判断をしたのはあなたなので、この依頼は別のモデレーターが判断する必要があります。',
   },
 
   notifications: {

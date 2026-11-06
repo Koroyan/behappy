@@ -352,6 +352,7 @@ export const az3: PartialMessages = {
     },
     staffOnly: 'Bu bölmə BeHappy moderatorları üçündür.',
     signInAsStaff: 'Moderasiya alətlərindən istifadə üçün e-poçt və parolla daxil olun.',
+    ownDecision: 'İlkin qərarı siz verdiyiniz üçün bu müraciət barədə başqa moderator qərar verməlidir.',
   },
 
   notifications: {

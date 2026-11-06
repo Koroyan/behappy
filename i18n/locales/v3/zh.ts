@@ -352,6 +352,7 @@ export const zh3: PartialMessages = {
     },
     staffOnly: '此区域仅供 BeHappy 管理员使用。',
     signInAsStaff: '请使用邮箱和密码登录以使用管理工具。',
+    ownDecision: '由于原决定是你做出的，这条复核申请需要由另一位管理员处理。',
   },
 
   notifications: {

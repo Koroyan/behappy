@@ -352,6 +352,7 @@ export const it3: PartialMessages = {
     },
     staffOnly: 'Quest’area è per i moderatori di BeHappy.',
     signInAsStaff: 'Accedi con email e password per usare gli strumenti di moderazione.',
+    ownDecision: 'Deve decidere un altro moderatore, perché la decisione originale è stata tua.',
   },
 
   notifications: {

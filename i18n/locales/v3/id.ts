@@ -352,6 +352,7 @@ export const id3: PartialMessages = {
     },
     staffOnly: 'Area ini khusus moderator BeHappy.',
     signInAsStaff: 'Masuk dengan email dan kata sandi untuk memakai alat moderasi.',
+    ownDecision: 'Moderator lain perlu memutuskan ini, karena keputusan awal dibuat olehmu.',
   },
 
   notifications: {

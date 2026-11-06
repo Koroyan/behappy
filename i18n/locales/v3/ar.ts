@@ -355,6 +355,7 @@ export const ar3: PartialMessages = {
     },
     staffOnly: 'هذا القسم مخصص لمشرفي BeHappy.',
     signInAsStaff: 'لاستخدام أدوات الإشراف، يُرجى تسجيل الدخول بالبريد وكلمة المرور.',
+    ownDecision: 'يجب أن يتخذ مشرف آخر القرار بشأن هذا الطلب، لأن القرار الأصلي صدر عنك.',
   },
 
   notifications: {

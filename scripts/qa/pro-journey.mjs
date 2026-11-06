@@ -330,6 +330,8 @@ try {
 } finally {
   for (const [who, c] of [['pro', P], ['admin', A], ['client', C]]) if (c.page.errors.length) results.push(`WARN ${who} page errors: ${[...new Set(c.page.errors)].slice(0, 3).join(' | ')}`);
   await browser.close();
+  // Test-account sessions for follow-up QA (dev server only; written to --out, never the repo).
+  fs.writeFileSync(path.join(OUT, 'accounts.json'), JSON.stringify({ app: APP, proId, pro, admin, member }, null, 2));
   console.log(results.join('\n'));
   fs.writeFileSync(path.join(OUT, 'results.txt'), results.join('\n') + '\n');
   process.exit(results.some((r) => r.startsWith('FAIL')) ? 1 : 0);

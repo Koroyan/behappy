@@ -352,6 +352,7 @@ export const tr3: PartialMessages = {
     },
     staffOnly: 'Bu alan BeHappy moderatörleri içindir.',
     signInAsStaff: 'Moderasyon araçlarını kullanmak için e-posta ve şifrenle giriş yap.',
+    ownDecision: 'İlk kararı sen verdiğin için bu isteği başka bir moderatörün karara bağlaması gerekiyor.',
   },
 
   notifications: {
