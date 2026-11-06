@@ -663,6 +663,12 @@ export const tr: PartialMessages = {
     exported: 'Veri dosyan hazır.',
     deleteData: 'Tüm verileri sil',
     deleteHint: 'Bu cihazdaki günlüğü, sohbetleri, çalışmaları ve ayarları siler.',
+    deleteFailedOffline: 'Çevrimdışı görünüyorsun, bu yüzden hiçbir şey silinmedi. İnternete bağlanıp tekrar dene.',
+    deleteFailedServer: 'Sunucu hesabını şu an silemedi, bu yüzden hiçbir şey silinmedi. Biraz sonra tekrar dene.',
+    deleteNotSignedInTitle: 'Bu cihazda artık oturum açık değil',
+    deleteNotSignedInBody: 'Sunucu bu cihazın oturumunu tanımıyor (örneğin hesap başka bir cihazda geri yüklendi), bu yüzden sunucudaki hesap buradan silinemez. Yine de bu cihazda saklanan her şeyi silebilirsin.',
+    deleteNotSignedInCta: 'Bu cihazdan sil',
+
     deleteConfirmTitle: 'Her şey silinsin mi?',
     deleteConfirmBody: 'Bu işlem bu cihazdaki tüm BeHappy verilerini ve sunucudaki anonim hesabını kalıcı olarak siler. Kurtarma kodunu saklamadıysan satın alımlarını daha sonra geri yükleyemezsin.',
     deleteConfirmCta: 'Her şeyi sil',
