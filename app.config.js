@@ -1,5 +1,14 @@
 require('dotenv').config();
 
+// EXPO_PUBLIC_* variables are inlined into the app bundle that every visitor
+// downloads. The project-root .env of older checkouts held the OpenAI key as
+// EXPO_PUBLIC_API_KEY; that key was published and must be revoked. Drop it here
+// so it can never reach a bundle again, even if some code referenced it.
+if (process.env.EXPO_PUBLIC_API_KEY) {
+  delete process.env.EXPO_PUBLIC_API_KEY;
+  console.warn('[security] Ignoring EXPO_PUBLIC_API_KEY from .env: secrets never go into the app. Revoke that key and delete the line (AI keys live only in server/.env).');
+}
+
 // Single source of Expo config (app.json was removed in 2.0: when both exist,
 // a function-less app.config.js silently ignores app.json — which had dropped
 // the microphone permission from native builds).

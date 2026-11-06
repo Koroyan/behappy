@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 
-import { deleteServerAccount } from '@/lib/api/account';
+import { deleteServerAccount, forgetAccountOnThisDevice } from '@/lib/api/account';
 import { clearArtworks } from '@/lib/media/artworkStore';
 
 // Never exported: credentials and caches that are not the user's content.
@@ -46,8 +46,16 @@ export async function exportAllData(): Promise<void> {
   if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(path, { mimeType: 'application/json' });
 }
 
-export async function deleteAllData(): Promise<void> {
-  await deleteServerAccount();
+/**
+ * Deletes the server account first, then everything on this device. If the
+ * server step fails it throws (AccountDeletionError) and nothing is deleted,
+ * so the person can try again; otherwise the account would be orphaned with
+ * no way left to delete it. `localOnly` is the explicit "delete on this device
+ * only" choice offered when the server can't be reached from here.
+ */
+export async function deleteAllData({ localOnly = false }: { localOnly?: boolean } = {}): Promise<void> {
+  if (localOnly) await forgetAccountOnThisDevice();
+  else await deleteServerAccount();
   await clearArtworks();
   await AsyncStorage.clear();
 }

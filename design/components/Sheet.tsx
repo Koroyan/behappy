@@ -103,6 +103,8 @@ interface ConfirmOptions {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
+  /** A message with a single acknowledge button (no cancel). */
+  notice?: boolean;
 }
 
 interface FeedbackContextValue {
@@ -150,7 +152,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         maxWidth={440}
         footer={
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-            <Button label={pending?.cancelLabel ?? t('common.cancel')} variant="quiet" onPress={() => settle(false)} />
+            {pending?.notice ? null : <Button label={pending?.cancelLabel ?? t('common.cancel')} variant="quiet" onPress={() => settle(false)} />}
             <Button label={pending?.confirmLabel ?? t('common.confirm')} variant={pending?.destructive ? 'danger' : 'primary'} onPress={() => settle(true)} testID="confirm-accept" />
           </View>
         }

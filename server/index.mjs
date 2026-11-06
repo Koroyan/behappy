@@ -4,7 +4,7 @@
 // Holds the OpenAI key, meters AI usage, and verifies Flitt TEST payments.
 
 import { createApp } from './app.mjs';
-import { assertTestModeOnly, config, describeConfig } from './config.mjs';
+import { assertTestModeOnly, config, describeConfig, LEAKED_ROOT_KEY_PRESENT } from './config.mjs';
 import { Store } from './store.mjs';
 
 assertTestModeOnly();
@@ -17,11 +17,11 @@ const app = createApp({ store, config });
 app.listen(config.port, () => {
   const info = describeConfig();
   console.log('BeHappy API listening', info);
-  if (config.openai.keySource === 'legacy project-root .env') {
+  if (LEAKED_ROOT_KEY_PRESENT) {
     console.warn(
-      '[security] Using the OpenAI key from the project-root .env (EXPO_PUBLIC_API_KEY). ' +
-        'That key was committed to git and shipped in the public web bundle: rotate it at ' +
-        'platform.openai.com, put the new key in server/.env as OPENAI_API_KEY, and remove it from the root .env.'
+      '[security] The project-root .env still contains EXPO_PUBLIC_API_KEY. That OpenAI key was committed to git ' +
+        'and shipped in a public web bundle. It is NOT used by this server or the app: revoke it at ' +
+        'platform.openai.com/api-keys and delete the line.'
     );
   }
   if (!config.openai.apiKey) console.warn('[ai] OPENAI_API_KEY is missing: AI features will answer 503.');

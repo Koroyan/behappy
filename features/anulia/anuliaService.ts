@@ -3,7 +3,8 @@
  *
  * Conversations are stored on the device under the pre-2.0 key
  * "therapy_sessions" (same shape), so existing history carries over.
- * Replies stream from the hosted prompt through the BeHappy server. Images
+ * Replies stream through the BeHappy server, which adds Anulia's instructions
+ * (server/prompts/anulia.md) to every request. Images
  * are sent as input_image parts of the same conversation, so text and image
  * turns share one continuous context.
  */
@@ -13,10 +14,6 @@ import { canPersonalize } from '@/lib/privacy/consent';
 import { publish, readJson, uid, writeJson } from '@/lib/storage/json';
 import { buildProfileContextBlock, getUserProfile } from '@/services/userProfileService';
 
-import { ANULIA_PERSONA_CONTEXT } from './persona';
-
-const PROMPT_ID = 'pmpt_6902692e3d8081959fff3a192b21482902ebe8295781d9fb';
-const PROMPT_VERSION = '11';
 const SESSIONS_KEY = 'therapy_sessions';
 export const ANULIA_TOPIC = 'anulia';
 
@@ -143,19 +140,21 @@ export function makeMessage(type: AnuliaMessage['type'], content: string, extra:
 async function contextBlock(language: AppLanguage): Promise<string> {
   const profile = (await canPersonalize()) ? buildProfileContextBlock(await getUserProfile()) : '';
   const lang = LANGUAGE_NAMES[language] || 'English';
-  return [ANULIA_PERSONA_CONTEXT, profile, `[Reply in the language the client writes in. If unclear, use ${lang}.]`].filter(Boolean).join('\n');
+  return [profile, `[Reply in the language the person writes in. If unclear, use ${lang}.]`].filter(Boolean).join('\n');
 }
 
 function toReply(raw: string): AnuliaReply {
   const parsed = parseJsonLoose(raw);
   if (parsed && typeof parsed === 'object') {
     const text = parsed.response_text || parsed.message || parsed.content;
-    const emotion = parsed.clinical_assessment?.emotional_state;
+    // 3.0 server instructions use neutral keys; the older hosted-prompt keys are still read.
+    const emotion = parsed.emotional_state ?? parsed.clinical_assessment?.emotional_state;
+    const themes = Array.isArray(parsed.themes) ? parsed.themes : [parsed.session_data?.presenting_concern, parsed.session_data?.treatment_target];
     return {
       response_text: typeof text === 'string' && text.trim() ? text : raw,
       detected_emotion: typeof emotion === 'string' && emotion.split(/\s+/).length === 1 && emotion.length <= 20 ? emotion.toLowerCase() : undefined,
-      key_insights: [parsed.session_data?.presenting_concern, parsed.session_data?.treatment_target].filter((x) => typeof x === 'string' && x),
-      crisis_level: parsed.crisis_response?.risk_level ?? null,
+      key_insights: themes.filter((x: unknown): x is string => typeof x === 'string' && x.trim() !== '').slice(0, 3),
+      crisis_level: parsed.safety?.risk_level ?? parsed.crisis_response?.risk_level ?? null,
       interactive_component: null,
     };
   }
@@ -178,7 +177,7 @@ export interface SendOptions {
  */
 export async function sendToAnulia({ conversation, history, text, imageDataUrl, language, onDelta }: SendOptions): Promise<{ reply: AnuliaReply; responseId?: string }> {
   const ctx = await contextBlock(language);
-  const schemaHint = '[Respond with valid JSON matching the clinical schema.]';
+  const schemaHint = '[Reply with the JSON object described in your instructions.]';
 
   const userContent = (withContext: string) => {
     const parts: any[] = [{ type: 'input_text', text: `${withContext}\n\n${text}\n\n${schemaHint}` }];
@@ -213,7 +212,6 @@ export async function sendToAnulia({ conversation, history, text, imageDataUrl, 
     });
     await aiResponsesStream(
       {
-        prompt: { id: PROMPT_ID, version: PROMPT_VERSION },
         input,
         store: true,
         max_output_tokens: 1400,

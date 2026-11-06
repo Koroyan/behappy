@@ -6,7 +6,7 @@ import { Platform, View } from 'react-native';
 import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@/contexts/LanguageContext';
 import { AppText, Avatar, Badge, Banner, Button, Card, Divider, Icon, ListRow, ProgressBar, Press, Screen, Segmented, SectionHeader, Sheet, space, TEXT_SCALES, Toggle, useFeedback, useLayout, useTheme } from '@/design';
 import { useT } from '@/i18n';
-import { useAccount } from '@/lib/api/account';
+import { AccountDeletionError, useAccount } from '@/lib/api/account';
 import { setAiConsent, setPersonalize, useConsent } from '@/lib/privacy/consent';
 import { deleteAllData, exportAllData } from '@/lib/storage/dataTools';
 import { getUserProfile } from '@/services/userProfileService';
@@ -36,7 +36,19 @@ export default function ProfileScreen() {
   const onDelete = async () => {
     const ok = await confirm({ title: t('profile.deleteConfirmTitle'), body: t('profile.deleteConfirmBody'), confirmLabel: t('profile.deleteConfirmCta'), destructive: true });
     if (!ok) return;
-    await deleteAllData();
+    try {
+      await deleteAllData();
+    } catch (e) {
+      const reason = e instanceof AccountDeletionError ? e.reason : 'server';
+      if (reason !== 'not_signed_in') {
+        // Nothing was deleted: say so plainly instead of pretending it worked.
+        await confirm({ title: t('common.errorTitle'), body: t(reason === 'offline' ? 'profile.deleteFailedOffline' : 'profile.deleteFailedServer'), confirmLabel: t('common.gotIt'), notice: true });
+        return;
+      }
+      const localOnly = await confirm({ title: t('profile.deleteNotSignedInTitle'), body: t('profile.deleteNotSignedInBody'), confirmLabel: t('profile.deleteNotSignedInCta'), destructive: true });
+      if (!localOnly) return;
+      await deleteAllData({ localOnly: true });
+    }
     toast(t('profile.deleted'));
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       setTimeout(() => window.location.assign('/'), 600);

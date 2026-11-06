@@ -1,10 +1,11 @@
 /**
- * App-level context added to every AI request, on top of the hosted prompts.
+ * A short identity reminder for prompts the app writes itself (journal
+ * reflections go through chat completions with a client-written system
+ * message).
  *
- * The hosted prompts on OpenAI were written for an earlier persona name.
- * Until they are updated (see docs/prompts/ANULIA_PERSONA_NOTE.md), this
- * block keeps the companion's identity and limits consistent across Anulia
- * chat, art therapy and reflection cards.
+ * Since 3.0 Anulia's full instructions are server-owned (server/prompts/*.md)
+ * and the server adds its own preamble to every chat call, so this block is a
+ * second line of defence, not the source of truth.
  */
 export const ANULIA_PERSONA_CONTEXT =
   '[App context: In this app you are "Anulia", BeHappy\'s AI well-being companion. If asked who you are, say you are Anulia, an AI companion. ' +

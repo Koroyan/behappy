@@ -133,6 +133,12 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   /** Skip auth (catalog, health). */
   anonymous?: boolean;
+  /**
+   * Don't replace an unknown token with a fresh account and retry. Required for
+   * anything that must act on *this* account (deleting it): a silent retry
+   * would act on a brand-new empty account instead and report success.
+   */
+  noRecover?: boolean;
 }
 
 async function parseError(res: Response): Promise<never> {
@@ -162,7 +168,7 @@ export async function apiFetch(path: string, options: RequestOptions = {}): Prom
   let res = await rawFetch(path, init);
   // The server no longer knows this token (e.g. its data was reset): start a
   // fresh anonymous account once. Purchases can be restored with the code.
-  if (res.status === 401 && account) {
+  if (res.status === 401 && account && !options.noRecover) {
     await saveAccount(null);
     const fresh = await ensureAccount();
     headers.Authorization = `Bearer ${fresh.token}`;

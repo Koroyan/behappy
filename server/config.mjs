@@ -5,33 +5,17 @@
 // value falls back to a safe development default; a missing required value in
 // production stops the server from starting.
 
-import fs from 'node:fs';
+// env.mjs must be the first import: it loads server/.env before anything below
+// (or any module importing this one) reads process.env.
+import { PROJECT_DIR, rootEnvHasLeakedKey, SERVER_DIR } from './env.mjs';
+
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import dotenv from 'dotenv';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-
-// server/.env is the canonical place for secrets. It overrides inherited
-// environment variables on purpose: a stale OPENAI_API_KEY in the OS
-// environment (e.g. an old, revoked key) must not silently win over the key
-// configured for this server. Hosts without a server/.env use real env vars.
-dotenv.config({ path: path.join(here, '.env'), override: true });
-
-// Development convenience only: older checkouts kept the OpenAI key in the
-// project-root .env as EXPO_PUBLIC_API_KEY. We read it as a last resort so the
-// app keeps working locally, and warn loudly, because EXPO_PUBLIC_* values are
-// designed to be shipped to clients.
-let legacyRootKey = '';
-try {
-  const rootEnvPath = path.join(here, '..', '.env');
-  if (fs.existsSync(rootEnvPath)) {
-    const parsed = dotenv.parse(fs.readFileSync(rootEnvPath));
-    legacyRootKey = parsed.OPENAI_API_KEY || parsed.EXPO_PUBLIC_API_KEY || '';
-  }
-} catch {
-  legacyRootKey = '';
-}
+// The OpenAI key comes only from OPENAI_API_KEY (server/.env or the host's
+// environment). There is deliberately no fallback: the key that older
+// checkouts kept in the project-root .env (EXPO_PUBLIC_API_KEY) was published
+// and must be revoked, never reused.
+export const LEAKED_ROOT_KEY_PRESENT = rootEnvHasLeakedKey();
 
 const env = process.env;
 const bool = (value, fallback = false) => {
@@ -64,18 +48,30 @@ export const config = {
     .map((s) => s.trim().replace(/\/$/, ''))
     .filter(Boolean),
   // Outside server/ so file-watching dev servers don't restart on every write.
-  dataDir: env.DATA_DIR || path.join(here, '..', '.server-data'),
+  dataDir: env.DATA_DIR || path.join(PROJECT_DIR, '.server-data'),
+  serverDir: SERVER_DIR,
   adminToken: env.ADMIN_TOKEN || '',
   // Express "trust proxy". Default: only a proxy on this machine. Behind a
   // hosting platform's load balancer set TRUST_PROXY=1 (one hop).
   trustProxy: env.TRUST_PROXY === undefined || env.TRUST_PROXY === '' ? 'loopback' : /^[0-9]+$/.test(env.TRUST_PROXY) ? Number(env.TRUST_PROXY) : env.TRUST_PROXY,
 
   openai: {
-    apiKey: env.OPENAI_API_KEY || legacyRootKey,
-    keySource: env.OPENAI_API_KEY ? 'server/.env' : legacyRootKey ? 'legacy project-root .env' : 'missing',
+    apiKey: env.OPENAI_API_KEY || '',
+    keySource: env.OPENAI_API_KEY ? 'OPENAI_API_KEY' : 'missing',
     baseUrl: (env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, ''),
     // Optional hard ceiling on proxied AI requests per UTC day across all users.
     globalDailyRequestCap: int(env.AI_GLOBAL_DAILY_REQUEST_CAP, 5000),
+  },
+
+  // Models per feature. Read here, after server/.env is loaded (see env.mjs).
+  // The instructions themselves are server-owned (server/prompts/).
+  ai: {
+    models: {
+      anulia: env.AI_MODEL_ANULIA || 'gpt-5.4-mini',
+      art: env.AI_MODEL_ART || 'gpt-5.4-mini',
+      cards: env.AI_MODEL_CARDS || 'gpt-5.4-mini',
+      community: env.AI_MODEL_COMMUNITY || 'gpt-5.4-mini',
+    },
   },
 
   flitt: {

@@ -65,7 +65,7 @@ export async function buildMemoryContext(): Promise<string> {
         progressNote = `Recent emotional shifts: ${recentShifts.slice(-3).join(' → ')}`;
       }
       if (recentAlliance.length > 0) {
-        progressNote += `\nTherapeutic alliance trend: ${recentAlliance.slice(-3).join(' → ')}`;
+        progressNote += `\nComfort with the exercise (recent): ${recentAlliance.slice(-3).join(' → ')}`;
       }
     }
 
@@ -84,16 +84,16 @@ Last Session Summary: ${lastSummary}
 ${safetyConcerns.length > 0 ? `\nPrevious Safety Concerns:\n${safetyConcerns.join('\n')}` : ''}
 ${progressNote ? `\n${progressNote}` : ''}
 
-[THERAPEUTIC INSTRUCTION]
-Use this context as your internal clinical "cheat sheet" to inform empathy, depth, and continuity of care.
+[INSTRUCTION]
+Use this context only for warmth and continuity. It is background, not a record to analyse.
 - Stay present-focused on THIS session's image and current feelings
-- Do NOT ask comparative questions about previous sessions unless the client spontaneously brings them up
-- Let prior insights inform your understanding and therapeutic attunement, not your questions
-- Recognize patterns when clinically relevant but don't explicitly mention "in previous sessions you..."
-- Build on therapeutic alliance through continuity while respecting each session's independence
-- Monitor for changes in safety concerns or progress trajectory without making it obvious
-- Avoid repeating questions that were already deeply explored in prior sessions
-- Use recurring themes awareness to ask deeper, more attuned questions about THIS session's material`;
+- Do NOT ask comparative questions about previous sessions unless the person brings them up
+- Let earlier sessions inform your understanding and tone, not your questions
+- Don't say "in previous sessions you..." and never draw conclusions about the person from patterns
+- Keep continuity while respecting each session's independence
+- Notice changes in safety concerns, and follow the safety rules if risk appears
+- Avoid repeating questions that were already explored in earlier sessions
+- Use awareness of recurring themes to ask more attuned questions about THIS session's material`;
   } catch (e) {
     console.warn('Memory context build failed:', e);
     return '';

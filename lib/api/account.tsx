@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { apiJson, ensureAccount, getStoredAccount, onAccountChange, replaceAccount, StoredAccount } from './client';
+import { apiFetch, apiJson, ensureAccount, getStoredAccount, NetworkError, onAccountChange, replaceAccount, StoredAccount } from './client';
 
 export interface Entitlements {
   plus: { active: boolean; expiresAt: number | null };
@@ -113,12 +113,40 @@ export async function restoreWithCode(recoveryCode: string): Promise<boolean> {
   return true;
 }
 
-export async function deleteServerAccount(): Promise<void> {
-  try {
-    await apiJson('/api/account', { method: 'DELETE' });
-  } catch {
-    // offline: local data is still removed by the caller
+/**
+ * Why the server account could not be deleted. Nothing is deleted in that
+ * case, so the person can retry; deleting only the data on this device is a
+ * separate, explicit choice (see deleteAllData).
+ */
+export class AccountDeletionError extends Error {
+  reason: 'offline' | 'not_signed_in' | 'server';
+  constructor(reason: 'offline' | 'not_signed_in' | 'server') {
+    super(`Account deletion failed: ${reason}`);
+    this.name = 'AccountDeletionError';
+    this.reason = reason;
   }
+}
+
+/** Deletes this device's account on the server. Throws AccountDeletionError instead of failing silently. */
+export async function deleteServerAccount(): Promise<void> {
+  const stored = await getStoredAccount();
+  if (stored) {
+    let res: Response;
+    try {
+      res = await apiFetch('/api/account', { method: 'DELETE', noRecover: true });
+    } catch (e) {
+      throw new AccountDeletionError(e instanceof NetworkError ? 'offline' : 'server');
+    }
+    // The server doesn't know this device's sign-in (for example the account
+    // was restored on another device, which replaces the old token).
+    if (res.status === 401) throw new AccountDeletionError('not_signed_in');
+    if (!res.ok) throw new AccountDeletionError('server');
+  }
+  await forgetAccountOnThisDevice();
+}
+
+/** Removes the stored sign-in and cached entitlements from this device only. */
+export async function forgetAccountOnThisDevice(): Promise<void> {
   await replaceAccount(null);
   await AsyncStorage.removeItem(CACHE_KEY);
 }

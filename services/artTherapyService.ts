@@ -1,5 +1,4 @@
 import type { AppLanguage } from '@/contexts/LanguageContext';
-import { ANULIA_PERSONA_CONTEXT } from '@/features/anulia/persona';
 import { aiResponses, aiResponsesStream, aiSpeech, aiTranscribe, StaleChainError } from '@/lib/api/ai';
 import { canPersonalize } from '@/lib/privacy/consent';
 import { Audio } from 'expo-av';
@@ -73,10 +72,8 @@ export interface ChatMessage {
 }
 
 class ArtTherapyService {
-  // Hosted prompt on OpenAI. Requests go through the BeHappy server, which holds
-  // the API key and only allows this prompt for the "art" feature.
-  private promptId: string = 'pmpt_690baa7920308196a2d94f41d4be76be0bd44ed1840b1049';
-  private promptVersion: string = '21';
+  // The instructions for art reflection are server-owned (server/prompts/art.md);
+  // requests go through the BeHappy server, which holds the API key.
   private activeSessionId: number | undefined;
 
   /** The art session number (1–43) that the next requests belong to; the server meters per session. */
@@ -124,12 +121,12 @@ class ArtTherapyService {
     extraContext?: string
   ): Promise<string> {
     const imageOnlyInstruction = hasImageOnlyMessage
-      ? '\nThe latest user message contains only an image. First determine whether it clearly appears to be the client\'s own hand-made artwork for this art therapy session. If it is an ordinary photo, selfie, screenshot, digital/generated character, document, object, room, person, pet, food, landscape, or otherwise not clearly hand-made artwork, politely reject it without psychological interpretation and ask for a hand-made drawing or painting. If it is ambiguous, ask the client to confirm whether they made it by hand for this session.'
+      ? '\nThe latest user message contains only an image. First determine whether it clearly appears to be the person\'s own hand-made artwork on paper for this art reflection session. If it is an ordinary photo, selfie, screenshot, digital/generated character, document, object, room, person, pet, food, landscape, or otherwise not clearly hand-made artwork, politely decline it without psychological interpretation and invite a drawing or painting made on paper. If it is ambiguous, ask the person to confirm whether they made it by hand for this session.'
       : '';
 
     const profileBlock = (await canPersonalize()) ? buildProfileContextBlock(await getUserProfile()) : '';
 
-    return `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${languageName}, Phase: ${currentPhase}. CRITICAL: You MUST respond in ${languageName} language for ALL text, including response_text, phase_summary, session_summary, next_steps, and any question. Do NOT respond in English unless Language is English.${imageOnlyInstruction} Respond with valid JSON matching the ArtTherapyResponse schema.]` + (profileBlock ? `\n${profileBlock}` : '') + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '') + `\n${ANULIA_PERSONA_CONTEXT}`;
+    return `\n\n[Session Context: Theme: ${sessionTheme}, Language: ${languageName}, Phase: ${currentPhase}. CRITICAL: You MUST respond in ${languageName} language for ALL text, including response_text, phase_summary, session_summary, next_steps, and any question. Do NOT respond in English unless Language is English.${imageOnlyInstruction} Respond with valid JSON matching the ArtTherapyResponse schema.]` + (profileBlock ? `\n${profileBlock}` : '') + (extraContext ? `\n[Prior Sessions]\n${extraContext}` : '');
   }
 
   /**
@@ -437,7 +434,6 @@ class ArtTherapyService {
 
       const payload: any = {
         input,
-        prompt: { id: this.promptId, version: this.promptVersion },
         max_output_tokens: 2048,
         store: false,
         // Encourage well-formed JSON to match our schema (new field location)
@@ -628,7 +624,6 @@ class ArtTherapyService {
     ): Promise<ArtTherapyResponse> => {
       const body = {
         input,
-        prompt: { id: this.promptId, version: this.promptVersion },
         max_output_tokens: 2048,
         stream: true,
         store: true,

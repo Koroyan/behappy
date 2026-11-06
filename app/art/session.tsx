@@ -23,12 +23,12 @@ import ArtTherapyProgramManager, { ArtTherapySession, SessionProgress } from '@/
 import artTherapyService, { ArtTherapyResponse, ChatMessage } from '@/services/artTherapyService';
 
 const IMAGE_ONLY_INSTRUCTION =
-  'An image was uploaded without text. Before guiding the art therapy session, apply the image eligibility rules and continue only if it clearly appears to be hand-made artwork created by the client for this session.';
+  'An image was uploaded without text. Before guiding the art reflection session, apply the image eligibility rules and continue only if it clearly appears to be hand-made artwork the person made on paper for this session.';
 
 const buildEndSessionControlContext = (source: 'button' | 'text') =>
   [
-    `[User Action: The client requested session closure via ${source}.]`,
-    'Close the current art-therapy session now without asking another exploration question.',
+    `[User Action: The person asked to close the session via ${source}.]`,
+    'Close the current art reflection session now without asking another exploration question.',
     'Return valid JSON with session_phase=2, phase_complete=true, session_complete=true, required_input="none", action="close_session", and include session_summary.',
     'response_text should be a brief warm closure in the user language, followed by no new question.',
   ].join('\n');

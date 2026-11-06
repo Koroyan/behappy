@@ -1,32 +1,21 @@
 // OpenAI proxy. The client never sees the API key.
 //
-// Every request is: authenticated (anonymous account token) → validated
-// against an allowlist (hosted prompt ids, models, field names, size caps) →
-// metered by quota.mjs → forwarded with the server's key. Conversation chains
-// (previous_response_id) are bound to the account that created them, so one
-// user can't continue another user's conversation.
+// Every request is: authenticated (account token) → validated against an
+// allowlist (features, models, field names, size caps) → metered by quota.mjs
+// → forwarded with the server's key and the server's own instructions
+// (server/prompts/). Conversation chains (previous_response_id) are bound to
+// the account that created them, so one user can't continue another user's
+// conversation.
 
 import express from 'express';
 import { requireAccount } from './auth.mjs';
 import { entitlementsForAccount } from './entitlements.mjs';
+import { CHAT_PREAMBLE, LEGACY_PROMPT_IDS, SERVER_PROMPTS } from './prompts/index.mjs';
 import { checkAndRecord } from './quota.mjs';
 
-export const PROMPTS = {
-  anulia: process.env.PROMPT_ID_ANULIA || 'pmpt_6902692e3d8081959fff3a192b21482902ebe8295781d9fb',
-  art: process.env.PROMPT_ID_ART || 'pmpt_690baa7920308196a2d94f41d4be76be0bd44ed1840b1049',
-  cards: process.env.PROMPT_ID_CARDS || 'pmpt_690f8a73181481968bdf18821d56058203765a60aea147e6',
-};
-
-// The server picks the model for each hosted prompt. The prompts themselves
-// were pinned to *-chat-latest models that OpenAI has since retired, which
-// made every AI feature fail; overriding here keeps them working and lets the
-// model be changed without an app release.
-export const RESPONSES_MODEL = {
-  anulia: process.env.AI_MODEL_ANULIA || 'gpt-5.4-mini',
-  art: process.env.AI_MODEL_ART || 'gpt-5.4-mini',
-  cards: process.env.AI_MODEL_CARDS || 'gpt-5.4-mini',
-};
+const DEFAULT_MODELS = { anulia: 'gpt-5.4-mini', art: 'gpt-5.4-mini', cards: 'gpt-5.4-mini' };
 const CHAT_MODELS = new Set(['gpt-4o', 'gpt-4o-mini', 'gpt-4.1-mini']);
+// `prompt` is still accepted from app builds before 3.0, then replaced (see below).
 const RESPONSES_FIELDS = new Set(['input', 'prompt', 'model', 'max_output_tokens', 'stream', 'store', 'previous_response_id', 'text', 'temperature']);
 const CHAT_FIELDS = new Set(['model', 'messages', 'max_tokens', 'temperature', 'response_format']);
 const VOICES = new Set(['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar']);
@@ -57,6 +46,22 @@ class SlidingWindow {
 }
 
 const bad = (res, status, error, message) => res.status(status).json({ error, message });
+
+const PART_TYPES = new Set(['input_text', 'input_image', 'output_text']);
+/** A user or assistant message whose content is text or text/image parts. */
+export function isConversationTurn(item) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+  if (item.role !== 'user' && item.role !== 'assistant') return false;
+  if (Object.keys(item).some((k) => !['role', 'content', 'type'].includes(k))) return false;
+  if (item.type !== undefined && item.type !== 'message') return false;
+  if (typeof item.content === 'string') return true;
+  return Array.isArray(item.content) && item.content.every((p) => p && typeof p === 'object' && PART_TYPES.has(p.type));
+}
+
+/** Chat-completions messages from clients: user/assistant/system text only (the server's preamble is prepended). */
+function isChatMessage(m) {
+  return m && typeof m === 'object' && ['system', 'user', 'assistant'].includes(m.role) && (typeof m.content === 'string' || Array.isArray(m.content));
+}
 
 function readContext(req) {
   return {
@@ -125,11 +130,22 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
       if (!RESPONSES_FIELDS.has(key)) return bad(res, 400, 'bad_field', `Field "${key}" is not allowed.`);
     }
     const feature = req.aiContext.feature;
-    if (!body.prompt || body.prompt.id !== PROMPTS[feature]) {
+    // Older app builds name the hosted prompt they were written for. Only the
+    // matching id is accepted, and it is never forwarded: the server's own
+    // instructions replace it.
+    if (body.prompt !== undefined && (typeof body.prompt !== 'object' || body.prompt === null || body.prompt.id !== LEGACY_PROMPT_IDS[feature])) {
       return bad(res, 400, 'bad_prompt', 'This prompt is not allowed for this feature.');
     }
-    if (body.prompt.version !== undefined && !/^\d{1,4}$/.test(String(body.prompt.version))) {
-      return bad(res, 400, 'bad_prompt_version', 'Invalid prompt version.');
+    if (body.text !== undefined && !(body.text && typeof body.text === 'object' && ['json_object', 'text'].includes(body.text?.format?.type) && Object.keys(body.text).every((k) => k === 'format'))) {
+      return bad(res, 400, 'bad_text_format', 'Only plain text or JSON object output is allowed.');
+    }
+    if (!Array.isArray(body.input) && typeof body.input !== 'string') {
+      return bad(res, 400, 'bad_input', 'input must be a string or an array of messages.');
+    }
+    // Clients send only conversation turns. System/developer messages, tool
+    // calls and other item types would let a client add its own instructions.
+    if (Array.isArray(body.input) && !body.input.every(isConversationTurn)) {
+      return bad(res, 400, 'bad_input', 'input may contain only user and assistant messages.');
     }
     if (body.previous_response_id !== undefined) {
       const owner = store.data.responseOwners[body.previous_response_id];
@@ -139,9 +155,13 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
         return bad(res, 409, 'stale_previous_response', 'previous_response_id not found');
       }
     }
+    const serverPrompt = SERVER_PROMPTS[feature];
+    const { prompt: _ignoredPrompt, model: _ignoredModel, ...rest } = body;
     const clean = {
-      ...body,
-      model: RESPONSES_MODEL[feature],
+      ...rest,
+      model: config.ai?.models?.[feature] || DEFAULT_MODELS[feature],
+      instructions: serverPrompt.instructions,
+      reasoning: serverPrompt.reasoning,
       max_output_tokens: Math.min(Number(body.max_output_tokens) || MAX_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS),
     };
 
@@ -215,9 +235,10 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
     if (!Array.isArray(body.messages) || body.messages.length === 0 || body.messages.length > 60) {
       return bad(res, 400, 'bad_messages', 'messages must be a non-empty array of at most 60 items.');
     }
+    // The server's preamble always comes first, whatever the client wrote.
     const clean = {
       model: body.model,
-      messages: body.messages,
+      messages: [{ role: 'system', content: CHAT_PREAMBLE }, ...body.messages.filter(isChatMessage)],
       max_tokens: Math.min(Number(body.max_tokens) || 800, MAX_CHAT_TOKENS),
       ...(body.temperature !== undefined ? { temperature: Math.max(0, Math.min(1.2, Number(body.temperature) || 0.7)) } : {}),
       ...(body.response_format ? { response_format: body.response_format } : {}),

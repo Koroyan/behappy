@@ -42,11 +42,10 @@ const GENDER_LABEL: Record<Gender, string> = {
 };
 
 /**
- * Single shared formatter reused by every AI service (aiTherapyService, artTherapyService,
- * cardTherapyService) so the exact wording sent to every hosted prompt stays consistent.
- * Prompts are instructed (see the *_PROMPT_*_DRAFT.md files) to use this block naturally —
- * address the client by first name, let context quietly inform tone — and never recite it
- * back to the client as a list.
+ * Single shared formatter reused by every AI service (Anulia, art reflection, cards) so the
+ * wording stays consistent. Sent only when the person allowed personalisation. The server
+ * prompts (server/prompts/*.md) tell the model to use this block naturally — address the
+ * person by first name, let context quietly inform tone — and never recite it back as a list.
  */
 export function buildProfileContextBlock(profile: UserProfile | null): string {
   if (!profile?.name) return '';
@@ -61,5 +60,5 @@ export function buildProfileContextBlock(profile: UserProfile | null): string {
     profile.mainConcerns?.trim() ? `What brought them here: ${profile.mainConcerns.trim()}` : '',
   ].filter(Boolean);
 
-  return `[Client Profile: ${parts.join('. ')}. Address the client as "${firstName}" naturally in conversation — not mechanically every turn. Let this context quietly inform your tone and understanding; never recite it back to the client as a list or treat it as a form to review aloud.]`;
+  return `[Profile: ${parts.join('. ')}. Shared by the person. Address them as "${firstName}" naturally in conversation — not mechanically every turn. Let this context quietly inform your tone; never recite it back as a list or treat it as a form to review aloud.]`;
 }
