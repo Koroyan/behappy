@@ -9,6 +9,13 @@ import { usePrimaryNav } from './Sidebar';
 
 const ROUTE_TO_KEY: Record<string, string> = { index: 'today', community: 'community', anulia: 'anulia', specialists: 'specialists', profile: 'profile' };
 
+/** Rough glyph width (in em) per script, to fit long labels on narrow phones. */
+const glyphEm = (s: string) =>
+  /[Ⴀ-ჿᲐ-Ჿ԰-֏]/.test(s) ? 0.72 : /[぀-ヿ㐀-鿿가-힯]/.test(s) ? 1.0 : /[؀-ۿऀ-ॿ]/.test(s) ? 0.62 : 0.57;
+
+/** The usual size, shrunk (to 9px at least) when a translation is longer than its tab. */
+export const tabLabelSize = (label: string, tabWidth: number, base: number) => Math.max(9, Math.min(base, (tabWidth - 6) / (Math.max(label.length, 1) * glyphEm(label))));
+
 /** Phone navigation: five calm destinations, large touch targets, labels always visible. */
 export function MobileTabBar({ state, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
@@ -65,7 +72,7 @@ export function MobileTabBar({ state, navigation }: BottomTabBarProps) {
             <View style={{ paddingHorizontal: 16, paddingVertical: 4, borderRadius: 999, backgroundColor: focused ? colors.primarySoft : 'transparent' }}>
               <Icon name={focused ? item.activeIcon : item.icon} size={22} color={focused ? 'onPrimarySoft' : 'textTertiary'} />
             </View>
-            <AppText variant="caption" color={focused ? 'text' : 'textTertiary'} numberOfLines={1} style={{ fontSize: width < 360 ? 10.5 : 11.5 }}>
+            <AppText variant="caption" color={focused ? 'text' : 'textTertiary'} numberOfLines={1} style={{ fontSize: tabLabelSize(item.label, (width - 12) / Math.max(primary.length, 1), width < 360 ? 10.5 : 11.5) }}>
               {item.label}
             </AppText>
           </Press>
