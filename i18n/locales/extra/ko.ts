@@ -663,6 +663,12 @@ export const ko: PartialMessages = {
     exported: '데이터 파일이 준비되었어요.',
     deleteData: '모든 데이터 삭제',
     deleteHint: '이 기기에서 일기, 대화, 작품, 설정을 삭제해요.',
+    deleteFailedOffline: '오프라인 상태인 것 같아요. 아무것도 삭제되지 않았어요. 인터넷에 연결한 뒤 다시 시도해 주세요.',
+    deleteFailedServer: '서버가 지금 계정을 삭제하지 못해서 아무것도 삭제되지 않았어요. 잠시 후 다시 시도해 주세요.',
+    deleteNotSignedInTitle: '이 기기는 더 이상 로그인되어 있지 않아요',
+    deleteNotSignedInBody: '서버가 이 기기의 로그인을 알아보지 못해요(예: 다른 기기에서 계정을 복구함). 그래서 여기서는 서버 계정을 삭제할 수 없어요. 이 기기에 저장된 것은 모두 삭제할 수 있어요.',
+    deleteNotSignedInCta: '이 기기에서 삭제',
+
     deleteConfirmTitle: '모두 삭제할까요?',
     deleteConfirmBody: '이 기기의 BeHappy 데이터와 서버의 익명 계정이 영구적으로 삭제돼요. 복원 코드를 저장하지 않았다면 나중에 구매를 복원할 수 없어요.',
     deleteConfirmCta: '모두 삭제',
