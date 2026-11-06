@@ -11,9 +11,10 @@ import { de3 } from './de';
 import { es3 } from './es';
 import { fr3 } from './fr';
 import { hy3 } from './hy';
+import { it3 } from './it';
 import { ka3 } from './ka';
 import { ru3 } from './ru';
 import { tr3 } from './tr';
 import { uk3 } from './uk';
 
-export const v3Locales: Partial<Record<AppLanguage, PartialMessages>> = { az: az3, de: de3, es: es3, fr: fr3, hy: hy3, ka: ka3, ru: ru3, tr: tr3, uk: uk3 };
+export const v3Locales: Partial<Record<AppLanguage, PartialMessages>> = { az: az3, de: de3, es: es3, fr: fr3, hy: hy3, it: it3, ka: ka3, ru: ru3, tr: tr3, uk: uk3 };

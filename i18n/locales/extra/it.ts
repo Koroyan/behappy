@@ -663,6 +663,12 @@ export const it: PartialMessages = {
     exported: 'Il file con i tuoi dati è pronto.',
     deleteData: 'Elimina tutti i dati',
     deleteHint: 'Cancella da questo dispositivo diario, conversazioni, opere e impostazioni.',
+    deleteFailedOffline: 'Sembra che tu sia offline, quindi non è stato eliminato nulla. Connettiti a internet e riprova.',
+    deleteFailedServer: 'Il server non è riuscito a eliminare il tuo account in questo momento, quindi non è stato eliminato nulla. Riprova tra poco.',
+    deleteNotSignedInTitle: 'Questo dispositivo non ha più l’accesso',
+    deleteNotSignedInBody: 'Il server non riconosce l’accesso di questo dispositivo (per esempio, l’account è stato ripristinato su un altro dispositivo), quindi l’account sul server non può essere eliminato da qui. Puoi comunque eliminare tutto ciò che è salvato su questo dispositivo.',
+    deleteNotSignedInCta: 'Elimina su questo dispositivo',
+
     deleteConfirmTitle: 'Eliminare tutto?',
     deleteConfirmBody: 'Questo elimina per sempre tutti i dati di BeHappy su questo dispositivo e il tuo account anonimo sul server. Senza un codice di recupero salvato, non potrai più recuperare gli acquisti.',
     deleteConfirmCta: 'Elimina tutto',
