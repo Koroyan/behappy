@@ -84,7 +84,7 @@ export function ProCard({ pro, onPress }: { pro: PublicPro; onPress: () => void 
       accessibilityLabel={pro.publicName}
       feedback="scale"
       testID={`pro-${pro.id}`}
-      style={{ flexBasis: 320, flexGrow: 1, padding: 18, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 10 }}
+      style={{ flexBasis: 320, flexGrow: 1, flexShrink: 1, maxWidth: '100%', padding: 18, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 10 }}
     >
       <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
         <ProAvatar name={pro.publicName} photoUrl={pro.photoUrl} />
