@@ -663,6 +663,12 @@ export const es: PartialMessages = {
     exported: 'Tu archivo de datos está listo.',
     deleteData: 'Eliminar todos los datos',
     deleteHint: 'Borra de este dispositivo el diario, las conversaciones, las obras y la configuración.',
+    deleteFailedOffline: 'Parece que no tienes conexión, así que no se borró nada. Conéctate a internet y vuelve a intentarlo.',
+    deleteFailedServer: 'El servidor no pudo borrar tu cuenta ahora mismo, así que no se borró nada. Vuelve a intentarlo en un momento.',
+    deleteNotSignedInTitle: 'Este dispositivo ya no tiene la sesión iniciada',
+    deleteNotSignedInBody: 'El servidor no reconoce el acceso de este dispositivo (por ejemplo, la cuenta se restauró en otro dispositivo), así que la cuenta del servidor no se puede borrar desde aquí. Aun así, puedes borrar todo lo guardado en este dispositivo.',
+    deleteNotSignedInCta: 'Borrar en este dispositivo',
+
     deleteConfirmTitle: '¿Eliminarlo todo?',
     deleteConfirmBody: 'Esto elimina para siempre todos los datos de BeHappy de este dispositivo y tu cuenta anónima del servidor. Sin un código de recuperación guardado, no podrás recuperar tus compras.',
     deleteConfirmCta: 'Eliminarlo todo',
