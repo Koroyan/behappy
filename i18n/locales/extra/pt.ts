@@ -663,6 +663,12 @@ export const pt: PartialMessages = {
     exported: 'O seu ficheiro de dados está pronto.',
     deleteData: 'Eliminar todos os dados',
     deleteHint: 'Apaga deste dispositivo o diário, as conversas, as obras e as definições.',
+    deleteFailedOffline: 'Parece que está sem ligação, por isso nada foi apagado. Ligue-se à internet e tente novamente.',
+    deleteFailedServer: 'O servidor não conseguiu apagar a sua conta neste momento, por isso nada foi apagado. Tente novamente daqui a pouco.',
+    deleteNotSignedInTitle: 'Este dispositivo já não tem sessão iniciada',
+    deleteNotSignedInBody: 'O servidor não reconhece o acesso deste dispositivo (por exemplo, a conta foi restaurada noutro dispositivo), por isso não é possível apagar a conta do servidor a partir daqui. Ainda assim, pode apagar tudo o que está guardado neste dispositivo.',
+    deleteNotSignedInCta: 'Apagar neste dispositivo',
+
     deleteConfirmTitle: 'Eliminar tudo?',
     deleteConfirmBody: 'Isto elimina para sempre todos os dados do BeHappy neste dispositivo e a sua conta anónima no servidor. Sem um código de recuperação guardado, não poderá recuperar as compras.',
     deleteConfirmCta: 'Eliminar tudo',
