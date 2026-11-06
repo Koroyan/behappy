@@ -18,7 +18,7 @@ import { schemaVersion } from './db/migrate.mjs';
 import { entitlementsForAccount, ordersForAccount } from './entitlements.mjs';
 import { FlittClient } from './flitt.mjs';
 import { createAuthRouter } from './identity.mjs';
-import { collectMeSections, runAccountDeletionHooks } from './lifecycle.mjs';
+import { runAccountDeletionHooks } from './lifecycle.mjs';
 import { aggregateMetrics } from './metrics.mjs';
 import { createMailer } from './notify/mailer.mjs';
 import { listNotifications, unreadCount } from './notify/notifications.mjs';
@@ -87,7 +87,8 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
       fetchImpl,
     });
   const mail = mailer || createMailer({ driver: config.mail?.driver || 'log', from: config.mail?.from, resendApiKey: config.mail?.resendApiKey, isProduction: config.isProduction });
-  const deps = { db, config, flitt, clock, mailer: mail, fetchImpl };
+  // meSections: extra parts of GET /api/account/me, added by feature modules.
+  const deps = { db, config, flitt, clock, mailer: mail, fetchImpl, meSections: [] };
   app.locals.deps = deps;
 
   const allowedOrigins = new Set([...config.appPublicUrls, ...config.corsOrigins]);
@@ -163,7 +164,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
       ai: { available: Boolean(config.openai.apiKey) },
       identity: { registered: a.registered, email: a.email, emailVerified: a.emailVerified, roles: a.roles, sessionKind: a.sessionKind, status: a.status, emailAvailable: mail.available },
       notifications: { unread: await unreadCount(db, a.id) },
-      ...(await collectMeSections(db, a, now)),
+      ...Object.fromEntries(await Promise.all(deps.meSections.map(async (s) => [s.name, await s.fn(db, a, now)]))),
     });
   });
 

@@ -14,17 +14,3 @@ export function registerAccountDeletionHook(name, fn) {
 export async function runAccountDeletionHooks(t, accountId, now) {
   for (const hook of deletionHooks) await hook.fn(t, accountId, now);
 }
-
-// Extra sections of GET /api/account/me (community profile, professional
-// status, unread counts), contributed by the feature modules.
-const meSections = [];
-
-export function registerMeSection(name, fn) {
-  if (!meSections.some((s) => s.name === name)) meSections.push({ name, fn });
-}
-
-export async function collectMeSections(db, account, now) {
-  const out = {};
-  for (const s of meSections) out[s.name] = await s.fn(db, account, now);
-  return out;
-}

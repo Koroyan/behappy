@@ -67,12 +67,48 @@ async function createPostgres(url) {
   };
 }
 
+/**
+ * Two processes on one embedded database directory can corrupt it (on
+ * Windows a killed dev server sometimes keeps running). A lock file with the
+ * owner's pid stops a second server; a stale lock from a dead process is taken over.
+ */
+function lockDataDir(dir) {
+  const lock = path.join(dir, 'behappy-server.lock');
+  if (fs.existsSync(lock)) {
+    const pid = Number(fs.readFileSync(lock, 'utf8'));
+    let alive = false;
+    if (pid && pid !== process.pid) {
+      try {
+        process.kill(pid, 0);
+        alive = true;
+      } catch {
+        alive = false;
+      }
+    }
+    if (alive) throw new Error(`Another BeHappy server (pid ${pid}) is using the embedded database in ${dir}. Stop it first: two servers on one embedded database can corrupt it.`);
+  }
+  fs.writeFileSync(lock, String(process.pid));
+  const release = () => {
+    try {
+      if (Number(fs.readFileSync(lock, 'utf8')) === process.pid) fs.unlinkSync(lock);
+    } catch {
+      // already gone
+    }
+  };
+  process.once('exit', release);
+  return release;
+}
+
 async function createPglite(dir) {
   const { PGlite, types } = await import('@electric-sql/pglite');
   const { btree_gist } = await import('@electric-sql/pglite/contrib/btree_gist');
   const { pg_trgm } = await import('@electric-sql/pglite/contrib/pg_trgm');
   const { citext } = await import('@electric-sql/pglite/contrib/citext');
-  if (dir) fs.mkdirSync(dir, { recursive: true });
+  let release = () => {};
+  if (dir) {
+    fs.mkdirSync(dir, { recursive: true });
+    release = lockDataDir(dir);
+  }
   // An explicit undefined data dir makes PGlite ignore the options: use memory://.
   const db = new PGlite(dir || 'memory://', {
     extensions: { btree_gist, pg_trgm, citext },
@@ -96,7 +132,10 @@ async function createPglite(dir) {
     exec: async (sql) => {
       await db.exec(sql);
     },
-    close: () => db.close(),
+    close: async () => {
+      await db.close();
+      release();
+    },
   };
 }
 

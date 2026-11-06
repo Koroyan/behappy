@@ -21,6 +21,8 @@ export const SERVER_PROMPTS = {
   anulia: { instructions: read('anulia.md'), reasoning: { effort: 'none' } },
   art: { instructions: read('art.md'), reasoning: { effort: 'medium' } },
   cards: { instructions: read('cards.md'), reasoning: { effort: 'none' } },
+  // Anulia in public community rooms (server/community/anulia.mjs).
+  community: { instructions: read('community.md'), reasoning: { effort: 'none' } },
 };
 
 /**

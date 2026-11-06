@@ -2,9 +2,11 @@
 // 3.0 adds its module here (community, professionals, bookings, memberships,
 // admin), so app.mjs stays small and every module gets the same deps.
 
-export const FEATURE_MODULES = [];
+import { mountCommunity, startCommunityRealtime } from './community/index.mjs';
 
-const SERVICES = [];
+export const FEATURE_MODULES = [mountCommunity];
+
+export const SERVICES = [startCommunityRealtime];
 
 /** Starts background services (real-time rooms, the reminder scheduler). */
 export async function startFeatureServices({ server, app, deps }) {

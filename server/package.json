@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "start": "node index.mjs"
+    "start": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON index.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
