@@ -663,6 +663,12 @@ export const de: PartialMessages = {
     exported: 'Deine Datendatei ist bereit.',
     deleteData: 'Alle Daten löschen',
     deleteHint: 'Löscht Tagebuch, Gespräche, Bilder und Einstellungen von diesem Gerät.',
+    deleteFailedOffline: 'Du scheinst offline zu sein, daher wurde nichts gelöscht. Verbinde dich mit dem Internet und versuch es noch einmal.',
+    deleteFailedServer: 'Der Server konnte dein Konto gerade nicht löschen, daher wurde nichts gelöscht. Bitte versuch es gleich noch einmal.',
+    deleteNotSignedInTitle: 'Dieses Gerät ist nicht mehr angemeldet',
+    deleteNotSignedInBody: 'Der Server erkennt die Anmeldung dieses Geräts nicht (zum Beispiel, weil das Konto auf einem anderen Gerät wiederhergestellt wurde), daher kann das Serverkonto nicht von hier gelöscht werden. Alles, was auf diesem Gerät gespeichert ist, kannst du trotzdem löschen.',
+    deleteNotSignedInCta: 'Auf diesem Gerät löschen',
+
     deleteConfirmTitle: 'Alles löschen?',
     deleteConfirmBody: 'Damit werden alle BeHappy-Daten auf diesem Gerät und dein anonymes Konto auf dem Server dauerhaft gelöscht. Ohne gespeicherten Wiederherstellungscode lassen sich Käufe danach nicht wiederherstellen.',
     deleteConfirmCta: 'Alles löschen',
