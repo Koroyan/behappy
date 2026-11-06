@@ -482,6 +482,7 @@ export const ko3: PartialMessages = {
     confirmedTitle: '예약됐어요',
     confirmedBody: '상담이 확정되었어요. 하루 전에 알림을 보내 드려요.',
     viewAppointment: '예약 보기',
+    rescheduling: '예약의 새 시간을 고르고 있어요. 새 시간이 예약되면 지금 시간은 풀려요.',
     errors: {
       slot_unavailable: '방금 다른 분이 이 시간을 예약했어요. 다른 시간을 골라 주세요.',
       not_bookable: '이 전문가는 지금 예약을 받지 않아요.',

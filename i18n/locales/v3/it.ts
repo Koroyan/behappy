@@ -482,6 +482,7 @@ export const it3: PartialMessages = {
     confirmedTitle: 'Prenotazione fatta',
     confirmedBody: 'La tua seduta è confermata. Riceverai un promemoria il giorno prima.',
     viewAppointment: 'Vedi l’appuntamento',
+    rescheduling: 'Stai scegliendo un nuovo orario per il tuo appuntamento. L’orario attuale si libera appena il nuovo è prenotato.',
     errors: {
       slot_unavailable: 'Qualcuno ha appena preso questo orario. Scegline un altro.',
       not_bookable: 'Questo specialista al momento non accetta prenotazioni.',

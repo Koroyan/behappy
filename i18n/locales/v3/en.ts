@@ -491,6 +491,7 @@ export const en3 = {
     confirmedTitle: 'You’re booked',
     confirmedBody: 'Your session is confirmed. You’ll get a reminder a day before.',
     viewAppointment: 'See the appointment',
+    rescheduling: 'Choosing a new time for your appointment. Your current time is released once the new one is booked.',
     errors: {
       slot_unavailable: 'Someone just took this time. Please choose another.',
       not_bookable: 'This specialist isn’t taking bookings right now.',

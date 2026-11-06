@@ -482,6 +482,7 @@ export const tr3: PartialMessages = {
     confirmedTitle: 'Randevun alındı',
     confirmedBody: 'Seansın onaylandı. Bir gün önce hatırlatma alacaksın.',
     viewAppointment: 'Randevuyu gör',
+    rescheduling: 'Randevun için yeni bir saat seçiyorsun. Yeni saat alınınca mevcut saat boşa çıkar.',
     errors: {
       slot_unavailable: 'Bu saati az önce biri aldı. Başka bir saat seç.',
       not_bookable: 'Bu uzman şu an randevu almıyor.',

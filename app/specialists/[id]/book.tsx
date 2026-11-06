@@ -8,12 +8,13 @@ import { InfoRow, SlotPicker } from '@/features/pro/ProParts';
 import { useT } from '@/i18n';
 import { useIdentity } from '@/lib/api/account';
 import { ApiError } from '@/lib/api/client';
-import { Booking, createBooking, getClientName, getPro, getSlots, PublicPro, setClientName } from '@/lib/api/pros';
+import { Booking, createBooking, getClientName, getPro, getSlots, PublicPro, rescheduleBooking, setClientName } from '@/lib/api/pros';
 
 const DAY = 24 * 60 * 60 * 1000;
 
 export default function BookSession() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // ?reschedule=<bookingId>: move that appointment instead of creating a second one.
+  const { id, reschedule } = useLocalSearchParams<{ id: string; reschedule?: string }>();
   const router = useRouter();
   const { t, tp, formatDate, formatTime, formatPrice } = useT();
   const { colors } = useTheme();
@@ -78,7 +79,9 @@ export default function BookSession() {
     setError(null);
     try {
       if (name.trim()) await setClientName(name.trim());
-      const b = await createBooking({ professionalId: pro.id, serviceId: service.id, startsAt: slot, note: note.trim() || undefined });
+      const b = reschedule
+        ? await rescheduleBooking(String(reschedule), service.id, slot)
+        : await createBooking({ professionalId: pro.id, serviceId: service.id, startsAt: slot, note: note.trim() || undefined });
       setDone(b);
     } catch (e) {
       const code = e instanceof ApiError ? e.code : undefined;
@@ -108,6 +111,7 @@ export default function BookSession() {
   return (
     <Screen back title={t('booking.title')} subtitle={proName} width="reading" keyboard testID="screen-book">
       <View style={{ gap: space[5] }}>
+        {reschedule ? <Banner tone="info" body={t('booking.rescheduling')} /> : null}
         <View>
           <SectionHeader title={t('booking.chooseService')} />
           <View style={{ gap: 8 }}>

@@ -482,6 +482,7 @@ export const es3: PartialMessages = {
     confirmedTitle: 'Reserva hecha',
     confirmedBody: 'Tu sesión está confirmada. Recibirás un recordatorio un día antes.',
     viewAppointment: 'Ver la cita',
+    rescheduling: 'Estás eligiendo un nuevo horario para tu cita. El horario actual se libera en cuanto se reserva el nuevo.',
     errors: {
       slot_unavailable: 'Alguien acaba de reservar este horario. Elige otro.',
       not_bookable: 'Este especialista no acepta reservas ahora mismo.',

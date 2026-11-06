@@ -482,6 +482,7 @@ export const id3: PartialMessages = {
     confirmedTitle: 'Pemesanan berhasil',
     confirmedBody: 'Sesimu sudah dikonfirmasi. Kamu akan mendapat pengingat sehari sebelumnya.',
     viewAppointment: 'Lihat janji temu',
+    rescheduling: 'Kamu sedang memilih waktu baru untuk janji temumu. Waktu yang sekarang dilepas begitu waktu baru dipesan.',
     errors: {
       slot_unavailable: 'Waktu ini baru saja diambil orang lain. Pilih waktu lain.',
       not_bookable: 'Spesialis ini sedang tidak menerima pemesanan.',

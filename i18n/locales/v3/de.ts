@@ -482,6 +482,7 @@ export const de3: PartialMessages = {
     confirmedTitle: 'Du bist gebucht',
     confirmedBody: 'Deine Sitzung ist bestätigt. Einen Tag vorher bekommst du eine Erinnerung.',
     viewAppointment: 'Termin ansehen',
+    rescheduling: 'Du wählst eine neue Zeit für deinen Termin. Die bisherige Zeit wird frei, sobald die neue gebucht ist.',
     errors: {
       slot_unavailable: 'Diese Zeit wurde gerade vergeben. Bitte wähle eine andere.',
       not_bookable: 'Diese Fachperson nimmt gerade keine Buchungen an.',

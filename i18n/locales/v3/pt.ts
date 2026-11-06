@@ -482,6 +482,7 @@ export const pt3: PartialMessages = {
     confirmedTitle: 'Marcação feita',
     confirmedBody: 'A sua sessão está confirmada. Receberá um lembrete na véspera.',
     viewAppointment: 'Ver a consulta',
+    rescheduling: 'Está a escolher um novo horário para a sua consulta. O horário atual fica livre assim que o novo for marcado.',
     errors: {
       slot_unavailable: 'Alguém acabou de ficar com este horário. Escolha outro.',
       not_bookable: 'Este especialista não está a aceitar marcações neste momento.',

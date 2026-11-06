@@ -482,6 +482,7 @@ export const zh3: PartialMessages = {
     confirmedTitle: '预约成功',
     confirmedBody: '你的咨询已确认。前一天你会收到提醒。',
     viewAppointment: '查看预约',
+    rescheduling: '你正在为预约选择新的时间。新时间预约成功后，原来的时间会被释放。',
     errors: {
       slot_unavailable: '这个时间刚刚被别人预约了。请选择其他时间。',
       not_bookable: '这位专业人士目前不接受预约。',

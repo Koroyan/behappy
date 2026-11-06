@@ -482,6 +482,7 @@ export const az3: PartialMessages = {
     confirmedTitle: 'Yazıldınız',
     confirmedBody: 'Seansınız təsdiqləndi. Bir gün əvvəl xatırlatma alacaqsınız.',
     viewAppointment: 'Görüşə baxın',
+    rescheduling: 'Görüşünüz üçün yeni vaxt seçirsiniz. Yeni vaxt tutulan kimi cari vaxt boşalır.',
     errors: {
       slot_unavailable: 'Bu vaxtı indicə kimsə tutdu. Başqasını seçin.',
       not_bookable: 'Bu mütəxəssis hazırda yazılış qəbul etmir.',

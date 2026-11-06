@@ -482,6 +482,7 @@ export const pl3: PartialMessages = {
     confirmedTitle: 'Zarezerwowano',
     confirmedBody: 'Twoja sesja jest potwierdzona. Dzień wcześniej otrzymasz przypomnienie.',
     viewAppointment: 'Zobacz wizytę',
+    rescheduling: 'Wybierasz nowy termin wizyty. Obecny termin zwolni się, gdy tylko nowy zostanie zarezerwowany.',
     errors: {
       slot_unavailable: 'Ktoś właśnie zajął ten termin. Wybierz inny.',
       not_bookable: 'Ten specjalista nie przyjmuje teraz rezerwacji.',

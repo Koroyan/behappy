@@ -351,4 +351,24 @@ describe('Professionals', () => {
     assert.equal(row.client_note_enc, null);
     assert.equal(row.status, 'cancelled_by_client', 'future appointments are released');
   });
+
+  // Runs last: it moves the shared clock forward by a year.
+  test('nobody reviews their own application; verification expires after its validity', async () => {
+    const self = await applicant('Tamar');
+    await t.grantRole(self.accountId, 'admin');
+    assert.equal((await call(self, '/api/pro/submit', 'POST', {})).status, 200);
+    const id = (await call(self, '/api/pro/me')).json.profile.id;
+    const own = await call(self, `/api/admin/pros/${id}/review`, 'POST', { action: 'approve' });
+    assert.equal(own.status, 403);
+    assert.equal(own.json.error, 'cannot_review_self');
+    assert.equal((await approve(self)).status, 200, 'another admin can approve');
+
+    t.clock.advance(366 * DAY);
+    await runAllJobs(t.app.locals.deps);
+    const p = (await t.db.query('select status, published from professional_profiles where id = $1', [id])).rows[0];
+    assert.equal(p.status, 'expired');
+    assert.equal(p.published, false, 'an expired profile leaves the directory');
+    const n = await t.db.query("select count(*)::int as n from notifications where account_id = $1 and kind = 'pro_verification' and data->>'status' = 'expired'", [self.accountId]);
+    assert.equal(n.rows[0].n, 1, 'the professional is told');
+  });
 });

@@ -89,7 +89,7 @@ export default function AppointmentDetail() {
         </Card>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           <Button label={t('appointments.message')} icon="mail-outline" variant="secondary" onPress={message} />
-          {active ? <Button label={t('appointments.reschedule')} icon="swap-horizontal-outline" variant="outline" onPress={() => router.push(`/specialists/${b.professionalId}/book` as any)} /> : null}
+          {active ? <Button label={t('appointments.reschedule')} icon="swap-horizontal-outline" variant="outline" onPress={() => router.push(`/specialists/${b.professionalId}/book?reschedule=${encodeURIComponent(b.id)}` as any)} testID="appointment-reschedule" /> : null}
           {active ? <Button label={t('appointments.cancel')} icon="close-circle-outline" variant="danger" onPress={cancel} testID="appointment-cancel" /> : null}
         </View>
       </View>

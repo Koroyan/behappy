@@ -482,6 +482,7 @@ export const ja3: PartialMessages = {
     confirmedTitle: '予約しました',
     confirmedBody: 'セッションが確定しました。前日にリマインダーが届きます。',
     viewAppointment: '予約を見る',
+    rescheduling: '予約の新しい時間を選んでいます。新しい時間が予約されると、今の時間は解放されます。',
     errors: {
       slot_unavailable: 'この時間はたった今ほかの方が予約しました。別の時間を選んでください。',
       not_bookable: 'この専門家は現在予約を受け付けていません。',

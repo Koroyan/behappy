@@ -482,6 +482,7 @@ export const fr3: PartialMessages = {
     confirmedTitle: 'C’est réservé',
     confirmedBody: 'Votre séance est confirmée. Vous recevrez un rappel la veille.',
     viewAppointment: 'Voir le rendez-vous',
+    rescheduling: 'Vous choisissez un nouvel horaire pour votre rendez-vous. L’horaire actuel est libéré dès que le nouveau est réservé.',
     errors: {
       slot_unavailable: 'Ce créneau vient d’être pris. Choisissez-en un autre.',
       not_bookable: 'Ce·tte spécialiste ne prend pas de réservations pour le moment.',

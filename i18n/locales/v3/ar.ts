@@ -485,6 +485,7 @@ export const ar3: PartialMessages = {
     confirmedTitle: 'تم الحجز',
     confirmedBody: 'تأكدت جلستك. سيصلك تذكير قبلها بيوم.',
     viewAppointment: 'عرض الموعد',
+    rescheduling: 'أنت تختار وقتًا جديدًا لموعدك. يُحرَّر الوقت الحالي فور حجز الوقت الجديد.',
     errors: {
       slot_unavailable: 'حجز أحدهم هذا الوقت للتو. يُرجى اختيار وقت آخر.',
       not_bookable: 'لا يستقبل هذا المختص حجوزات الآن.',
