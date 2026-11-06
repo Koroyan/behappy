@@ -71,7 +71,26 @@ function readContext(req) {
   };
 }
 
-export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) {
+/** Token counts reported by OpenAI (Responses or Chat Completions shape). */
+export function readUsage(usage) {
+  if (!usage || typeof usage !== 'object') return null;
+  const input = Number(usage.input_tokens ?? usage.prompt_tokens ?? 0) || 0;
+  const output = Number(usage.output_tokens ?? usage.completion_tokens ?? 0) || 0;
+  return input || output ? { input, output } : null;
+}
+
+/** Records token counts only (no content) for the admin cost report. */
+export async function recordAiUsage(db, { accountId, feature, model, usage }) {
+  const u = readUsage(usage);
+  if (!u) return;
+  try {
+    await db.query('insert into ai_usage (account_id, feature, model, input_tokens, output_tokens) values ($1, $2, $3, $4, $5)', [accountId || null, feature, model, u.input, u.output]);
+  } catch {
+    // Cost reporting must never break a reply.
+  }
+}
+
+export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock = { now: () => Date.now() } }) {
   const router = express.Router();
   const perAccount = new SlidingWindow(40, 60 * 1000);
   let globalDay = '';
@@ -81,7 +100,7 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
 
   // Shared guard: auth, configured key, feature, rate limit, global cap, quota.
   const guard = (expectedFeatures) => [
-    requireAccount(store),
+    requireAccount(db, { clock }),
     (req, res, next) => {
       if (!config.openai.apiKey) return bad(res, 503, 'ai_unavailable', 'AI is not configured on the server.');
       const ctx = readContext(req);
@@ -102,9 +121,10 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
     },
   ];
 
-  const meter = (req, res) => {
-    const entitlements = entitlementsForAccount(store, req.account.id);
-    const decision = checkAndRecord({ store, accountId: req.account.id, entitlements, ctx: req.aiContext });
+  const meter = async (req, res) => {
+    const now = clock.now();
+    const entitlements = await entitlementsForAccount(db, req.account.id, now);
+    const decision = await checkAndRecord({ db, accountId: req.account.id, entitlements, ctx: req.aiContext, now });
     if (!decision.allowed) {
       res.status(decision.status || 402).json(decision);
       return null;
@@ -116,11 +136,9 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
     return decision;
   };
 
-  const rememberResponse = (id, accountId) => {
+  const rememberResponse = async (id, accountId) => {
     if (typeof id !== 'string' || !id.startsWith('resp_')) return;
-    store.mutate((db) => {
-      db.responseOwners[id] = { accountId, at: Date.now() };
-    });
+    await db.query('insert into ai_response_owners (response_id, account_id) values ($1, $2) on conflict (response_id) do nothing', [id, accountId]);
   };
 
   // ---------- Responses API (hosted prompts) ----------
@@ -148,8 +166,8 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
       return bad(res, 400, 'bad_input', 'input may contain only user and assistant messages.');
     }
     if (body.previous_response_id !== undefined) {
-      const owner = store.data.responseOwners[body.previous_response_id];
-      if (!owner || owner.accountId !== req.account.id) {
+      const r = await db.query('select account_id from ai_response_owners where response_id = $1', [String(body.previous_response_id)]);
+      if (r.rows[0]?.account_id !== req.account.id) {
         // Not ours (or expired from our records): treat as stale so the client
         // resends full context instead of continuing someone else's chain.
         return bad(res, 409, 'stale_previous_response', 'previous_response_id not found');
@@ -165,7 +183,7 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
       max_output_tokens: Math.min(Number(body.max_output_tokens) || MAX_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS),
     };
 
-    if (!meter(req, res)) return;
+    if (!(await meter(req, res))) return;
 
     let upstream;
     try {
@@ -190,7 +208,8 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
 
     if (!clean.stream) {
       const data = await upstream.json();
-      rememberResponse(data?.id, req.account.id);
+      await rememberResponse(data?.id, req.account.id);
+      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: data?.usage });
       return res.json(data);
     }
 
@@ -202,14 +221,16 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
     res.flushHeaders?.();
 
     let head = '';
+    let tail = '';
     let captured = false;
     try {
       for await (const chunk of upstream.body) {
+        const text = Buffer.from(chunk).toString('utf8');
         if (!captured) {
-          head += Buffer.from(chunk).toString('utf8');
+          head += text;
           const m = head.match(/"id"\s*:\s*"(resp_[A-Za-z0-9_-]+)"/);
           if (m) {
-            rememberResponse(m[1], req.account.id);
+            await rememberResponse(m[1], req.account.id);
             captured = true;
             head = '';
           } else if (head.length > 16384) {
@@ -217,12 +238,17 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
             head = '';
           }
         }
+        // The final "response.completed" event carries the token counts.
+        tail = (tail + text).slice(-8192);
         res.write(chunk);
       }
     } catch {
       // Client or upstream disconnected; nothing else to do.
     }
     res.end();
+    const inTok = tail.match(/"input_tokens"\s*:\s*(\d+)/);
+    const outTok = tail.match(/"output_tokens"\s*:\s*(\d+)/);
+    if (inTok || outTok) await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: { input_tokens: Number(inTok?.[1] || 0), output_tokens: Number(outTok?.[1] || 0) } });
   });
 
   // ---------- Chat Completions (vision turns, summaries, journal, motivation) ----------
@@ -244,7 +270,7 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
       ...(body.response_format ? { response_format: body.response_format } : {}),
     };
 
-    if (!meter(req, res)) return;
+    if (!(await meter(req, res))) return;
 
     try {
       const upstream = await fetchImpl(`${config.openai.baseUrl}/chat/completions`, {
@@ -255,6 +281,11 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
       const text = await upstream.text();
       if (!upstream.ok) {
         return res.status(upstream.status >= 500 ? 502 : 400).json({ error: 'ai_upstream_error', message: 'The AI service returned an error.', upstreamStatus: upstream.status });
+      }
+      try {
+        await recordAiUsage(db, { accountId: req.account.id, feature: req.aiContext.feature, model: clean.model, usage: JSON.parse(text)?.usage });
+      } catch {
+        // not JSON: nothing to record
       }
       res.type('application/json').send(text);
     } catch {
@@ -270,7 +301,7 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
     if (bytes.length > MAX_AUDIO_BYTES) return bad(res, 413, 'audio_too_large', 'Audio is too large.');
     if (!/^audio\/[a-z0-9.+-]+$/i.test(String(mimeType).split(';')[0])) return bad(res, 400, 'bad_mime', 'Unsupported audio type.');
 
-    if (!meter(req, res)) return;
+    if (!(await meter(req, res))) return;
 
     try {
       const form = new FormData();
@@ -298,7 +329,7 @@ export function createAiRouter({ store, config, fetchImpl = globalThis.fetch }) 
     if (input.length > MAX_TTS_CHARS) return bad(res, 413, 'input_too_long', `input must be at most ${MAX_TTS_CHARS} characters.`);
     if (!VOICES.has(voice)) return bad(res, 400, 'bad_voice', 'Voice not allowed.');
 
-    if (!meter(req, res)) return;
+    if (!(await meter(req, res))) return;
 
     try {
       const upstream = await fetchImpl(`${config.openai.baseUrl}/audio/speech`, {

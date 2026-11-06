@@ -6,7 +6,7 @@ import { Platform, View } from 'react-native';
 import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@/contexts/LanguageContext';
 import { AppText, Avatar, Badge, Banner, Button, Card, Divider, Icon, ListRow, ProgressBar, Press, Screen, Segmented, SectionHeader, Sheet, space, TEXT_SCALES, Toggle, useFeedback, useLayout, useTheme } from '@/design';
 import { useT } from '@/i18n';
-import { AccountDeletionError, useAccount } from '@/lib/api/account';
+import { AccountDeletionError, useAccount, useIdentity } from '@/lib/api/account';
 import { setAiConsent, setPersonalize, useConsent } from '@/lib/privacy/consent';
 import { deleteAllData, exportAllData } from '@/lib/storage/dataTools';
 import { getUserProfile } from '@/services/userProfileService';
@@ -18,6 +18,7 @@ export default function ProfileScreen() {
   const { language, setLanguage, restartNeededForDirection } = useLanguage();
   const theme = useTheme();
   const { me, entitlements, refresh, offline } = useAccount();
+  const identity = useIdentity();
   const consent = useConsent();
   const { confirm, toast } = useFeedback();
   const [name, setName] = useState('');
@@ -205,6 +206,17 @@ export default function ProfileScreen() {
           </View>
           <Icon name="chevron-forward" size={18} color="textTertiary" />
         </Press>
+        <Card padding={6} testID="profile-account">
+          <View style={{ paddingHorizontal: 14 }}>
+            <ListRow
+              icon={identity.registered ? 'person-circle-outline' : 'person-add-outline'}
+              iconTone={identity.registered ? 'primary' : 'lavender'}
+              title={t('account.title')}
+              subtitle={identity.registered ? t('account.signedInAs', { email: identity.email || '' }) : t('account.anonymousTitle')}
+              onPress={() => router.push('/account' as any)}
+            />
+          </View>
+        </Card>
         {!hasContextPanel ? membership : null}
         {preferences}
         {privacy}

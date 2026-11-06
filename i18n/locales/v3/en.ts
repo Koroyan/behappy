@@ -1,0 +1,90 @@
+/**
+ * English source strings added in BeHappy 3.0 (account, navigation, community,
+ * specialists and bookings, professional workspace, membership, admin).
+ * Spread into `en` (../en.ts), so keys are typed and checked like the rest.
+ * Other languages live next to this file (v3/<code>.ts) and merge per language.
+ *
+ * Voice: the same as 2.0 — warm, plain, unhurried; no clinical promises, no
+ * guarantees about clients or income, no pressure.
+ */
+type Plural = { zero?: string; one: string; two?: string; few?: string; many?: string; other: string };
+const plural = (one: string, other: string): Plural => ({ one, other });
+
+export const en3 = {
+  account: {
+    title: 'Your BeHappy account',
+    anonymousTitle: 'You’re using BeHappy without an account',
+    anonymousBody: 'Your journal, conversations and other private notes stay on this device either way. An account lets you join community rooms, book specialists, apply as a professional and sign in on another device.',
+    create: 'Create an account',
+    signIn: 'Sign in',
+    signOut: 'Sign out',
+    signedInAs: 'Signed in as {email}',
+    verified: 'Email verified',
+    email: 'Email',
+    password: 'Password',
+    passwordHint: 'At least 10 characters. A few words together are easy to remember and hard to guess.',
+    newPassword: 'New password',
+    currentPassword: 'Current password',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
+    createTitle: 'Create your account',
+    createBody: 'Use an email you can open now: we’ll send a 6-digit code to confirm it. Your private notes stay on this device.',
+    createCta: 'Send the code',
+    verifyTitle: 'Check your email',
+    verifyBody: 'Enter the 6-digit code we sent to {email}.',
+    code: 'Code',
+    verifyCta: 'Confirm',
+    resend: 'Send a new code',
+    resent: 'A new code is on its way.',
+    created: 'Your account is ready.',
+    signInTitle: 'Sign in',
+    signInBody: 'Use the email and password of your BeHappy account.',
+    signInWarning: 'Signing in to another account replaces this device’s anonymous sign-in. Your journal and other private notes stay on this device. Anything bought without an account stays with that account; its recovery code brings it back.',
+    signedIn: 'You’re signed in.',
+    forgot: 'Forgot your password?',
+    forgotTitle: 'Reset your password',
+    forgotBody: 'Enter your account email. If it belongs to a BeHappy account, we’ll send a 6-digit code.',
+    forgotCta: 'Send the code',
+    resetTitle: 'Choose a new password',
+    resetBody: 'Enter the code from the email and a new password. This signs out every other device.',
+    resetCta: 'Save the new password',
+    changePassword: 'Change password',
+    changeBody: 'Other devices are signed out when you change your password.',
+    passwordChanged: 'Password changed.',
+    devices: 'Signed-in devices',
+    thisDevice: 'This device',
+    deviceApp: 'App sign-in',
+    devicePassword: 'Signed in with password',
+    lastActive: 'Last active {date}',
+    signOutDevice: 'Sign out this device',
+    signedOut: 'Signed out.',
+    sessionEnded: 'You were signed out (for example, the password was changed on another device). Sign in again to continue.',
+    requiredTitle: 'An account is needed for this',
+    requiredBody: 'Community rooms, bookings and professional tools need a BeHappy account, so people know who they’re talking to. Your private notes stay on your device.',
+    signOutConfirmTitle: 'Sign out of this device?',
+    signOutConfirmBody: 'Your private notes stay on this device. You can sign in again any time.',
+    errors: {
+      bad_email: 'Please check the email address.',
+      password_too_short: 'Use at least 10 characters.',
+      password_too_long: 'That password is too long.',
+      password_too_simple: 'Use a mix of different characters.',
+      password_too_common: 'That password is very common. Try a few words together.',
+      password_contains_email: 'Please don’t use your email in the password.',
+      email_in_use: 'This email already belongs to a BeHappy account. Sign in instead.',
+      already_registered: 'This device already has an account.',
+      code_wrong: 'That code isn’t right. Please check it and try again.',
+      code_expired: 'That code has expired. Ask for a new one.',
+      code_missing: 'Ask for a new code first.',
+      code_attempts_exceeded: 'Too many tries. Ask for a new code.',
+      invalid_credentials: 'The email or password isn’t right.',
+      account_locked: 'Too many tries. Please wait 15 minutes and try again.',
+      account_suspended: 'This account is suspended.',
+      rate_limited: 'Too many requests. Please wait a little and try again.',
+      email_unavailable: 'Email isn’t set up on this server yet, so accounts can’t be created right now.',
+      nothing_to_verify: 'There’s nothing to confirm right now.',
+      generic: 'Something went wrong. Please try again.',
+    },
+  },
+};
+
+export { plural as plural3 };

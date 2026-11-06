@@ -9,6 +9,8 @@
  * A plural entry. English needs only "one" and "other"; other languages add the
  * CLDR forms they use (Russian few/many, Arabic zero/two/few/many, …).
  */
+import { en3 } from './v3/en';
+
 export type Plural = { zero?: string; one: string; two?: string; few?: string; many?: string; other: string };
 const plural = (one: string, other: string): Plural => ({ one, other });
 
@@ -912,4 +914,7 @@ export const en = {
     body: 'Let’s take you somewhere calm.',
     home: 'Go to Today',
   },
+
+  // BeHappy 3.0: account, community, specialists, bookings, professional workspace, admin.
+  ...en3,
 };

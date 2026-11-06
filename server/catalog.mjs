@@ -96,14 +96,49 @@ export function getCatalog(name = 'current') {
   return (CATALOGS[name] || CATALOGS.current).map((p) => ({ ...p }));
 }
 
-export function findProduct(catalogName, productId) {
-  return getCatalog(catalogName).find((p) => p.id === productId) || null;
+/**
+ * BeHappy Professional: a fixed-price membership a verified psychologist pays
+ * for the platform's tools. BeHappy takes no commission on sessions. A
+ * prepaid pass with manual renewal (recurring: false) until an authorised
+ * recurring-payment flow exists. Price, duration and trial come from config
+ * (PRO_PRICE_MINOR, PRO_DURATION_DAYS, PRO_TRIAL_DAYS), so the owner can change
+ * them; the values below are only defaults.
+ */
+export const PROFESSIONAL_DEFAULTS = { amountMinor: 7900, currency: 'GEL', durationDays: 30, trialDays: 14, graceDays: 0 };
+
+export function getProfessionalCatalog(professional = PROFESSIONAL_DEFAULTS) {
+  const p = { ...PROFESSIONAL_DEFAULTS, ...(professional || {}) };
+  return [
+    {
+      id: 'professional_30d',
+      kind: 'professional',
+      amountMinor: p.amountMinor,
+      currency: p.currency,
+      durationDays: p.durationDays,
+      recurring: false,
+      trialDays: p.trialDays,
+      commissionPercent: 0,
+      audience: 'verified_professionals',
+      grants: ['professional_listing', 'booking_calendar', 'client_messages', 'profile_analytics'],
+      highlight: true,
+    },
+  ];
+}
+
+/**
+ * Finds a product for checkout. Consumer and professional catalogs are kept
+ * apart: a consumer checkout can't buy a membership and vice versa.
+ */
+export function findProduct(catalogName, productId, { audience = 'consumer', professional } = {}) {
+  const list = audience === 'professional' ? getProfessionalCatalog(professional) : getCatalog(catalogName);
+  return list.find((p) => p.id === productId) || null;
 }
 
 /** ASCII-only order description (Flitt order_desc is shown on the checkout page). */
 export function orderDescription(product) {
   if (product.kind === 'plus') return `BeHappy Plus - ${product.durationDays} days (TEST)`;
   if (product.kind === 'art') return 'BeHappy Art Therapy Program (TEST)';
+  if (product.kind === 'professional') return `BeHappy Professional - ${product.durationDays} days (TEST)`;
   return 'BeHappy (TEST)';
 }
 

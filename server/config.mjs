@@ -30,7 +30,54 @@ const int = (value, fallback) => {
 export const NODE_ENV = env.NODE_ENV || 'development';
 export const IS_PRODUCTION = NODE_ENV === 'production';
 
+// Development QA tools (read the dev email outbox, move the server clock) are
+// off unless the server is started with --dev-tools (npm run server:dev) or
+// DEV_TOOLS=1, and never available when NODE_ENV=production.
+const DEV_TOOLS = !IS_PRODUCTION && (process.argv.includes('--dev-tools') || bool(env.DEV_TOOLS));
+
 export const config = {
+  isProduction: IS_PRODUCTION,
+  devTools: DEV_TOOLS,
+  // PostgreSQL connection string. Without it the server uses an embedded
+  // PostgreSQL (PGlite) in DATA_DIR/pg, for development only.
+  databaseUrl: env.DATABASE_URL || '',
+  mail: {
+    driver: (env.MAIL_DRIVER || (IS_PRODUCTION ? 'none' : 'log')).toLowerCase(),
+    from: env.MAIL_FROM || '',
+    resendApiKey: env.RESEND_API_KEY || '',
+  },
+  sms: {
+    driver: (env.SMS_DRIVER || (IS_PRODUCTION ? 'none' : 'log')).toLowerCase(),
+    twilioAccountSid: env.TWILIO_ACCOUNT_SID || '',
+    twilioAuthToken: env.TWILIO_AUTH_TOKEN || '',
+    twilioVerifyServiceSid: env.TWILIO_VERIFY_SERVICE_SID || '',
+  },
+  // 32-byte keys (base64) for encrypting verification documents and private
+  // client/professional messages at rest. Development generates throwaway
+  // keys in DATA_DIR; production must set them (and keep them safe).
+  encryption: {
+    documentsKey: env.DOCUMENT_ENCRYPTION_KEY || '',
+    messagesKey: env.MESSAGE_ENCRYPTION_KEY || '',
+    identifierSalt: env.IDENTIFIER_HMAC_KEY || '',
+  },
+  // BeHappy Professional membership (fixed fee, 0% commission). TEST values,
+  // configurable by the owner.
+  professional: {
+    amountMinor: int(env.PRO_PRICE_MINOR, 7900),
+    currency: 'GEL',
+    durationDays: int(env.PRO_DURATION_DAYS, 30),
+    trialDays: int(env.PRO_TRIAL_DAYS, 14),
+    graceDays: int(env.PRO_GRACE_DAYS, 0),
+    verificationValidDays: int(env.PRO_VERIFICATION_VALID_DAYS, 365),
+  },
+  community: {
+    // Optional automated pre-screen of community messages with OpenAI's
+    // moderation endpoint (off by default; human moderators always decide).
+    aiModeration: bool(env.COMMUNITY_AI_MODERATION, false),
+    anuliaHourlyRoomCap: int(env.COMMUNITY_ANULIA_ROOM_HOURLY_CAP, 30),
+    anuliaDailyGlobalCap: int(env.COMMUNITY_ANULIA_DAILY_CAP, 2000),
+  },
+  supportEmail: env.SUPPORT_EMAIL || '',
   port: int(env.PORT, 8787),
   // Public URL of this API, used to build Flitt response/callback URLs.
   publicApiUrl: (env.PUBLIC_API_URL || `http://localhost:${int(env.PORT, 8787)}`).replace(/\/$/, ''),
@@ -121,6 +168,40 @@ export function describeConfig() {
     flittMode: config.flitt.mode,
     flittMerchant: config.flitt.merchantId,
     catalog: config.catalog,
-    dataDir: config.dataDir,
+    database: config.databaseUrl ? 'postgresql (DATABASE_URL)' : `embedded PGlite in ${config.dataDir} (development only)`,
+    email: config.mail.driver,
+    sms: config.sms.driver,
+    devTools: config.devTools,
+    professional: `${config.professional.amountMinor / 100} ${config.professional.currency} / ${config.professional.durationDays} days, trial ${config.professional.trialDays} days, 0% commission`,
   };
+}
+
+const isHttps = (url) => /^https:\/\//i.test(url);
+const isKey = (value) => {
+  try {
+    return Buffer.from(String(value), 'base64').length === 32;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Configuration problems that must stop a production start (blocking) and
+ * ones that only disable a feature (warnings). Nothing here prints a secret.
+ */
+export function productionProblems(c = config) {
+  const blocking = [];
+  const warnings = [];
+  if (!c.isProduction) return { blocking, warnings };
+  if (!c.databaseUrl) blocking.push('DATABASE_URL is required in production (the embedded database is for development only).');
+  if (!isHttps(c.publicApiUrl)) blocking.push('PUBLIC_API_URL must be an https:// URL in production.');
+  if (!c.appPublicUrls.every(isHttps)) blocking.push('APP_PUBLIC_URLS must all be https:// URLs in production.');
+  if (!isKey(c.encryption.documentsKey)) blocking.push('DOCUMENT_ENCRYPTION_KEY must be a base64 32-byte key in production.');
+  if (!isKey(c.encryption.messagesKey)) blocking.push('MESSAGE_ENCRYPTION_KEY must be a base64 32-byte key in production.');
+  if (!isKey(c.encryption.identifierSalt)) blocking.push('IDENTIFIER_HMAC_KEY must be a base64 32-byte key in production.');
+  if (c.trustProxy === 'loopback') warnings.push('TRUST_PROXY is not set: behind a hosting load balancer set TRUST_PROXY=1, or per-IP limits see the proxy address.');
+  if (c.mail.driver !== 'resend' || !c.mail.resendApiKey || !c.mail.from) warnings.push('Email is not configured (MAIL_DRIVER=resend, RESEND_API_KEY, MAIL_FROM): registration and password reset answer 503.');
+  if (c.sms.driver !== 'twilio' || !c.sms.twilioAccountSid) warnings.push('SMS is not configured (SMS_DRIVER=twilio + TWILIO_*): professional phone verification answers 503.');
+  if (!c.openai.apiKey) warnings.push('OPENAI_API_KEY is missing: AI features answer 503.');
+  return { blocking, warnings };
 }

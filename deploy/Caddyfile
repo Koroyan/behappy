@@ -1,0 +1,12 @@
+# Caddy obtains and renews the TLS certificate for API_DOMAIN automatically.
+# Socket.IO (wss://API_DOMAIN/socket.io/) is proxied with the same rule.
+{$API_DOMAIN} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+	reverse_proxy api:8787
+}

@@ -1,17 +1,31 @@
 // Express application factory (also used by the test suite).
+//
+// Dependencies are passed in: db (PostgreSQL or PGlite, see db/index.mjs),
+// config, a Flitt client, an OpenAI fetch, a clock and a mailer. Nothing here
+// reads process.env.
 
 import crypto from 'node:crypto';
 
 import cors from 'cors';
 import express from 'express';
+
 import { createAiRouter } from './ai.mjs';
-import { createAccount, requireAccount, restoreAccount, rotateRecoveryCode } from './auth.mjs';
+import { audit } from './audit.mjs';
+import { bearerToken, createAccount, requireAccount, requireStaff, restoreAccount, rotateRecoveryCode } from './auth.mjs';
 import { getCatalog } from './catalog.mjs';
+import { createClock } from './clock.mjs';
+import { schemaVersion } from './db/migrate.mjs';
 import { entitlementsForAccount, ordersForAccount } from './entitlements.mjs';
 import { FlittClient } from './flitt.mjs';
+import { createAuthRouter } from './identity.mjs';
+import { collectMeSections, runAccountDeletionHooks } from './lifecycle.mjs';
+import { aggregateMetrics } from './metrics.mjs';
+import { createMailer } from './notify/mailer.mjs';
+import { listNotifications, unreadCount } from './notify/notifications.mjs';
+import { getOrder } from './orders.mjs';
 import { applyFlittUpdate, createCheckout, isFinal, publicOrder, refreshOrderFromFlitt } from './payments.mjs';
 import { LIMITS, usageSummary } from './quota.mjs';
-import { aggregateMetrics } from './metrics.mjs';
+import { ts } from './db/index.mjs';
 
 class IpWindow {
   constructor(limit, windowMs) {
@@ -46,13 +60,18 @@ const withQuery = (url, params) => {
   return url.includes('?') ? `${url}&${qs}` : `${url}?${qs}`;
 };
 
-const sameSecret = (given, expected) => {
+export const sameSecret = (given, expected) => {
   const a = crypto.createHash('sha256').update(String(given ?? '')).digest();
   const b = crypto.createHash('sha256').update(String(expected)).digest();
   return crypto.timingSafeEqual(a, b);
 };
 
-export function createApp({ store, config, fetchImpl = globalThis.fetch, flittClient } = {}) {
+/**
+ * Express app. `extend(app, deps)` lets feature modules (community,
+ * professionals, admin) mount their routers with the same dependencies.
+ */
+export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClient, clock = createClock(), mailer, extend = [] } = {}) {
+  if (!db) throw new Error('createApp needs a database');
   const app = express();
   app.disable('x-powered-by');
   // Only trust X-Forwarded-For from a proxy we know about; otherwise clients
@@ -67,6 +86,9 @@ export function createApp({ store, config, fetchImpl = globalThis.fetch, flittCl
       apiBase: config.flitt.apiBase,
       fetchImpl,
     });
+  const mail = mailer || createMailer({ driver: config.mail?.driver || 'log', from: config.mail?.from, resendApiKey: config.mail?.resendApiKey, isProduction: config.isProduction });
+  const deps = { db, config, flitt, clock, mailer: mail, fetchImpl };
+  app.locals.deps = deps;
 
   const allowedOrigins = new Set([...config.appPublicUrls, ...config.corsOrigins]);
   app.use(
@@ -79,12 +101,27 @@ export function createApp({ store, config, fetchImpl = globalThis.fetch, flittCl
       exposedHeaders: ['X-BeHappy-Tier', 'X-BeHappy-Remaining', 'X-BeHappy-Grace'],
     })
   );
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    next();
+  });
 
   const accountCreation = new IpWindow(20, 60 * 60 * 1000);
   const restoreAttempts = new IpWindow(10, 15 * 60 * 1000);
+  const auth = requireAccount(db, { clock });
+  const json = express.json({ limit: '10kb' });
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, payments: 'flitt-test', ai: Boolean(config.openai.apiKey) });
+  app.get('/api/health', async (_req, res) => {
+    let database = 'ok';
+    let schema = null;
+    try {
+      await db.query('select 1');
+      schema = await schemaVersion(db);
+    } catch {
+      database = 'error';
+    }
+    res.status(database === 'ok' ? 200 : 503).json({ ok: database === 'ok', database, schema, driver: db.kind, payments: 'flitt-test', ai: Boolean(config.openai.apiKey), email: mail.available });
   });
 
   app.get('/api/catalog', (_req, res) => {
@@ -101,67 +138,85 @@ export function createApp({ store, config, fetchImpl = globalThis.fetch, flittCl
   });
 
   // ---------- Accounts ----------
-  app.post('/api/account', express.json({ limit: '10kb' }), (req, res) => {
+  app.post('/api/account', json, async (req, res) => {
     if (!accountCreation.allow(req.ip)) return res.status(429).json({ error: 'rate_limited' });
-    res.status(201).json(createAccount(store));
+    res.status(201).json(await createAccount(db, { now: clock.now(), userAgent: req.get('user-agent') }));
   });
 
-  app.post('/api/account/restore', express.json({ limit: '10kb' }), (req, res) => {
+  app.post('/api/account/restore', json, async (req, res) => {
     if (!restoreAttempts.allow(req.ip)) return res.status(429).json({ error: 'rate_limited' });
-    const restored = restoreAccount(store, req.body?.recoveryCode);
+    const restored = await restoreAccount(db, req.body?.recoveryCode, { now: clock.now(), userAgent: req.get('user-agent') });
     if (!restored) return res.status(404).json({ error: 'not_found', message: 'No account matches this recovery code.' });
     res.json(restored);
   });
 
-  const auth = requireAccount(store);
-
-  app.get('/api/account/me', auth, (req, res) => {
-    const entitlements = entitlementsForAccount(store, req.account.id);
+  app.get('/api/account/me', auth, async (req, res) => {
+    const now = clock.now();
+    const a = req.account;
+    const entitlements = await entitlementsForAccount(db, a.id, now);
     res.json({
-      accountId: req.account.id,
-      createdAt: req.account.createdAt,
+      accountId: a.id,
+      createdAt: a.createdAt,
       entitlements,
-      usage: usageSummary({ store, accountId: req.account.id, entitlements }),
+      usage: await usageSummary({ db, accountId: a.id, entitlements, now }),
       payments: { provider: 'flitt', mode: 'test' },
       ai: { available: Boolean(config.openai.apiKey) },
+      identity: { registered: a.registered, email: a.email, emailVerified: a.emailVerified, roles: a.roles, sessionKind: a.sessionKind, status: a.status, emailAvailable: mail.available },
+      notifications: { unread: await unreadCount(db, a.id) },
+      ...(await collectMeSections(db, a, now)),
     });
   });
 
-  app.post('/api/account/recovery-code', auth, (req, res) => {
-    res.json({ recoveryCode: rotateRecoveryCode(store, req.account.id) });
+  app.post('/api/account/recovery-code', auth, async (req, res) => {
+    res.json({ recoveryCode: await rotateRecoveryCode(db, req.account.id) });
   });
 
-  app.delete('/api/account', auth, (req, res) => {
+  // Deletes the account and everything attached to it in one transaction. If
+  // any part fails, nothing is deleted and the app is told (no silent success).
+  app.delete('/api/account', auth, async (req, res) => {
     const id = req.account.id;
-    store.mutate((db) => {
-      delete db.accounts[id];
-      delete db.usage[id];
+    const now = clock.now();
+    await db.tx(async (t) => {
       // Payment records are kept for accounting, detached from the account.
-      for (const order of Object.values(db.orders)) {
-        if (order.accountId === id) order.accountId = 'deleted';
-      }
-      for (const [rid, row] of Object.entries(db.responseOwners)) {
-        if (row.accountId === id) delete db.responseOwners[rid];
-      }
+      await t.query('update orders set account_deleted = true where account_id = $1', [id]);
+      await runAccountDeletionHooks(t, id, now);
+      await t.query('delete from accounts where id = $1', [id]);
+      await audit(t, { actorRole: 'system', action: 'account.deleted', targetType: 'account', targetId: crypto.createHash('sha256').update(id).digest('hex').slice(0, 16) });
     });
     res.json({ ok: true });
   });
 
+  // ---------- Email + password ----------
+  app.use('/api/auth', createAuthRouter({ db, mailer: mail, clock }));
+
+  // ---------- Notifications ----------
+  app.get('/api/notifications', auth, async (req, res) => {
+    res.json({ notifications: await listNotifications(db, req.account.id, { before: req.query.before }), unread: await unreadCount(db, req.account.id) });
+  });
+
+  app.post('/api/notifications/read', json, auth, async (req, res) => {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isFinite).slice(0, 200) : null;
+    if (ids) await db.query('update notifications set read_at = $3 where account_id = $1 and id = any($2::bigint[]) and read_at is null', [req.account.id, ids, ts(clock.now())]);
+    else await db.query('update notifications set read_at = $2 where account_id = $1 and read_at is null', [req.account.id, ts(clock.now())]);
+    res.json({ ok: true, unread: await unreadCount(db, req.account.id) });
+  });
+
   // ---------- AI proxy ----------
-  app.use('/api/ai', express.json({ limit: '20mb' }), createAiRouter({ store, config, fetchImpl }));
+  app.use('/api/ai', express.json({ limit: '20mb' }), createAiRouter({ db, config, fetchImpl, clock }));
 
   // ---------- Payments (Flitt TEST) ----------
-  app.post('/api/payments/checkout', express.json({ limit: '10kb' }), auth, async (req, res) => {
+  app.post('/api/payments/checkout', json, auth, async (req, res) => {
     try {
       const returnUrl = buildReturnUrl(config, req.body?.returnTo);
       const { order, checkoutUrl, product } = await createCheckout({
-        store,
+        db,
         config,
         flitt,
         accountId: req.account.id,
         productId: String(req.body?.productId || ''),
         lang: String(req.body?.lang || 'en'),
         returnUrl,
+        now: clock.now(),
       });
       res.status(201).json({ order: publicOrder(order), checkoutUrl, product, mode: 'test' });
     } catch (error) {
@@ -170,95 +225,133 @@ export function createApp({ store, config, fetchImpl = globalThis.fetch, flittCl
   });
 
   app.get('/api/payments/orders', auth, async (req, res) => {
+    const now = clock.now();
     // Bring the newest open orders up to date with Flitt first (a declined attempt,
     // an expiry), so the list never shows a stale "started". Each check is throttled
     // inside refreshOrderFromFlitt and never throws.
-    const open = ordersForAccount(store, req.account.id)
+    const open = (await ordersForAccount(db, req.account.id))
       .filter((o) => !isFinal(o.status))
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 3);
-    await Promise.all(open.map((o) => refreshOrderFromFlitt({ store, config, flitt, orderId: o.id }).catch(() => null)));
-    const orders = ordersForAccount(store, req.account.id)
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .map(publicOrder);
+    await Promise.all(open.map((o) => refreshOrderFromFlitt({ db, config, flitt, orderId: o.id, now }).catch(() => null)));
+    const orders = (await ordersForAccount(db, req.account.id)).sort((a, b) => b.createdAt - a.createdAt).map(publicOrder);
     res.json({ orders });
   });
 
   app.get('/api/payments/orders/:orderId', auth, async (req, res) => {
-    const order = store.orders[req.params.orderId];
+    const now = clock.now();
+    const order = await getOrder(db, req.params.orderId);
     if (!order || order.accountId !== req.account.id) return res.status(404).json({ error: 'not_found' });
-    const refreshed = isFinal(order.status) ? order : await refreshOrderFromFlitt({ store, config, flitt, orderId: order.id });
+    const refreshed = isFinal(order.status) ? order : await refreshOrderFromFlitt({ db, config, flitt, orderId: order.id, now });
     res.json({
       order: publicOrder(refreshed),
-      entitlements: entitlementsForAccount(store, req.account.id),
+      entitlements: await entitlementsForAccount(db, req.account.id, now),
     });
   });
 
   // Flitt → our server (JSON). Must answer 200 once handled, or Flitt retries.
-  app.post(
-    '/api/payments/flitt/callback',
-    express.json({ limit: '100kb' }),
-    express.urlencoded({ extended: false, limit: '100kb' }),
-    (req, res) => {
-      const result = applyFlittUpdate({ store, config, payload: req.body, via: 'callback' });
-      if (!result.ok && (result.reason === 'bad_signature' || result.reason === 'merchant_mismatch')) {
-        return res.status(400).json({ ok: false, reason: result.reason });
-      }
-      if (!result.ok && result.reason === 'unknown_order') return res.status(404).json({ ok: false, reason: result.reason });
-      res.status(200).json({ ok: true, duplicate: Boolean(result.duplicate) });
+  app.post('/api/payments/flitt/callback', express.json({ limit: '100kb' }), express.urlencoded({ extended: false, limit: '100kb' }), async (req, res) => {
+    const result = await applyFlittUpdate({ db, config, payload: req.body, via: 'callback', now: clock.now() });
+    if (!result.ok && (result.reason === 'bad_signature' || result.reason === 'merchant_mismatch')) {
+      return res.status(400).json({ ok: false, reason: result.reason });
     }
-  );
+    if (!result.ok && result.reason === 'unknown_order') return res.status(404).json({ ok: false, reason: result.reason });
+    res.status(200).json({ ok: true, duplicate: Boolean(result.duplicate) });
+  });
 
   // Browser redirect after checkout (Flitt may POST form fields or GET).
   app.all('/api/payments/flitt/return', express.urlencoded({ extended: false, limit: '100kb' }), express.json({ limit: '100kb' }), async (req, res) => {
     const orderId = String(req.query.orderId || req.body?.order_id || '');
-    const order = store.orders[orderId];
+    const order = await getOrder(db, orderId);
     if (!order) return res.redirect(303, withQuery(`${config.appPublicUrls[0]}/checkout/result`, { error: 'unknown_order' }));
 
     // A signed payload in the redirect is applied like a callback; an unsigned
     // or forged one is ignored. Either way we then ask Flitt directly.
-    if (req.body && req.body.signature) applyFlittUpdate({ store, config, payload: req.body, via: 'return' });
+    if (req.body && req.body.signature) await applyFlittUpdate({ db, config, payload: req.body, via: 'return', now: clock.now() });
     try {
-      await refreshOrderFromFlitt({ store, config, flitt, orderId, minIntervalMs: 0 });
+      await refreshOrderFromFlitt({ db, config, flitt, orderId, minIntervalMs: 0, now: clock.now() });
     } catch {
       // status will be retried by the result screen's polling
     }
     res.redirect(303, withQuery(order.returnUrl || `${config.appPublicUrls[0]}/checkout/result`, { orderId }));
   });
 
-  // Test-only refund, for verifying the reversal path. Requires ADMIN_TOKEN.
-  app.get('/api/admin/metrics', (req, res) => {
-    if (!config.adminToken || !sameSecret(req.get('x-admin-token'), config.adminToken)) return res.status(403).json({ error: 'forbidden' });
-    res.json(aggregateMetrics(store));
+  // ---------- Owner tools (legacy token for scripts, or an admin password session) ----------
+  const adminGate = [
+    async (req, res, next) => {
+      if (config.adminToken && req.get('x-admin-token') && sameSecret(req.get('x-admin-token'), config.adminToken)) {
+        req.adminVia = 'token';
+        return next();
+      }
+      if (!bearerToken(req)) return res.status(403).json({ error: 'forbidden' });
+      return auth(req, res, () => requireStaff('admin')(req, res, next));
+    },
+  ];
+
+  // Grants or revokes a staff role for a registered account. The owner's
+  // ADMIN_TOKEN bootstraps the first administrator; after that admins can do it.
+  app.post('/api/admin/roles', json, ...adminGate, async (req, res) => {
+    const role = String(req.body?.role || '');
+    if (!['admin', 'moderator'].includes(role)) return res.status(400).json({ error: 'bad_role' });
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const grant = req.body?.grant !== false;
+    const r = await db.query(
+      grant
+        ? 'update accounts set roles = array(select distinct unnest(roles || array[$2]::text[])) where email = $1 and email_verified_at is not null returning id'
+        : 'update accounts set roles = array_remove(roles, $2) where email = $1 and email_verified_at is not null returning id',
+      [email, role]
+    );
+    const id = r.rows[0]?.id;
+    if (!id) return res.status(404).json({ error: 'not_found', message: 'No registered account with this email.' });
+    await audit(db, { actorId: req.account?.id || null, actorRole: req.adminVia === 'token' ? 'owner_token' : 'admin', action: grant ? 'role.granted' : 'role.revoked', targetType: 'account', targetId: id, metadata: { role } });
+    res.json({ ok: true, accountId: id, role, granted: grant });
   });
 
-  app.post('/api/admin/orders/:orderId/refund', express.json({ limit: '10kb' }), async (req, res) => {
-    if (!config.adminToken || !sameSecret(req.get('x-admin-token'), config.adminToken)) return res.status(403).json({ error: 'forbidden' });
-    const order = store.orders[req.params.orderId];
+  app.get('/api/admin/metrics', ...adminGate, async (_req, res) => {
+    res.json(await aggregateMetrics(db, clock.now()));
+  });
+
+  // TEST-mode refund through Flitt's reversal API.
+  app.post('/api/admin/orders/:orderId/refund', json, ...adminGate, async (req, res) => {
+    const order = await getOrder(db, req.params.orderId);
     if (!order) return res.status(404).json({ error: 'not_found' });
     if (order.status !== 'approved') return res.status(409).json({ error: 'not_refundable', status: order.status });
     try {
-      const response = await flitt.reverse({
-        orderId: order.id,
-        amountMinor: order.amountMinor,
-        currency: order.currency,
-        reverseId: `rev-${order.id}`,
-      });
-      store.mutate((db) => {
-        db.orders[order.id].lastStatusCheckAt = 0;
-      });
-      const refreshed = await refreshOrderFromFlitt({ store, config, flitt, orderId: order.id, minIntervalMs: 0, force: true });
+      const response = await flitt.reverse({ orderId: order.id, amountMinor: order.amountMinor, currency: order.currency, reverseId: `rev-${order.id}` });
+      await db.query('update orders set last_status_check_at = null where id = $1', [order.id]);
+      const refreshed = await refreshOrderFromFlitt({ db, config, flitt, orderId: order.id, minIntervalMs: 0, force: true, now: clock.now() });
+      await audit(db, { actorId: req.account?.id || null, actorRole: req.adminVia === 'token' ? 'owner_token' : 'admin', action: 'order.refund_requested', targetType: 'order', targetId: order.id, metadata: { reverseStatus: response.reverse_status } });
       res.json({ reverse: { status: response.reverse_status }, order: publicOrder(refreshed) });
     } catch (error) {
       res.status(502).json({ error: 'refund_failed', message: error.message });
     }
   });
 
+  // ---------- Feature modules ----------
+  for (const mount of extend) mount(app, deps);
+
+  // ---------- Development tools (never in production) ----------
+  if (config.devTools && !config.isProduction) {
+    app.get('/api/dev/outbox', (req, res) => {
+      const m = mail.lastTo(String(req.query.to || ''));
+      res.json({ message: m });
+    });
+    app.post('/api/dev/clock', json, (req, res) => {
+      try {
+        clock.setOffset(Number(req.body?.offsetMs) || 0);
+        res.json({ ok: true, offsetMs: clock.offset, now: clock.now() });
+      } catch (e) {
+        res.status(403).json({ error: 'clock_locked', message: e.message });
+      }
+    });
+  }
+
   app.use((err, _req, res, _next) => {
     if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'payload_too_large' });
     if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'bad_json' });
+    if (err?.status && err?.code && err.status < 500) return res.status(err.status).json({ error: err.code, message: err.message });
     console.error('[server] unhandled error', err);
-    res.status(500).json({ error: 'server_error' });
+    res.status(err?.status === 503 ? 503 : 500).json({ error: err?.code === 'email_unavailable' ? 'email_unavailable' : 'server_error' });
   });
 
   return app;

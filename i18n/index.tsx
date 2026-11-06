@@ -20,6 +20,7 @@ import { ka } from './locales/ka';
 import { ru } from './locales/ru';
 import { hy } from './locales/hy';
 import { extraLocales } from './locales/extra';
+import { v3Locales } from './locales/v3';
 import { withRtlBase } from './bidi';
 import { DATE_FALLBACK_LANGS, formatDateFallback, formatTimeFallback } from './dateFallback';
 
@@ -45,7 +46,11 @@ type Leaves<T, P extends string = ''> = {
 
 export type MessageKey = Leaves<Messages>;
 
-const CATALOG: Partial<Record<AppLanguage, PartialMessages>> = { en, ka, ru, hy, ...extraLocales };
+const BASE: Partial<Record<AppLanguage, PartialMessages>> = { en, ka, ru, hy, ...extraLocales };
+// 3.0 namespaces are separate files per language, merged over the 2.0 catalog.
+const CATALOG: Partial<Record<AppLanguage, PartialMessages>> = Object.fromEntries(
+  Object.entries(BASE).map(([code, base]) => [code, { ...base, ...(v3Locales[code as AppLanguage] || {}) }])
+);
 
 function lookup(obj: unknown, path: string): unknown {
   let cur: any = obj;

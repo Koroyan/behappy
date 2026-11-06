@@ -1,0 +1,24 @@
+{
+  "name": "behappy-server",
+  "version": "3.0.0",
+  "private": true,
+  "description": "BeHappy API and real-time server (Express, PostgreSQL, Socket.IO). Flitt TEST mode only.",
+  "type": "module",
+  "main": "index.mjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "pg": "^8.23.1",
+    "socket.io": "^4.8.4"
+  },
+  "optionalDependencies": {
+    "@electric-sql/pglite": "^0.5.15"
+  }
+}

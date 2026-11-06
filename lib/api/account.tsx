@@ -18,6 +18,16 @@ export interface UsageSummary {
   art: { startedToday: number; newSessionsPerDay: number; freeSessionIds: number[] };
 }
 
+export interface Identity {
+  registered: boolean;
+  email: string | null;
+  emailVerified: boolean;
+  roles: ('moderator' | 'admin')[];
+  sessionKind: 'device' | 'password';
+  status: 'active' | 'suspended';
+  emailAvailable: boolean;
+}
+
 export interface Me {
   accountId: string;
   createdAt: number;
@@ -25,7 +35,22 @@ export interface Me {
   usage: UsageSummary;
   payments: { provider: 'flitt'; mode: 'test' };
   ai: { available: boolean };
+  identity?: Identity;
+  notifications?: { unread: number };
+  /** Sections contributed by 3.0 feature modules (community, professional). */
+  [section: string]: unknown;
 }
+
+export const ANONYMOUS_IDENTITY: Identity = { registered: false, email: null, emailVerified: false, roles: [], sessionKind: 'device', status: 'active', emailAvailable: true };
+
+/** Who is signed in on this device (server-confirmed; anonymous until the first answer). */
+export function useIdentity(): Identity {
+  const { me } = useAccount();
+  return (me?.identity as Identity | undefined) ?? ANONYMOUS_IDENTITY;
+}
+
+/** Staff tools need the role and a password session (enforced on the server too). */
+export const isStaffIdentity = (id: Identity, role: 'moderator' | 'admin') => id.roles.includes(role) && id.sessionKind === 'password' && id.registered;
 
 export const FREE_ENTITLEMENTS: Entitlements = {
   plus: { active: false, expiresAt: null },

@@ -11,12 +11,31 @@ import ts from 'typescript';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const localesDir = path.join(root, 'i18n/locales');
 
-function loadLocale(file, exportName) {
-  const src = fs.readFileSync(path.join(localesDir, file), 'utf8');
+// Loads a locale file, following its relative imports (en.ts spreads ./v3/en).
+const loaded = new Map();
+function loadTs(abs) {
+  if (loaded.has(abs)) return loaded.get(abs);
+  const src = fs.readFileSync(abs, 'utf8');
   const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const m = { exports: {} };
-  new Function('module', 'exports', 'require', js)(m, m.exports, () => ({}));
-  return m.exports[exportName];
+  loaded.set(abs, m.exports);
+  const req = (spec) => {
+    if (!spec.startsWith('.')) return {};
+    const base = path.resolve(path.dirname(abs), spec);
+    const hit = [`${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts')].find((c) => fs.existsSync(c));
+    return hit ? loadTs(hit) : {};
+  };
+  new Function('module', 'exports', 'require', js)(m, m.exports, req);
+  loaded.set(abs, m.exports);
+  return m.exports;
+}
+
+function loadLocale(file, exportName) {
+  const tree = loadTs(path.join(localesDir, file))[exportName];
+  // 3.0 namespaces for this language (v3/<code>.ts exports <code>3).
+  const v3 = path.join(localesDir, 'v3', `${exportName}.ts`);
+  if (exportName !== 'en' && fs.existsSync(v3)) return { ...tree, ...(loadTs(v3)[`${exportName}3`] || {}) };
+  return tree;
 }
 
 const flatten = (obj, prefix = '', out = {}) => {

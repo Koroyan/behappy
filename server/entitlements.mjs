@@ -2,7 +2,10 @@
 //
 // Recomputing from the order history every time keeps refunds/reversals exact:
 // a reversed order simply stops contributing, and the Plus expiry shrinks by
-// exactly that order's duration.
+// exactly that order's duration. Professional memberships are separate
+// (professional/membership.mjs) and never unlock consumer features.
+
+import { ordersForAccount } from './orders.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -33,10 +36,8 @@ export function computeEntitlements(orders, now = Date.now()) {
   };
 }
 
-export function ordersForAccount(store, accountId) {
-  return Object.values(store.orders).filter((o) => o.accountId === accountId);
-}
+export { ordersForAccount };
 
-export function entitlementsForAccount(store, accountId, now = Date.now()) {
-  return computeEntitlements(ordersForAccount(store, accountId), now);
+export async function entitlementsForAccount(db, accountId, now = Date.now()) {
+  return computeEntitlements(await ordersForAccount(db, accountId), now);
 }

@@ -4,7 +4,9 @@ import { after, before, describe, test } from 'node:test';
 import { createApp } from '../app.mjs';
 import { computeEntitlements } from '../entitlements.mjs';
 import { buildSignatureString, sign, verifySignature } from '../flitt.mjs';
-import { MemoryStore } from '../store.mjs';
+import { createDatabase } from '../db/index.mjs';
+import { migrate } from '../db/migrate.mjs';
+import { getOrder } from '../orders.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -151,22 +153,26 @@ describe('Entitlements are derived from orders', () => {
 describe('API', () => {
   let server;
   let base;
-  let store;
+  let db;
   let flitt;
   let openai;
 
   before(async () => {
-    store = new MemoryStore();
+    db = await createDatabase({ memory: true });
+    await migrate(db);
     flitt = new FakeFlitt();
     openai = makeOpenAiFetch();
-    const app = createApp({ store, config: makeConfig(), fetchImpl: openai, flittClient: flitt });
+    const app = createApp({ db, config: makeConfig(), fetchImpl: openai, flittClient: flitt });
     await new Promise((resolve) => {
       server = app.listen(0, resolve);
     });
     base = `http://127.0.0.1:${server.address().port}`;
   });
 
-  after(() => server.close());
+  after(async () => {
+    server.close();
+    await db.close();
+  });
 
   const api = async (path, { token, method = 'GET', body, headers = {} } = {}) => {
     const res = await fetch(`${base}${path}`, {
@@ -228,7 +234,7 @@ describe('API', () => {
     assert.equal(res.json.mode, 'test');
     const created = flitt.created.at(-1);
     assert.equal(created.amountMinor, 5000);
-    const stored = store.orders[res.json.order.id];
+    const stored = await getOrder(db, res.json.order.id);
     assert.equal(stored.returnUrl, 'http://app.test/checkout/result', 'unknown origins and unsafe paths fall back to the app URL');
     assert.equal((await api('/api/payments/checkout', { token: acct.token, method: 'POST', body: { productId: 'free_money' } })).status, 400);
   });
@@ -236,18 +242,18 @@ describe('API', () => {
   test('forged, tampered and replayed callbacks never grant access', async () => {
     const acct = await newAccount();
     const { json } = await api('/api/payments/checkout', { token: acct.token, method: 'POST', body: { productId: 'plus_30' } });
-    const order = store.orders[json.order.id];
+    const order = await getOrder(db, json.order.id);
 
     const unsigned = { order_id: order.id, merchant_id: 1549901, amount: order.amountMinor, currency: 'GEL', order_status: 'approved' };
     assert.equal((await api('/api/payments/flitt/callback', { method: 'POST', body: unsigned })).status, 400);
-    assert.equal(store.orders[order.id].status, 'created');
+    assert.equal((await getOrder(db, order.id)).status, 'created');
 
     const wrongMerchant = signedCallback(order, { merchant_id: 999 });
     assert.equal((await api('/api/payments/flitt/callback', { method: 'POST', body: wrongMerchant })).status, 400);
 
     const cheap = signedCallback(order, { amount: 1 });
     await api('/api/payments/flitt/callback', { method: 'POST', body: cheap });
-    assert.equal(store.orders[order.id].status, 'error', 'amount mismatch quarantines the order');
+    assert.equal((await getOrder(db, order.id)).status, 'error', 'amount mismatch quarantines the order');
     const me = await api('/api/account/me', { token: acct.token });
     assert.equal(me.json.entitlements.plus.active, false);
   });
@@ -255,7 +261,7 @@ describe('API', () => {
   test('a valid signed callback grants Plus exactly once', async () => {
     const acct = await newAccount();
     const { json } = await api('/api/payments/checkout', { token: acct.token, method: 'POST', body: { productId: 'plus_30' } });
-    const order = store.orders[json.order.id];
+    const order = await getOrder(db, json.order.id);
     const payload = signedCallback(order);
     const first = await api('/api/payments/flitt/callback', { method: 'POST', body: payload });
     assert.equal(first.status, 200);
@@ -272,7 +278,7 @@ describe('API', () => {
 
     const regress = signedCallback(order, { order_status: 'processing', payment_id: 777002 });
     await api('/api/payments/flitt/callback', { method: 'POST', body: regress });
-    assert.equal(store.orders[order.id].status, 'approved', 'status never moves backwards');
+    assert.equal((await getOrder(db, order.id)).status, 'approved', 'status never moves backwards');
   });
 
   test('browser return with unsigned "success" does not approve; Flitt status does', async () => {
@@ -282,7 +288,7 @@ describe('API', () => {
       method: 'POST',
       body: { productId: 'art_program', returnTo: { platform: 'web', origin: 'http://app.test', path: '/checkout/result' } },
     });
-    const order = store.orders[json.order.id];
+    const order = await getOrder(db, json.order.id);
 
     flitt.statusById.set(order.id, { order_id: order.id, merchant_id: 1549901, amount: order.amountMinor, currency: 'GEL', order_status: 'processing' });
     const ret = await fetch(`${base}/api/payments/flitt/return?orderId=${order.id}&success=true&status=success`, {
@@ -293,11 +299,11 @@ describe('API', () => {
     });
     assert.equal(ret.status, 303);
     assert.equal(ret.headers.get('location'), `http://app.test/checkout/result?orderId=${order.id}`);
-    assert.equal(store.orders[order.id].status, 'processing');
+    assert.equal((await getOrder(db, order.id)).status, 'processing');
     assert.equal((await api('/api/account/me', { token: acct.token })).json.entitlements.artProgram.owned, false);
 
     flitt.statusById.set(order.id, { order_id: order.id, merchant_id: 1549901, amount: order.amountMinor, currency: 'GEL', order_status: 'approved', payment_id: 55 });
-    store.orders[order.id].lastStatusCheckAt = 0;
+    await db.query('update orders set last_status_check_at = null where id = $1', [order.id]);
     const polled = await api(`/api/payments/orders/${order.id}`, { token: acct.token });
     assert.equal(polled.json.order.status, 'approved');
     assert.equal(polled.json.entitlements.artProgram.owned, true);
@@ -313,10 +319,10 @@ describe('API', () => {
       method: 'POST',
       body: { productId: 'plus_30', returnTo: { platform: 'web', origin: 'http://app.test', path: '/checkout/result' } },
     });
-    const order = store.orders[json.order.id];
+    const order = await getOrder(db, json.order.id);
     // Flitt keeps the order open after a declined card; the decline is only in the response code.
     flitt.statusById.set(order.id, { order_id: order.id, merchant_id: 1549901, amount: order.amountMinor, currency: 'GEL', order_status: 'processing', response_code: 1014, response_description: 'Declined by issuing bank' });
-    store.orders[order.id].lastStatusCheckAt = 0;
+    await db.query('update orders set last_status_check_at = null where id = $1', [order.id]);
     const list = await api('/api/payments/orders', { token: acct.token });
     const row = list.json.orders.find((o) => o.id === order.id);
     assert.equal(row.attemptDeclined, true);
@@ -327,7 +333,7 @@ describe('API', () => {
   test('a refund (reversal) removes the entitlement', async () => {
     const acct = await newAccount();
     const { json } = await api('/api/payments/checkout', { token: acct.token, method: 'POST', body: { productId: 'plus_90' } });
-    const order = store.orders[json.order.id];
+    const order = await getOrder(db, json.order.id);
     await api('/api/payments/flitt/callback', { method: 'POST', body: signedCallback(order) });
     assert.equal((await api('/api/account/me', { token: acct.token })).json.entitlements.plus.active, true);
 
@@ -355,8 +361,8 @@ describe('API', () => {
     assert.ok(res.json.accounts.total >= 1);
     assert.ok(res.json.orders.byStatus.reversed >= 1);
     const text = JSON.stringify(res.json);
-    for (const id of Object.keys(store.accounts)) assert.ok(!text.includes(id), 'no account ids in metrics');
-    for (const id of Object.keys(store.orders)) assert.ok(!text.includes(id), 'no order ids in metrics');
+    for (const { id } of (await db.query('select id from accounts')).rows) assert.ok(!text.includes(id), 'no account ids in metrics');
+    for (const { id } of (await db.query('select id from orders')).rows) assert.ok(!text.includes(id), 'no order ids in metrics');
   });
 
   const anulia = (token, conv, extra = {}) =>
@@ -482,7 +488,7 @@ describe('API', () => {
     assert.equal(locked.json.reason, 'need_art_access');
 
     const { json } = await api('/api/payments/checkout', { token: acct.token, method: 'POST', body: { productId: 'art_program' } });
-    await api('/api/payments/flitt/callback', { method: 'POST', body: signedCallback(store.orders[json.order.id]) });
+    await api('/api/payments/flitt/callback', { method: 'POST', body: signedCallback(await getOrder(db, json.order.id)) });
     const capped = await art(2);
     assert.equal(capped.status, 402, 'session 1 already used today’s new-session allowance');
     assert.equal(capped.json.reason, 'daily_new_session_limit');

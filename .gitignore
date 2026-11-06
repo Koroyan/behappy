@@ -49,3 +49,6 @@ dist/
 # QA screenshots
 qa-shots/
 scripts/pw-shots*/
+
+# Production secrets for the docker stack
+deploy/.env.production

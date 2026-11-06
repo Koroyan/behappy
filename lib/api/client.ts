@@ -28,6 +28,8 @@ export interface StoredAccount {
   token: string;
   recoveryCode?: string;
   createdAt: number;
+  /** "password" after signing in with email + password; otherwise a device session. */
+  kind?: 'device' | 'password';
 }
 
 export class ApiError extends Error {
@@ -77,17 +79,48 @@ export function onAccountChange(fn: (a: StoredAccount | null) => void) {
   };
 }
 
+/**
+ * Where the sign-in token lives. On iOS/Android it goes to the system
+ * keychain/keystore (expo-secure-store); browsers have no secure store, so web
+ * keeps it in local storage. 2.0 kept it in AsyncStorage on every platform: a
+ * token found there is moved to the secure store on first read.
+ */
+const SECURE_KEY = 'behappy_account_v1';
+const secureStore = Platform.OS === 'web' ? null : (require('expo-secure-store') as typeof import('expo-secure-store'));
+
+async function readRaw(): Promise<string | null> {
+  if (!secureStore) return AsyncStorage.getItem(ACCOUNT_KEY);
+  const secure = await secureStore.getItemAsync(SECURE_KEY);
+  if (secure) return secure;
+  const legacy = await AsyncStorage.getItem(ACCOUNT_KEY);
+  if (legacy) {
+    await secureStore.setItemAsync(SECURE_KEY, legacy);
+    await AsyncStorage.removeItem(ACCOUNT_KEY);
+  }
+  return legacy;
+}
+
+async function writeRaw(value: string | null) {
+  if (!secureStore) {
+    if (value) await AsyncStorage.setItem(ACCOUNT_KEY, value);
+    else await AsyncStorage.removeItem(ACCOUNT_KEY);
+    return;
+  }
+  if (value) await secureStore.setItemAsync(SECURE_KEY, value);
+  else await secureStore.deleteItemAsync(SECURE_KEY);
+  await AsyncStorage.removeItem(ACCOUNT_KEY);
+}
+
 async function saveAccount(account: StoredAccount | null) {
   cached = account;
-  if (account) await AsyncStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
-  else await AsyncStorage.removeItem(ACCOUNT_KEY);
+  await writeRaw(account ? JSON.stringify(account) : null);
   listeners.forEach((fn) => fn(account));
 }
 
 export async function getStoredAccount(): Promise<StoredAccount | null> {
   if (cached) return cached;
   try {
-    const raw = await AsyncStorage.getItem(ACCOUNT_KEY);
+    const raw = await readRaw();
     cached = raw ? (JSON.parse(raw) as StoredAccount) : null;
   } catch {
     cached = null;
@@ -128,7 +161,7 @@ export async function replaceAccount(account: StoredAccount | null) {
 }
 
 export interface RequestOptions {
-  method?: 'GET' | 'POST' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   headers?: Record<string, string>;
   /** Skip auth (catalog, health). */
@@ -166,15 +199,25 @@ export async function apiFetch(path: string, options: RequestOptions = {}): Prom
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   };
   let res = await rawFetch(path, init);
-  // The server no longer knows this token (e.g. its data was reset): start a
-  // fresh anonymous account once. Purchases can be restored with the code.
+  // The server no longer knows this token (e.g. its data was reset, or the
+  // password was reset on another device): start a fresh anonymous account
+  // once. A signed-out password session is remembered so the app can say so.
   if (res.status === 401 && account && !options.noRecover) {
+    if (account.kind === 'password') signOutNotice = 'session_ended';
     await saveAccount(null);
     const fresh = await ensureAccount();
     headers.Authorization = `Bearer ${fresh.token}`;
     res = await rawFetch(path, init);
   }
   return res;
+}
+
+let signOutNotice: 'session_ended' | null = null;
+/** Returns (once) why the app was signed out of a password session, if it was. */
+export function consumeSignOutNotice() {
+  const n = signOutNotice;
+  signOutNotice = null;
+  return n;
 }
 
 export async function apiJson<T = any>(path: string, options: RequestOptions = {}): Promise<T> {

@@ -9,6 +9,8 @@
 //  - A conversation that started inside the allowance gets a few "grace"
 //    messages so it can close gently instead of being cut off mid-thought.
 //  - Counters reset on UTC day / month boundaries.
+//  - Each decision runs in one transaction with the account row locked, so
+//    two simultaneous requests can't both spend the last message.
 
 export const LIMITS = {
   free: {
@@ -20,6 +22,7 @@ export const LIMITS = {
     motivation: { count: 2, period: 'day' },
     transcribe: { count: 5, period: 'day' },
     speech: { count: 3, period: 'day' },
+    community: { count: 5, period: 'day' },
   },
   plus: {
     anulia: { messages: 40, period: 'day', graceMessages: 3 },
@@ -30,6 +33,7 @@ export const LIMITS = {
     motivation: { count: 2, period: 'day' },
     transcribe: { count: 30, period: 'day' },
     speech: { count: 10, period: 'day' },
+    community: { count: 15, period: 'day' },
   },
   // Art-program owners without Plus: full program, normal Anulia free tier.
   art: { newSessions: 1, period: 'day', messagesPerSession: 80 },
@@ -37,39 +41,56 @@ export const LIMITS = {
 
 const dayKey = (now) => new Date(now).toISOString().slice(0, 10);
 const monthKey = (now) => new Date(now).toISOString().slice(0, 7);
-const periodKey = (period, now) => (period === 'day' ? dayKey(now) : period === 'month' ? monthKey(now) : 'lifetime');
+export const periodKey = (period, now) => (period === 'day' ? dayKey(now) : period === 'month' ? monthKey(now) : 'lifetime');
 
-function nextReset(period, now) {
+export function nextReset(period, now) {
   const d = new Date(now);
   if (period === 'day') return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
   if (period === 'month') return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
   return null;
 }
 
-function usageFor(store, accountId) {
-  if (!store.data.usage[accountId]) store.data.usage[accountId] = { counters: {}, conversations: {}, artSessions: {} };
-  return store.data.usage[accountId];
+async function readCounter(q, accountId, name, period, now) {
+  const r = await q.query('select count from usage_counters where account_id = $1 and name = $2 and period = $3', [accountId, name, periodKey(period, now)]);
+  return r.rows[0]?.count || 0;
 }
 
-const readCounter = (usage, name, period, now) => usage.counters[`${name}:${periodKey(period, now)}`] || 0;
+async function bump(q, accountId, name, period, now) {
+  await q.query(
+    `insert into usage_counters (account_id, name, period, count) values ($1, $2, $3, 1)
+     on conflict (account_id, name, period) do update set count = usage_counters.count + 1`,
+    [accountId, name, periodKey(period, now)]
+  );
+}
 
-function bump(store, accountId, name, period, now) {
-  store.mutate(() => {
-    const usage = usageFor(store, accountId);
-    const key = `${name}:${periodKey(period, now)}`;
-    usage.counters[key] = (usage.counters[key] || 0) + 1;
-  });
+async function readConversation(q, accountId, key) {
+  const r = await q.query('select count, grace from ai_conversations where account_id = $1 and key = $2', [accountId, key]);
+  return r.rows[0] || null;
+}
+
+async function writeConversation(q, accountId, key, count, grace) {
+  await q.query(
+    `insert into ai_conversations (account_id, key, count, grace) values ($1, $2, $3, $4)
+     on conflict (account_id, key) do update set count = excluded.count, grace = excluded.grace`,
+    [accountId, key, count, grace]
+  );
 }
 
 /**
  * Decides whether one AI request may proceed, and records it if so.
  * ctx: { feature, conversationId, artSessionId }
- * Returns { allowed: true } or { allowed: false, status, error, reason, resetAt }.
+ * Returns { allowed: true, ... } or { allowed: false, status, error, reason, resetAt }.
  */
-export function checkAndRecord({ store, accountId, entitlements, ctx, now = Date.now() }) {
+export async function checkAndRecord({ db, accountId, entitlements, ctx, now = Date.now() }) {
+  return db.tx(async (t) => {
+    await t.query('select id from accounts where id = $1 for update', [accountId]);
+    return decide(t, { accountId, entitlements, ctx, now });
+  });
+}
+
+async function decide(t, { accountId, entitlements, ctx, now }) {
   const tier = entitlements.plus.active ? 'plus' : 'free';
   const limits = LIMITS[tier];
-  const usage = usageFor(store, accountId);
   const feature = ctx.feature;
 
   const deny = (reason, period, extra = {}) => ({
@@ -86,22 +107,17 @@ export function checkAndRecord({ store, accountId, entitlements, ctx, now = Date
   if (feature === 'anulia') {
     const rule = limits.anulia;
     const conv = String(ctx.conversationId || 'default').slice(0, 80);
-    const used = readCounter(usage, 'anulia', rule.period, now);
-    const convKey = `${periodKey(rule.period, now)}:${conv}`;
-    const convRow = usage.conversations[convKey] || { count: 0, grace: 0 };
-
+    const used = await readCounter(t, accountId, 'anulia', rule.period, now);
+    const convKey = `anulia:${periodKey(rule.period, now)}:${conv}`;
+    const convRow = (await readConversation(t, accountId, convKey)) || { count: 0, grace: 0 };
     if (used < rule.messages) {
-      store.mutate(() => {
-        usage.conversations[convKey] = { count: convRow.count + 1, grace: convRow.grace };
-        usage.counters[`anulia:${periodKey(rule.period, now)}`] = used + 1;
-      });
+      await writeConversation(t, accountId, convKey, convRow.count + 1, convRow.grace);
+      await bump(t, accountId, 'anulia', rule.period, now);
       return { allowed: true, remaining: rule.messages - used - 1, tier };
     }
     // Gentle landing: an ongoing conversation may finish with a few extra turns.
     if (convRow.count > 0 && convRow.grace < rule.graceMessages) {
-      store.mutate(() => {
-        usage.conversations[convKey] = { count: convRow.count + 1, grace: convRow.grace + 1 };
-      });
+      await writeConversation(t, accountId, convKey, convRow.count + 1, convRow.grace + 1);
       return { allowed: true, remaining: 0, grace: true, graceLeft: rule.graceMessages - convRow.grace - 1, tier };
     }
     return deny(tier === 'plus' ? 'daily_limit' : 'free_limit', rule.period);
@@ -109,9 +125,9 @@ export function checkAndRecord({ store, accountId, entitlements, ctx, now = Date
 
   if (feature === 'journal') {
     const rule = limits.journal;
-    const used = readCounter(usage, 'journal', rule.period, now);
+    const used = await readCounter(t, accountId, 'journal', rule.period, now);
     if (used >= rule.reflections) return deny('daily_limit', rule.period);
-    bump(store, accountId, 'journal', rule.period, now);
+    await bump(t, accountId, 'journal', rule.period, now);
     return { allowed: true, remaining: rule.reflections - used - 1, tier };
   }
 
@@ -119,23 +135,19 @@ export function checkAndRecord({ store, accountId, entitlements, ctx, now = Date
     const rule = limits.cards;
     const conv = String(ctx.conversationId || '').slice(0, 80);
     if (!conv) return { allowed: false, status: 400, error: 'missing_conversation', feature };
-    const known = usage.conversations[`cards:${conv}`];
+    const key = `cards:${conv}`;
+    const known = await readConversation(t, accountId, key);
     if (known) {
       if (known.count >= rule.messagesPerConversation) return deny('conversation_limit', null);
-      store.mutate(() => {
-        usage.conversations[`cards:${conv}`] = { ...known, count: known.count + 1 };
-      });
+      await writeConversation(t, accountId, key, known.count + 1, known.grace);
       return { allowed: true, tier };
     }
-    const started = readCounter(usage, 'cards_started', rule.period, now);
+    const started = await readCounter(t, accountId, 'cards_started', rule.period, now);
     if (started >= rule.conversations) {
       return deny(tier === 'plus' ? 'daily_limit' : 'need_plus', rule.period === 'lifetime' ? null : rule.period);
     }
-    store.mutate(() => {
-      usage.conversations[`cards:${conv}`] = { count: 1, startedAt: now };
-      const key = `cards_started:${periodKey(rule.period, now)}`;
-      usage.counters[key] = (usage.counters[key] || 0) + 1;
-    });
+    await writeConversation(t, accountId, key, 1, 0);
+    await bump(t, accountId, 'cards_started', rule.period, now);
     return { allowed: true, tier, startedNew: true };
   }
 
@@ -149,63 +161,63 @@ export function checkAndRecord({ store, accountId, entitlements, ctx, now = Date
     if (!hasProgram && !freeSession) return deny('need_art_access', null);
 
     const rule = tier === 'plus' ? LIMITS.plus.art : hasProgram ? LIMITS.art : LIMITS.free.art;
-    const row = usage.artSessions[sessionId];
+    const r = await t.query('select count from art_session_usage where account_id = $1 and session_id = $2', [accountId, sessionId]);
+    const row = r.rows[0];
     if (row) {
       if (row.count >= rule.messagesPerSession) return deny('session_message_limit', null);
-      store.mutate(() => {
-        usage.artSessions[sessionId] = { ...row, count: row.count + 1 };
-      });
+      await t.query('update art_session_usage set count = count + 1 where account_id = $1 and session_id = $2', [accountId, sessionId]);
       return { allowed: true, tier };
     }
-    const startedToday = readCounter(usage, 'art_started', 'day', now);
+    const startedToday = await readCounter(t, accountId, 'art_started', 'day', now);
     if (startedToday >= rule.newSessions) return deny('daily_new_session_limit', 'day');
-    store.mutate(() => {
-      usage.artSessions[sessionId] = { count: 1, startedAt: now };
-      const key = `art_started:${dayKey(now)}`;
-      usage.counters[key] = (usage.counters[key] || 0) + 1;
-    });
+    await t.query('insert into art_session_usage (account_id, session_id, count, started_at) values ($1, $2, 1, $3)', [accountId, sessionId, new Date(now).toISOString()]);
+    await bump(t, accountId, 'art_started', 'day', now);
     return { allowed: true, tier, startedNew: true };
   }
 
-  const simple = { summary: limits.summary, motivation: limits.motivation, transcribe: limits.transcribe, speech: limits.speech }[feature];
+  const simple = { summary: limits.summary, motivation: limits.motivation, transcribe: limits.transcribe, speech: limits.speech, community: limits.community }[feature];
   if (simple) {
-    const used = readCounter(usage, feature, simple.period, now);
+    const used = await readCounter(t, accountId, feature, simple.period, now);
     if (used >= simple.count) return deny('daily_limit', simple.period);
-    bump(store, accountId, feature, simple.period, now);
-    return { allowed: true, tier };
+    await bump(t, accountId, feature, simple.period, now);
+    return { allowed: true, tier, remaining: simple.count - used - 1 };
   }
 
   return { allowed: false, status: 400, error: 'unknown_feature', feature };
 }
 
 /** Read-only usage summary for the client (shown on Profile / Pricing). */
-export function usageSummary({ store, accountId, entitlements, now = Date.now() }) {
+export async function usageSummary({ db, accountId, entitlements, now = Date.now() }) {
   const tier = entitlements.plus.active ? 'plus' : 'free';
   const limits = LIMITS[tier];
-  const usage = store.data.usage[accountId] || { counters: {}, conversations: {}, artSessions: {} };
-  const anuliaUsed = readCounter(usage, 'anulia', limits.anulia.period, now);
+  const read = (name, period) => readCounter(db, accountId, name, period, now);
   return {
     tier,
     anulia: {
-      used: anuliaUsed,
+      used: await read('anulia', limits.anulia.period),
       limit: limits.anulia.messages,
       period: limits.anulia.period,
       resetAt: nextReset(limits.anulia.period, now),
     },
     journal: {
-      used: readCounter(usage, 'journal', limits.journal.period, now),
+      used: await read('journal', limits.journal.period),
       limit: limits.journal.reflections,
       period: limits.journal.period,
     },
     cards: {
-      started: readCounter(usage, 'cards_started', limits.cards.period, now),
+      started: await read('cards_started', limits.cards.period),
       limit: limits.cards.conversations,
       period: limits.cards.period,
     },
     art: {
-      startedToday: readCounter(usage, 'art_started', 'day', now),
+      startedToday: await read('art_started', 'day'),
       newSessionsPerDay: (tier === 'plus' ? LIMITS.plus.art : entitlements.artProgram.active ? LIMITS.art : LIMITS.free.art).newSessions,
       freeSessionIds: LIMITS.free.art.freeSessionIds,
+    },
+    community: {
+      used: await read('community', limits.community.period),
+      limit: limits.community.count,
+      period: limits.community.period,
     },
   };
 }
