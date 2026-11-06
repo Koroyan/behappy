@@ -1,69 +1,86 @@
 # BeHappy
 
-A self-care companion for reflection and emotional awareness: a private journal, art therapy exercises on paper, reflection cards, breathing, meditation, self-check questionnaires, and Anulia, an AI well-being companion.
+A well-being platform with three parts:
 
-BeHappy is not medical care, therapy or a crisis service. See [docs/ETHICS.md](docs/ETHICS.md).
+- **Personal well-being** — a private journal, Anulia (an AI well-being companion), art therapy on paper, reflection cards, breathing, meditation, grounding, self-check questionnaires and a safety plan.
+- **Community** — real-time peer-support rooms on 13 topics in 19 languages, with Anulia on request and human moderation.
+- **Professionals** — a directory of verified psychologists: booking on their own hours, private messages, a professional workspace, and a flat monthly membership with **0% commission** on sessions.
+
+BeHappy is not medical care, therapy or a crisis service. Safety resources are free and never behind a paywall. See [docs/ETHICS.md](docs/ETHICS.md).
 
 ## Stack
 
-- **App**: Expo SDK 54, React Native 0.81, React 19, expo-router (iOS, Android, web)
-- **API server**: Node 24 + Express 5 (`server/`). Anonymous accounts, AI proxy, quotas, Flitt payments in **test mode only**
-- **AI**: OpenAI Responses API with hosted prompts, called only from the server
-- **Languages**: 19 interface languages, all complete (743 strings each), right-to-left layout for Arabic
+- **App**: Expo SDK 54, React Native 0.81, React 19, expo-router 6 (iOS, Android, web)
+- **API server**: Node 24 + Express 5 (`server/`), PostgreSQL (PGlite for development and tests), Socket.IO for live rooms and messages
+- **Accounts**: anonymous device accounts; registration with email code and password for the community and professional features; staff roles
+- **AI**: OpenAI, called only from the server with server-owned instructions (`server/prompts/`)
+- **Payments**: Flitt, **TEST mode only** (Plus, the art program, the professional membership)
+- **Languages**: 19 interface languages, all complete (1,566 strings each), right-to-left for Arabic
 
-## Quick start
+## Quick start (development)
 
 Requirements: Node 24, npm, and an OpenAI API key for the AI features.
 
 ```bash
 npm install
-cp server/.env.example server/.env    # then set OPENAI_API_KEY and ADMIN_TOKEN
-npm run server:dev                    # API on http://localhost:8787
-npx expo start --web --port 8081      # app on http://localhost:8081
+cp server/.env.example server/.env    # set OPENAI_API_KEY and ADMIN_TOKEN
+npm run server:local                  # API on :8787 with dev tools (test code 123456)
+npm run web:local                     # Expo web on :8082
+npm run web:proxy                     # proxy on :8081 → open http://localhost:8081
 ```
 
-Leave the root `.env` without API keys. The app needs only `EXPO_PUBLIC_API_URL` (see `.env.example`). Do not start Expo with `CI=1`: it disables file watching and the browser keeps serving old code.
+The proxy serves the app and forwards `/api` and `/socket.io` to the API, so one origin works locally and through a tunnel (point the tunnel at 8081 and add its origin to `APP_PUBLIC_URLS` in `server/.env`). Dev tools answer only on the machine itself.
 
-Native: `npm run ios` / `npm run android` (Expo Go or a development build). Point `EXPO_PUBLIC_API_URL` at an address the device can reach.
+Leave the root `.env` without API keys. Do not start Expo with `CI=1`: it disables file watching. Native: `npm run ios` / `npm run android`.
+
+Staff roles: register the account in the app, then `npm run admin:grant -- you@example.org admin` (or `moderator`). Staff tools need a password sign-in.
+
+Production: `deploy/docker-compose.yml` (PostgreSQL, API, Caddy with automatic HTTPS). The server refuses to start in production without a database URL, https URLs and encryption keys — see [docs/BEHAPPY_3_SECURITY.md](docs/BEHAPPY_3_SECURITY.md).
 
 ## Scripts
 
 | Command | What it does |
 |---|---|
-| `npm run server` / `server:dev` | Start the API (dev: restarts on changes in `server/`) |
-| `npm test` | 43 tests: server (payments, AI proxy, quotas, metrics), questionnaire scoring, date fallback, journal reflection filter, risk language, Latin-letter Georgian, right-to-left text |
-| `npm run typecheck` | TypeScript |
-| `npm run lint` | ESLint (Expo config) |
-| `npm run qa:i18n` | Every used translation key exists; coverage per language |
-| `npm run qa:scroll` | Scroll and bar checks per route and width (needs the app running) |
-| `npm run qa:shots` | Screenshots for visual review |
-| `npm run qa:payments` | Real browser payment against the Flitt sandbox |
-| `npm run qa:ai` / `qa:art` | Live AI checks (use your OpenAI key) |
-| `npm run qa:journeys` | 19 real-user journeys in the browser, from onboarding to delete-everything (live AI and the Flitt sandbox; `--skip-ai`, `--skip-pay`) |
-| `npm run qa:desktop` | A second client on a laptop, in English: journal edit, search and delete, Anulia summary, a card pair, GAD-7, a declined then an approved Flitt test card, restore on a second device |
-| `npm run economics` | Unit economics and pricing sensitivity |
+| `npm run server:local` / `server:dev` | API with dev tools / restart on changes |
+| `npm run web:local` · `npm run web:proxy` | Expo web on 8082 · proxy on 8081 |
+| `npm test` | 88 tests: payments, AI proxy, quotas, accounts, community, moderation, professionals, bookings, membership, scoring, text helpers, secret scan |
+| `npm run typecheck` · `npm run lint` | TypeScript · ESLint |
+| `npm run qa:i18n` | Every used key exists; coverage, placeholders and lists per language |
+| `npm run qa:pro` | Browser journey: apply → verify → trial → publish → book → confirm → message → membership checkout (`--pay` pays with the Flitt test card, `--app` targets a tunnel) |
+| `npm run qa:payments` | A real browser payment in the Flitt sandbox |
+| `npm run qa:journeys` · `qa:desktop` | 2.0 user journeys (live AI and the Flitt sandbox) |
+| `npm run qa:scroll` · `qa:shots` | Scroll and bar checks; screenshots |
+| `npm run admin:grant` | Grant or revoke a staff role |
 | `npm run build:web` | Static web build in `dist/` (not committed) |
 
 ## Project layout
 
 ```
-app/          routes (expo-router): tabs, art, cards, assessments, checkout, …
-features/     feature logic and UI (shell, chat, anulia, journal, …)
+app/          routes: tabs (Today, Community, Anulia, Specialists, Profile), community, specialists,
+              appointments, messages, pro (workspace), admin, moderation, journal, art, cards, …
+features/     feature UI and logic (shell, chat, community, pro, account, anulia, journal, …)
 design/       design system: tokens, typography, components
-lib/          API client, storage, media, assessment scoring
-content/      static content: art sessions, card decks, prompts, safety lines
-i18n/         translations (en.ts is the source)
-server/       API server and its tests
-scripts/qa/   QA scripts; scripts/legacy/ holds pre-2.0 tools
-docs/         audit, design system, security, pricing, Flitt setup, summary
+lib/          API clients (lib/api), real time, storage, media, assessment scoring
+i18n/         translations: 2.0 catalogs and 3.0 namespaces (i18n/locales/v3)
+server/       API: core, community/, professional/, admin/, db/ (migrations), prompts/, tests
+deploy/       production compose file and Caddyfile
+scripts/      dev proxy, QA scripts
+docs/         architecture, features, security, design, test results
 ```
 
 ## Documentation
 
-- [Redesign summary](docs/BEHAPPY_REDESIGN_SUMMARY.md): what 2.0 changed and what is left
-- [Audit](docs/BEHAPPY_AUDIT.md): findings in 1.x and their status
-- [Design system](docs/BEHAPPY_DESIGN_SYSTEM.md)
-- [Security and privacy review](docs/BEHAPPY_SECURITY_REVIEW.md): read the owner actions first
-- [Pricing strategy](docs/BEHAPPY_PRICING_STRATEGY.md)
-- [Flitt test setup](docs/BEHAPPY_FLITT_TEST_SETUP.md)
-- [Updating the AI prompts](docs/prompts/ANULIA_PERSONA_NOTE.md)
+BeHappy 3.0:
+[Architecture](docs/BEHAPPY_3_ARCHITECTURE.md) ·
+[Community](docs/BEHAPPY_3_COMMUNITY.md) ·
+[Moderation](docs/BEHAPPY_3_MODERATION.md) ·
+[Professionals](docs/BEHAPPY_3_PROFESSIONALS.md) ·
+[Verification](docs/BEHAPPY_3_VERIFICATION.md) ·
+[Booking](docs/BEHAPPY_3_BOOKING.md) ·
+[Professional membership](docs/BEHAPPY_3_PROFESSIONAL_SUBSCRIPTIONS.md) ·
+[Flitt TEST](docs/BEHAPPY_3_FLITT_TEST.md) ·
+[Security and privacy](docs/BEHAPPY_3_SECURITY.md) — read the owner actions first ·
+[Design system](docs/BEHAPPY_3_DESIGN_SYSTEM.md) ·
+[Test results](docs/BEHAPPY_3_TEST_RESULTS.md)
+
+From 2.0: [Redesign summary](docs/BEHAPPY_REDESIGN_SUMMARY.md) · [Audit](docs/BEHAPPY_AUDIT.md) · [Design system](docs/BEHAPPY_DESIGN_SYSTEM.md) · [Security review](docs/BEHAPPY_SECURITY_REVIEW.md) · [Pricing strategy](docs/BEHAPPY_PRICING_STRATEGY.md) · [Flitt test setup](docs/BEHAPPY_FLITT_TEST_SETUP.md) · [Updating the AI prompts](docs/prompts/ANULIA_PERSONA_NOTE.md)
