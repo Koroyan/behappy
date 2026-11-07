@@ -54,8 +54,10 @@ export function MessageRow({ message: m, myName, time, grouped, onReply, onMore,
   const [showMuted, setShowMuted] = useState(false);
   const mine = m.author.isMe;
   const ai = m.author.kind === 'anulia';
+  // An official notice written by the BeHappy team (staff tools).
+  const official = m.author.kind === 'system';
   const hidden = m.status === 'removed' || m.status === 'deleted';
-  const name = mine ? myName || t('community.room.you') : ai ? 'Anulia' : m.author.formerMember ? t('community.room.formerMember') : m.author.pseudonym || '';
+  const name = mine ? myName || t('community.room.you') : ai ? 'Anulia' : official ? 'BeHappy' : m.author.formerMember ? t('community.room.formerMember') : m.author.pseudonym || '';
 
   if (m.mutedAuthor && !showMuted && !hidden) {
     return (
@@ -67,11 +69,11 @@ export function MessageRow({ message: m, myName, time, grouped, onReply, onMore,
     );
   }
 
-  const bubbleBg = hidden ? colors.surfaceSunken : mine ? colors.chatUser : ai ? colors.lavenderSoft : colors.surface;
+  const bubbleBg = hidden ? colors.surfaceSunken : mine ? colors.chatUser : ai ? colors.lavenderSoft : official ? colors.sageSoft : colors.surface;
   const reactions = REACTIONS.filter((r) => (m.reactions[r.key] || 0) > 0);
 
   return (
-    <View testID={ai ? 'room-msg-anulia' : mine ? 'room-msg-mine' : 'room-msg'} style={{ flexDirection: mine ? 'row-reverse' : 'row', gap: 10, marginTop: grouped ? 2 : space[3], alignItems: 'flex-end' }}>
+    <View testID={ai ? 'room-msg-anulia' : official ? 'room-msg-official' : mine ? 'room-msg-mine' : 'room-msg'} style={{ flexDirection: mine ? 'row-reverse' : 'row', gap: 10, marginTop: grouped ? 2 : space[3], alignItems: 'flex-end' }}>
       <View style={{ width: 34 }}>{!grouped && !mine ? <MemberAvatar seed={m.author.avatarSeed} name={name} kind={m.author.kind} /> : null}</View>
       <View style={{ flexShrink: 1, maxWidth: '82%', alignItems: mine ? 'flex-end' : 'flex-start', gap: 4 }}>
         {!grouped ? (
@@ -80,6 +82,7 @@ export function MessageRow({ message: m, myName, time, grouped, onReply, onMore,
               {name}
             </AppText>
             {ai ? <Badge label={t('community.room.ai')} tone="lavender" icon="sparkles-outline" /> : null}
+            {official ? <Badge label={t('shell.staff')} tone="sage" icon="shield-checkmark-outline" /> : null}
             <AppText variant="caption" color="textTertiary">
               {time}
             </AppText>

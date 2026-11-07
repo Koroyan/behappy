@@ -236,3 +236,221 @@ describe('Analytics', () => {
     t.clock.advance(6000);
   });
 });
+
+describe('Admin operations', () => {
+  let t;
+  const call = (u, path, method = 'GET', body) => t.api(path, { token: u?.token, method, body });
+  const people = {};
+  const stepUp = (u) => call(u, '/api/admin/step-up', 'POST', { password: u.password });
+  let ROLE_PERMISSIONS;
+
+  before(async () => {
+    const { FEATURE_MODULES } = await import('../features.mjs');
+    ({ ROLE_PERMISSIONS } = await import('../admin/permissions.mjs'));
+    const { makeOpenAiFetch } = await import('./helpers.mjs');
+    t = await startTestServer({ extend: FEATURE_MODULES, openai: makeOpenAiFetch() });
+    for (const role of ['owner', 'admin', 'verifier', 'moderator', 'finance', 'support', 'analyst']) {
+      people[role] = await t.registered(`${role}-${Math.random().toString(36).slice(2, 7)}@example.org`);
+      await t.grantRole(people[role].accountId, role);
+    }
+    people.member = await t.registered(`member-${Math.random().toString(36).slice(2, 7)}@example.org`);
+  });
+  after(() => t.stop());
+
+  test('authorization matrix: every role reaches exactly what its permissions allow, on every endpoint', async () => {
+    const endpoints = [
+      ['/api/admin/dashboard', 'dashboard.view'],
+      ['/api/admin/users', 'users.view'],
+      ['/api/admin/professionals', 'professionals.view'],
+      ['/api/admin/pros', 'professionals.view'],
+      ['/api/admin/policies', 'professionals.view'],
+      ['/api/admin/memberships', 'memberships.view'],
+      ['/api/admin/finance', 'finance.view'],
+      ['/api/admin/appointments', 'appointments.view'],
+      ['/api/admin/community/rooms', 'community.view'],
+      ['/api/admin/community/stats', 'community.view'],
+      ['/api/admin/moderation/stats', 'moderation.act'],
+      ['/api/moderation/summary', 'moderation.act'],
+      ['/api/moderation/appeals', 'moderation.appeals'],
+      ['/api/admin/safety/incidents', 'safety.view'],
+      ['/api/admin/support/tickets', 'support.view'],
+      ['/api/admin/ai', 'ai.view'],
+      ['/api/admin/ai/prompts', 'ai.view'],
+      ['/api/admin/security', 'security.view'],
+      ['/api/admin/staff', 'staff.view'],
+      ['/api/admin/settings', 'settings.view'],
+      ['/api/admin/audit', 'audit.view'],
+      ['/api/admin/health', 'system.view'],
+      ['/api/admin/analytics/overview', 'analytics.view'],
+    ];
+    const problems = [];
+    for (const [role, u] of Object.entries(people)) {
+      const allowed = new Set(ROLE_PERMISSIONS[role] || []);
+      for (const [path, perm] of endpoints) {
+        const r = await call(u, path);
+        const expect = allowed.has(perm) ? 200 : 403;
+        if (r.status !== expect) problems.push(`${role} ${path}: ${r.status} (expected ${expect}) ${JSON.stringify(r.json).slice(0, 80)}`);
+      }
+    }
+    // No token at all, and a staff account on a device session.
+    for (const [path] of endpoints) if ((await t.api(path)).status !== 401) problems.push(`anonymous ${path} not 401`);
+    const device = await call({ token: people.owner.deviceToken }, '/api/admin/users');
+    assert.equal(device.json.error, 'password_session_required');
+    assert.deepEqual(problems, []);
+  });
+
+  test('accounts: masked contact details, no private content, reasons and confirmations for every action', async () => {
+    const { support, admin, owner } = people;
+    const person = await t.registered(`person-${Date.now()}@example.org`);
+    const bySupport = await call(support, `/api/admin/users?q=${encodeURIComponent(person.email)}`);
+    assert.equal(bySupport.json.users[0].email.includes('***'), true, 'support sees masked emails');
+    const byAdmin = await call(admin, `/api/admin/users?q=${encodeURIComponent(person.email)}`);
+    assert.equal(byAdmin.json.users[0].email, person.email);
+    const detail = await call(support, `/api/admin/users/${person.accountId}`);
+    assert.equal(detail.status, 200);
+    assert.match(detail.json.privacyNote, /not available here/);
+    for (const k of ['journal', 'assessments', 'safetyPlan', 'conversations']) assert.equal(detail.json[k], undefined);
+
+    // Suspension needs a reason and blocks the community; nobody acts on themselves.
+    assert.equal((await call(admin, `/api/admin/users/${person.accountId}/suspend`, 'POST', {})).json.error, 'reason_required');
+    assert.equal((await call(admin, `/api/admin/users/${admin.accountId}/suspend`, 'POST', { reason: 'test' })).json.error, 'not_on_yourself');
+    assert.equal((await call(admin, `/api/admin/users/${person.accountId}/suspend`, 'POST', { reason: 'spam wave' })).status, 200);
+    assert.equal((await call(person, '/api/community/profile', 'PUT', { pseudonym: 'Quiet Person', acceptGuidelines: true })).status, 200);
+    assert.equal((await call(person, '/api/community/rooms/sleep:en/join', 'POST')).json.error, 'account_suspended');
+    assert.equal((await call(admin, `/api/admin/users/${person.accountId}/reinstate`, 'POST', { reason: 'appeal accepted' })).status, 200);
+
+    // A password-reset email goes to the person; staff never see the code.
+    const reset = await call(support, `/api/admin/users/${person.accountId}/password-reset`, 'POST', { reason: 'user asked by email' });
+    assert.equal(reset.status, 200);
+    assert.ok(!JSON.stringify(reset.json).match(/[0-9]{6}/), 'no code in the response');
+    assert.ok(t.mailer.lastTo(person.email).text.match(/[0-9]{6}/));
+
+    // Complimentary Plus: a confirmation, a reason; it is not a payment.
+    assert.equal((await call(admin, `/api/admin/users/${person.accountId}/grants`, 'POST', { days: 30, reason: 'service outage' })).json.error, 'step_up_required');
+    await stepUp(admin);
+    const grant = await call(admin, `/api/admin/users/${person.accountId}/grants`, 'POST', { days: 30, reason: 'service outage' });
+    assert.equal(grant.json.entitlements.plus.active, true);
+    assert.equal((await call(person, '/api/account/me')).json.entitlements.tier, 'plus');
+    const orders = await t.db.query('select count(*)::int as n from orders where account_id = $1', [person.accountId]);
+    assert.equal(orders.rows[0].n, 0, 'no fake order');
+    assert.equal((await call(admin, `/api/admin/users/${person.accountId}/grants/${grant.json.grantId}/revoke`, 'POST', { reason: 'given by mistake' })).json.entitlements.tier, 'free');
+
+    // Ending sessions signs the person out everywhere.
+    assert.equal((await call(support, `/api/admin/users/${person.accountId}/sessions/revoke`, 'POST', { reason: 'lost phone' })).status, 200);
+    assert.equal((await call(person, '/api/account/me')).status, 401);
+
+    // Deleting needs the typed email and is refused for staff accounts.
+    await stepUp(owner);
+    assert.equal((await call(owner, `/api/admin/users/${admin.accountId}/delete`, 'POST', { reason: 'user asked by email twice', confirmEmail: admin.email })).json.error, 'staff_account');
+    assert.equal((await call(owner, `/api/admin/users/${person.accountId}/delete`, 'POST', { reason: 'user asked by email twice', confirmEmail: 'wrong@example.org' })).json.error, 'confirmation_mismatch');
+    assert.equal((await call(owner, `/api/admin/users/${person.accountId}/delete`, 'POST', { reason: 'user asked by email twice', confirmEmail: person.email })).status, 200);
+    assert.equal((await t.db.query('select count(*)::int as n from accounts where id = $1', [person.accountId])).rows[0].n, 0);
+    const trail = await t.db.query("select count(*)::int as n from audit_log where action in ('account.suspended', 'account.reinstated', 'account.password_reset_email', 'entitlement.granted', 'entitlement.revoked', 'account.sessions_revoked', 'account.deleted_by_staff')");
+    assert.ok(trail.rows[0].n >= 7);
+  });
+
+  test('community and safety: room pause and notices, report context is logged, urgent reports become safety cases', async () => {
+    const { moderator, admin, analyst } = people;
+    const member = async (name) => {
+      const u = await t.registered(`${name}-${Math.random().toString(36).slice(2, 7)}@example.org`);
+      await call(u, '/api/community/profile', 'PUT', { pseudonym: `${name} ${Math.random().toString(36).slice(2, 5)}`, acceptGuidelines: true });
+      await call(u, '/api/community/rooms/anxiety:en/join', 'POST');
+      return u;
+    };
+    const a = await member('Lela');
+    const b = await member('Gio');
+    assert.equal((await call(a, '/api/community/rooms/anxiety:en/messages', 'POST', { body: 'Breathing exercises help me a lot in the evenings.' })).status, 200);
+    t.clock.advance(31000);
+    const risky = await call(b, '/api/community/rooms/anxiety:en/messages', 'POST', { body: 'I want to end my life, I cannot go on.' });
+    assert.equal(risky.json.safetyNotice, true);
+
+    // The automatic urgent report opens a safety case.
+    const cases = await call(moderator, '/api/admin/safety/incidents?status=active');
+    const c = cases.json.incidents.find((x) => x.roomId === 'anxiety:en');
+    assert.ok(c, 'case opened');
+    assert.equal(c.source, 'automatic');
+    assert.equal((await call(analyst, '/api/admin/safety/incidents')).json.error, 'forbidden');
+    assert.equal((await call(moderator, `/api/admin/safety/incidents/${c.id}/assign`, 'POST', {})).status, 200);
+    assert.equal((await call(moderator, `/api/admin/safety/incidents/${c.id}/notes`, 'POST', { body: 'Sent the crisis resources privately.' })).status, 200);
+    const stored = await t.db.query('select body_ciphertext from safety_incident_notes where incident_id = $1 and body_ciphertext is not null', [c.id]);
+    assert.ok(!Buffer.from(stored.rows[0].body_ciphertext).toString('latin1').includes('crisis'), 'notes encrypted');
+    assert.equal((await call(moderator, `/api/admin/safety/incidents/${c.id}/resolve`, 'POST', { resolution: 'diagnosed' })).json.error, 'bad_resolution');
+    assert.equal((await call(moderator, `/api/admin/safety/incidents/${c.id}/resolve`, 'POST', { resolution: 'resources_shared' })).status, 200);
+
+    // Report context: a few messages from that room, logged.
+    const reports = (await call(moderator, '/api/moderation/reports')).json.reports;
+    const rep = reports.find((r) => r.roomId === 'anxiety:en');
+    const ctx = await call(moderator, `/api/admin/moderation/reports/${rep.id}/context`);
+    assert.equal(ctx.status, 200);
+    assert.ok(ctx.json.messages.length >= 2 && ctx.json.messages.length <= 11);
+    assert.equal((await t.db.query("select count(*)::int as n from audit_log where action = 'moderation.context_viewed'")).rows[0].n, 1);
+    assert.equal((await call(analyst, `/api/admin/moderation/reports/${rep.id}/context`)).json.error, 'forbidden');
+
+    // Pause and an official notice.
+    assert.equal((await call(moderator, '/api/admin/community/rooms/anxiety:en/state', 'POST', { action: 'pause', reason: 'cooling down' })).json.error, 'forbidden');
+    assert.equal((await call(admin, '/api/admin/community/rooms/anxiety:en/state', 'POST', { action: 'pause', reason: 'cooling down after a heated thread' })).status, 200);
+    t.clock.advance(31000);
+    assert.equal((await call(a, '/api/community/rooms/anxiety:en/messages', 'POST', { body: 'Hello again' })).json.error, 'room_paused');
+    assert.equal((await call(admin, '/api/admin/community/rooms/anxiety:en/notice', 'POST', { body: 'This room is paused for a short while. Get help now is always open.' })).status, 200);
+    const msgs = (await call(a, '/api/community/rooms/anxiety:en/messages')).json.messages;
+    assert.equal(msgs.at(-1).author.kind, 'system');
+    await call(admin, '/api/admin/community/rooms/anxiety:en/state', 'POST', { action: 'resume', reason: 'calm again' });
+    const rooms = (await call(analyst, '/api/admin/community/rooms?lang=en')).json.rooms;
+    assert.equal(rooms.find((r) => r.id === 'anxiety:en').members, null, 'fewer than 5 members: hidden');
+  });
+
+  test('support requests are private and encrypted; a safety request opens a case', async () => {
+    const { support, analyst } = people;
+    const person = await t.registered(`help-${Date.now()}@example.org`);
+    const other = await t.registered(`other-${Date.now()}@example.org`);
+    const created = await call(person, '/api/support/tickets', 'POST', { category: 'payment', subject: 'Charged twice for Plus', body: 'I think my card was charged twice yesterday.' });
+    assert.equal(created.status, 201);
+    const id = created.json.ticket.id;
+    const raw = await t.db.query('select subject_ciphertext from support_tickets where id = $1', [id]);
+    assert.ok(!Buffer.from(raw.rows[0].subject_ciphertext).toString('latin1').includes('Charged'), 'subject encrypted');
+    assert.equal((await call(other, `/api/support/tickets/${id}`)).status, 404, 'nobody else can read it');
+    assert.equal((await call(analyst, '/api/admin/support/tickets')).json.error, 'forbidden');
+    const queue = await call(support, '/api/admin/support/tickets?status=active');
+    assert.ok(queue.json.tickets.find((x) => x.id === id && x.subject === 'Charged twice for Plus'));
+    assert.equal((await call(support, `/api/admin/support/tickets/${id}/reply`, 'POST', { body: 'We checked: it was a TEST payment and nothing was charged.' })).status, 200);
+    const mine = await call(person, `/api/support/tickets/${id}`);
+    assert.equal(mine.json.ticket.status, 'waiting_on_user');
+    assert.equal(mine.json.ticket.messages.length, 2);
+    assert.ok((await call(person, '/api/notifications')).json.notifications.some((n) => n.kind === 'support_reply'));
+    const safety = await call(person, '/api/support/tickets', 'POST', { category: 'safety', subject: 'Worried about a friend', body: 'A friend in a room wrote something that scared me.' });
+    assert.equal(safety.status, 201);
+    const cases = (await call(people.moderator, '/api/admin/safety/incidents?status=active')).json.incidents;
+    assert.ok(cases.some((x) => x.source === 'support'));
+  });
+
+
+  test('AI switches and the daily budget stop calls before the provider; finance is labelled TEST', async () => {
+    const { owner, finance, analyst } = people;
+    const user = await t.newAccount();
+    const ask = () => t.api('/api/ai/chat', { token: user.token, method: 'POST', headers: { 'X-BeHappy-Feature': 'journal' }, body: { messages: [{ role: 'user', content: 'Today was calm.' }] } });
+    await stepUp(owner);
+    const switches = { anulia: true, journal: false, cards: true, art: true, community: true };
+    assert.equal((await call(analyst, '/api/admin/ai/settings/ai.features', 'PUT', { value: switches, reason: 'pause journal' })).json.error, 'forbidden');
+    assert.equal((await call(owner, '/api/admin/ai/settings/ai.features', 'PUT', { value: switches, reason: 'pause journal reflections' })).status, 200);
+    t.clock.advance(6000);
+    const paused = await ask();
+    assert.equal(paused.status, 503);
+    assert.equal(paused.json.error, 'ai_paused');
+    await call(owner, '/api/admin/ai/settings/ai.features', 'PUT', { value: { ...switches, journal: true }, reason: 'back on' });
+    t.clock.advance(6000);
+    const ai = await call(analyst, '/api/admin/ai');
+    assert.equal(ai.status, 200);
+    assert.ok(Array.isArray(ai.json.byFeature));
+    const fin = await call(finance, '/api/admin/finance');
+    assert.equal(fin.json.mode, 'test');
+    assert.match(fin.json.label, /TEST/);
+    assert.match(fin.json.label, /Not real income/);
+    const sec = await call(owner, '/api/admin/security');
+    assert.equal(sec.status, 200);
+    assert.equal(typeof sec.json.config.adminTokenSet, 'boolean');
+    assert.ok(!JSON.stringify(sec.json).includes('admin-secret'), 'no secret values');
+    // Search returns only what the viewer may open.
+    const s = await call(analyst, `/api/admin/search?q=${encodeURIComponent('example.org')}`);
+    assert.ok(s.json.results.every((r) => r.type !== 'user'));
+  });
+});

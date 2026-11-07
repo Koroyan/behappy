@@ -79,20 +79,62 @@ export function readUsage(usage) {
   return input || output ? { input, output } : null;
 }
 
-/** Records token counts only (no content) for the admin cost report. */
-export async function recordAiUsage(db, { accountId, feature, model, usage }) {
-  const u = readUsage(usage);
-  if (!u) return;
+/** Records token counts, outcome and latency only (never content) for the admin AI report. */
+export async function recordAiUsage(db, { accountId, feature, model, usage, latencyMs = null, status = 'ok', errorCode = null }) {
+  const u = readUsage(usage) || { input: 0, output: 0 };
   try {
-    await db.query('insert into ai_usage (account_id, feature, model, input_tokens, output_tokens) values ($1, $2, $3, $4, $5)', [accountId || null, feature, model, u.input, u.output]);
+    await db.query('insert into ai_usage (account_id, feature, model, input_tokens, output_tokens, status, latency_ms, error_code) values ($1, $2, $3, $4, $5, $6, $7, $8)', [
+      accountId || null,
+      feature,
+      model,
+      u.input,
+      u.output,
+      status,
+      latencyMs === null ? null : Math.round(latencyMs),
+      errorCode,
+    ]);
   } catch {
     // Cost reporting must never break a reply.
   }
 }
 
-export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock = { now: () => Date.now() } }) {
+// Which staff switch (settings ai.features) covers each request feature.
+const SWITCH_FOR = { anulia: 'anulia', summary: 'anulia', motivation: 'anulia', transcribe: 'anulia', speech: 'anulia', journal: 'journal', cards: 'cards', art: 'art', community: 'community' };
+
+/**
+ * Staff controls: a feature switched off, or today's estimated spend at the
+ * daily budget, answers 503 before anything reaches the AI provider. Safety
+ * resources never depend on AI.
+ */
+export function createAiControls({ db, settings, clock = { now: () => Date.now() } }) {
+  let cache = { at: 0, usd: 0 };
+  async function spentTodayUsd() {
+    const now = clock.now();
+    if (now - cache.at < 60 * 1000) return cache.usd;
+    const p = (await settings.get('ai.pricing')) || {};
+    const inPrice = p.inputPerMillion ?? Number(process.env.AI_PRICE_INPUT_PER_MTOK || 0);
+    const outPrice = p.outputPerMillion ?? Number(process.env.AI_PRICE_OUTPUT_PER_MTOK || 0);
+    const start = new Date(new Date(now).toISOString().slice(0, 10) + 'T00:00:00Z');
+    const r = await db.query('select coalesce(sum(input_tokens), 0)::bigint as i, coalesce(sum(output_tokens), 0)::bigint as o from ai_usage where created_at >= $1', [start]);
+    cache = { at: now, usd: (Number(r.rows[0].i) * (inPrice || 0) + Number(r.rows[0].o) * (outPrice || 0)) / 1e6 };
+    return cache.usd;
+  }
+  /** null when allowed, otherwise the refusal code. */
+  return async function check(feature) {
+    if (!settings) return null;
+    const switches = await settings.get('ai.features');
+    const key = SWITCH_FOR[feature];
+    if (switches && key && switches[key] === false) return 'ai_paused';
+    const budget = await settings.get('ai.dailyBudgetUsd');
+    if (budget && (await spentTodayUsd()) >= budget) return 'ai_budget_reached';
+    return null;
+  };
+}
+
+export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock = { now: () => Date.now() }, settings = null }) {
   const router = express.Router();
   const perAccount = new SlidingWindow(40, 60 * 1000);
+  const controls = createAiControls({ db, settings, clock });
   let globalDay = '';
   let globalCount = 0;
 
@@ -101,7 +143,7 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
   // Shared guard: auth, configured key, feature, rate limit, global cap, quota.
   const guard = (expectedFeatures) => [
     requireAccount(db, { clock }),
-    (req, res, next) => {
+    async (req, res, next) => {
       if (!config.openai.apiKey) return bad(res, 503, 'ai_unavailable', 'AI is not configured on the server.');
       const ctx = readContext(req);
       if (!FEATURES.has(ctx.feature) || (expectedFeatures && !expectedFeatures.includes(ctx.feature))) {
@@ -116,7 +158,14 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
       if (globalCount >= config.openai.globalDailyRequestCap) {
         return bad(res, 503, 'ai_busy', 'AI is temporarily unavailable. Please try again later.');
       }
+      try {
+        const refused = await controls(ctx.feature);
+        if (refused) return bad(res, 503, refused, refused === 'ai_paused' ? 'This AI feature is paused for now.' : 'AI features are paused for the rest of the day.');
+      } catch {
+        // If the controls can't be read, fall through: the other limits still apply.
+      }
       req.aiContext = ctx;
+      req.aiStartedAt = Date.now();
       next();
     },
   ];
@@ -193,10 +242,12 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
         body: JSON.stringify(clean),
       });
     } catch {
+      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: 'unreachable', latencyMs: Date.now() - req.aiStartedAt });
       return bad(res, 502, 'ai_upstream_unreachable', 'Could not reach the AI service.');
     }
 
     if (!upstream.ok) {
+      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt });
       const text = await upstream.text().catch(() => '');
       const stale = /previous_response/i.test(text) || (/not found/i.test(text) && upstream.status === 404);
       return res.status(stale ? 409 : upstream.status >= 500 ? 502 : 400).json({
@@ -209,7 +260,7 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     if (!clean.stream) {
       const data = await upstream.json();
       await rememberResponse(data?.id, req.account.id);
-      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: data?.usage });
+      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: data?.usage, latencyMs: Date.now() - req.aiStartedAt });
       return res.json(data);
     }
 
@@ -248,7 +299,7 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     res.end();
     const inTok = tail.match(/"input_tokens"\s*:\s*(\d+)/);
     const outTok = tail.match(/"output_tokens"\s*:\s*(\d+)/);
-    if (inTok || outTok) await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: { input_tokens: Number(inTok?.[1] || 0), output_tokens: Number(outTok?.[1] || 0) } });
+    await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: { input_tokens: Number(inTok?.[1] || 0), output_tokens: Number(outTok?.[1] || 0) }, latencyMs: Date.now() - req.aiStartedAt });
   });
 
   // ---------- Chat Completions (vision turns, summaries, journal, motivation) ----------
@@ -280,10 +331,11 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
       });
       const text = await upstream.text();
       if (!upstream.ok) {
+        await recordAiUsage(db, { accountId: req.account.id, feature: req.aiContext.feature, model: clean.model, status: 'error', errorCode: `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt });
         return res.status(upstream.status >= 500 ? 502 : 400).json({ error: 'ai_upstream_error', message: 'The AI service returned an error.', upstreamStatus: upstream.status });
       }
       try {
-        await recordAiUsage(db, { accountId: req.account.id, feature: req.aiContext.feature, model: clean.model, usage: JSON.parse(text)?.usage });
+        await recordAiUsage(db, { accountId: req.account.id, feature: req.aiContext.feature, model: clean.model, usage: JSON.parse(text)?.usage, latencyMs: Date.now() - req.aiStartedAt });
       } catch {
         // not JSON: nothing to record
       }

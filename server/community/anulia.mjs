@@ -6,7 +6,7 @@
 // room's recent PUBLIC messages only: never journals, Anulia conversations,
 // bookings or anything private. Every reply is posted as an AI message.
 
-import { recordAiUsage } from '../ai.mjs';
+import { createAiControls, recordAiUsage } from '../ai.mjs';
 import { ts } from '../db/index.mjs';
 import { entitlementsForAccount } from '../entitlements.mjs';
 import { SERVER_PROMPTS } from '../prompts/index.mjs';
@@ -39,7 +39,8 @@ const parseJson = (text) => {
 
 const outputText = (data) => data?.output_text || data?.output?.find((o) => o?.type === 'message')?.content?.find((c) => typeof c?.text === 'string')?.text || '';
 
-export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch, clock = { now: () => Date.now() }, bus }) {
+export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch, clock = { now: () => Date.now() }, bus, settings = null }) {
+  const controls = settings ? createAiControls({ db, settings, clock }) : null;
   const roomHits = new Map();
   let day = '';
   let dayCount = 0;
@@ -67,6 +68,8 @@ export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch
     }
     if (dayCount >= (config.community?.anuliaDailyGlobalCap ?? 2000)) return unavailable(account.id, roomId, 'busy');
     if (!roomAllowed(roomId, now)) return unavailable(account.id, roomId, 'room_busy');
+    // Staff switch or daily AI budget (admin center › AI).
+    if (controls && (await controls('community').catch(() => null))) return unavailable(account.id, roomId, 'busy');
     const entitlements = await entitlementsForAccount(db, account.id, now);
     const decision = await checkAndRecord({ db, accountId: account.id, entitlements, ctx: { feature: 'community' }, now });
     if (!decision.allowed) return unavailable(account.id, roomId, 'daily_limit');
@@ -87,6 +90,8 @@ export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch
     const input = `[Room] Topic: ${TOPIC_NAMES[topic] || topic}. Language: ${LANGUAGE_NAMES[lang] || 'English'}.\n[Recent public messages]\n${transcript}\n[${asker} asked you for help in the last message. Reply with the JSON object.]`;
 
     let data;
+    const started = Date.now();
+    const model = config.ai?.models?.community || 'gpt-5.4-mini';
     try {
       const res = await fetchImpl(`${config.openai.baseUrl}/responses`, {
         method: 'POST',
@@ -102,12 +107,13 @@ export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch
         }),
         signal: AbortSignal.timeout(45000),
       });
-      if (!res.ok) throw new Error(`upstream ${res.status}`);
+      if (!res.ok) throw Object.assign(new Error(`upstream ${res.status}`), { code: `upstream_${res.status}` });
       data = await res.json();
-    } catch {
+    } catch (e) {
+      await recordAiUsage(db, { accountId: account.id, feature: 'community', model, status: 'error', errorCode: e?.code || 'unreachable', latencyMs: Date.now() - started });
       return unavailable(account.id, roomId, 'error');
     }
-    await recordAiUsage(db, { accountId: account.id, feature: 'community', model: config.ai?.models?.community || 'gpt-5.4-mini', usage: data?.usage });
+    await recordAiUsage(db, { accountId: account.id, feature: 'community', model, usage: data?.usage, latencyMs: Date.now() - started });
 
     const parsed = parseJson(outputText(data)) || {};
     // No links from the AI in public rooms; trimmed to a readable length.

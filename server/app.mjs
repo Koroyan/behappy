@@ -251,7 +251,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
   });
 
   // ---------- AI proxy ----------
-  app.use('/api/ai', express.json({ limit: '20mb' }), createAiRouter({ db, config, fetchImpl, clock }));
+  app.use('/api/ai', express.json({ limit: '20mb' }), createAiRouter({ db, config, fetchImpl, clock, settings: settingsFor(deps) }));
 
   // ---------- Payments (Flitt TEST) ----------
   app.post('/api/payments/checkout', json, auth, async (req, res) => {

@@ -6,6 +6,7 @@ import { createCommunityAnulia } from './anulia.mjs';
 import { seedCommunity } from './constants.mjs';
 import { createModeration } from './moderation.mjs';
 import { startRealtime } from './realtime.mjs';
+import { settingsFor } from '../admin/settings.mjs';
 import { staffFor } from '../admin/staff.mjs';
 import { communityRouter, moderationRouter } from './routes.mjs';
 import { createBus, createCommunity } from './service.mjs';
@@ -17,7 +18,7 @@ export function communityFor(deps) {
     const bus = createBus();
     const community = createCommunity({ db: deps.db, clock: deps.clock, bus });
     const moderation = createModeration({ db: deps.db, clock: deps.clock, bus });
-    community.onAnulia(createCommunityAnulia({ db: deps.db, config: deps.config, fetchImpl: deps.fetchImpl, clock: deps.clock, bus }));
+    community.onAnulia(createCommunityAnulia({ db: deps.db, config: deps.config, fetchImpl: deps.fetchImpl, clock: deps.clock, bus, settings: settingsFor(deps) }));
     instances.set(deps, { bus, community, moderation, seeded: seedCommunity(deps.db) });
   }
   return instances.get(deps);

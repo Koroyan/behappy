@@ -5,6 +5,9 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 
+import { mountAppointmentsAdmin } from '../admin/appointments.mjs';
+import { mountProsAdmin } from '../admin/professionals.mjs';
+import { mountSensitive } from '../admin/sensitive.mjs';
 import { mountAdmin } from '../admin/routes.mjs';
 import { mountCommunity } from '../community/index.mjs';
 import { mountProfessionals } from '../professional/index.mjs';
@@ -22,7 +25,7 @@ describe('Professionals', () => {
   const call = (u, path, method = 'GET', body) => t.api(path, { token: u?.token, method, body });
 
   before(async () => {
-    t = await startTestServer({ extend: [mountCommunity, mountProfessionals, mountAdmin], config: { devFixedCode: '123456', devTools: true } });
+    t = await startTestServer({ extend: [mountCommunity, mountProfessionals, mountAdmin, mountProsAdmin, mountAppointmentsAdmin, mountSensitive], config: { devFixedCode: '123456', devTools: true } });
     admin = await t.registered('desk-admin@example.org');
     await t.grantRole(admin.accountId, 'admin');
   });
@@ -66,6 +69,109 @@ describe('Professionals', () => {
     return call(admin, `/api/admin/pros/${me.json.profile.id}/review`, 'POST', { action: 'approve', checklist: { identity_matches: true, degree_verified: true }, ...extra });
   };
 
+  test('staff tools: country policies need a source and someone else to activate them; documents get review outcomes', async () => {
+    const verifier = await t.registered(`verifier-${Date.now()}@example.org`);
+    await t.grantRole(verifier.accountId, 'verifier');
+    const draft = await call(verifier, '/api/admin/policies', 'POST', { country: 'AM', licenseRequired: true, sourceReference: 'Ministry of Health order 2024 (to confirm with counsel)', registryUrl: 'https://example.org/registry' });
+    assert.equal(draft.status, 200, JSON.stringify(draft.json));
+    assert.equal(draft.json.policy.status, 'draft');
+    assert.equal((await call(verifier, '/api/admin/policies', 'POST', { country: 'AM' })).json.error, 'source_required');
+    // A verifier can draft but not activate; an admin can activate someone else's draft with a review reference.
+    assert.equal((await call(verifier, `/api/admin/policies/${draft.json.policy.id}/activate`, 'POST', { reviewReference: 'Legal review 12' })).json.error, 'forbidden');
+    await call(admin, '/api/admin/step-up', 'POST', { password: admin.password });
+    assert.equal((await call(admin, `/api/admin/policies/${draft.json.policy.id}/activate`, 'POST', {})).json.error, 'review_reference_required');
+    const own = await call(admin, '/api/admin/policies', 'POST', { country: 'AZ', sourceReference: 'Draft by the admin themselves' });
+    assert.equal((await call(admin, `/api/admin/policies/${own.json.policy.id}/activate`, 'POST', { reviewReference: 'Legal review 13' })).json.error, 'cannot_approve_own_draft');
+    const active = await call(admin, `/api/admin/policies/${draft.json.policy.id}/activate`, 'POST', { reviewReference: 'Legal review 12, 2026-11-07' });
+    assert.equal(active.json.policy.status, 'active');
+    // The reviewed policy now applies to applications from that country.
+    const armenian = await t.registered(`am-${Date.now()}@example.org`);
+    await call(armenian, '/api/pro/application', 'POST', {});
+    await call(armenian, '/api/pro/profile', 'PUT', { country: 'AM', city: 'Yerevan' });
+    const me = await call(armenian, '/api/pro/me');
+    assert.equal(me.json.profile.rule.reviewed, true);
+    assert.equal(me.json.profile.rule.licenseRequired, true);
+    assert.ok(me.json.profile.missing.includes('license_document'));
+    assert.equal((await call(admin, `/api/admin/policies/${draft.json.policy.id}/retire`, 'POST', { reason: 'superseded by counsel advice' })).status, 200);
+    assert.equal((await call(armenian, '/api/pro/me')).json.profile.rule.reviewed, false, 'back to the default');
+
+    // Document outcomes: a rejection needs a note; nobody reviews their own documents.
+    const u = await applicant('Ana');
+    const proId = (await call(u, '/api/pro/me')).json.profile.id;
+    const docs = (await call(verifier, `/api/admin/professionals/${proId}/documents`)).json.documents;
+    assert.equal(docs.length, 2);
+    assert.equal((await call(verifier, `/api/admin/professionals/${proId}/documents/${docs[0].id}/review`, 'POST', { outcome: 'rejected' })).json.error, 'note_required');
+    assert.equal((await call(verifier, `/api/admin/professionals/${proId}/documents/${docs[0].id}/review`, 'POST', { outcome: 'unclear', note: 'The scan is too dark to read.' })).status, 200);
+    assert.equal((await call(verifier, `/api/admin/professionals/${proId}/documents`)).json.documents[0].review.outcome, 'unclear');
+    await t.grantRole(u.accountId, 'verifier');
+    assert.equal((await call(u, `/api/admin/professionals/${proId}/documents/${docs[1].id}/review`, 'POST', { outcome: 'accepted' })).json.error, 'cannot_review_self');
+  });
+
+  test('staff tools: renewing and ending a verification, and cancelling an appointment for BeHappy tells both people', async () => {
+    const pro = await applicant('Dato');
+    await call(pro, '/api/pro/submit', 'POST', {});
+    await approve(pro);
+    await call(pro, '/api/pro/publish', 'POST', { published: true });
+    const me = (await call(pro, '/api/pro/me')).json.profile;
+    await call(admin, '/api/admin/step-up', 'POST', { password: admin.password });
+    assert.equal((await call(admin, `/api/admin/professionals/${me.id}/verification/renew`, 'POST', { reason: 'annual check done' })).json.error, 'review_reference_required');
+    const renewed = await call(admin, `/api/admin/professionals/${me.id}/verification/renew`, 'POST', { reason: 'annual check done', reviewReference: 'Registry check 2026-11' });
+    assert.equal(renewed.status, 200);
+
+    const client = await t.registered();
+    await call(client, '/api/client/profile', 'PUT', { displayName: 'Mzia' });
+    const slots = (await t.api(`/api/pros/${me.id}/slots?serviceId=${me.services[0].id}&days=3`)).json.slots;
+    const booked = await call(client, '/api/bookings', 'POST', { professionalId: me.id, serviceId: me.services[0].id, startsAt: slots[2], note: 'Private note for the specialist' });
+    assert.equal(booked.status, 200, JSON.stringify(booked.json));
+    const bookingId = booked.json.booking.id;
+    const support = await t.registered(`support-${Date.now()}@example.org`);
+    await t.grantRole(support.accountId, 'support');
+    const seen = await call(support, `/api/admin/appointments/${bookingId}`);
+    assert.equal(seen.status, 200);
+    assert.equal(seen.json.appointment.hasClientNote, true);
+    assert.ok(!JSON.stringify(seen.json).includes('Private note'), 'the note itself is never shown');
+    assert.equal((await call(support, `/api/admin/appointments/${bookingId}/cancel`, 'POST', { reason: 'specialist unavailable' })).json.error, 'forbidden');
+    assert.equal((await call(admin, `/api/admin/appointments/${bookingId}/cancel`, 'POST', { reason: 'short' })).json.error, 'reason_required');
+    const cancelled = await call(admin, `/api/admin/appointments/${bookingId}/cancel`, 'POST', { reason: 'The specialist is temporarily unavailable.', messageToClient: 'Sorry, please choose another specialist.' });
+    assert.equal(cancelled.json.notified, 2);
+    assert.equal((await call(client, `/api/bookings/${bookingId}`)).json.booking.status, 'cancelled_by_admin');
+    const kinds = (await call(client, '/api/notifications')).json.notifications.map((n) => n.kind);
+    assert.ok(kinds.includes('booking_cancelled_by_admin'));
+    assert.ok((await call(pro, '/api/notifications')).json.notifications.some((n) => n.kind === 'booking_cancelled_by_admin'));
+    assert.equal((await call(admin, `/api/admin/appointments/${bookingId}/cancel`, 'POST', { reason: 'The specialist is temporarily unavailable.' })).json.error, 'not_active');
+
+    // Protected data: off by default; one item, a purpose and lawful basis, approved by someone else, time-limited, logged.
+    const owner = await t.registered(`owner-${Date.now()}@example.org`);
+    await t.grantRole(owner.accountId, 'owner');
+    const request = { category: 'booking_notes', resourceId: bookingId, purpose: 'Police request about a threat written in this booking note.', lawfulBasis: 'legal_obligation', ticketRef: 'LEG-2026-14' };
+    assert.equal((await call(admin, '/api/admin/sensitive/requests', 'POST', request)).json.error, 'feature_disabled');
+    await call(owner, '/api/admin/step-up', 'POST', { password: owner.password });
+    assert.equal((await call(owner, '/api/admin/settings/features.sensitiveAccess', 'PUT', { value: true, reason: 'formal request received' })).status, 200);
+    t.clock.advance(6000);
+    assert.equal((await call(admin, '/api/admin/sensitive/requests', 'POST', { ...request, purpose: 'too short' })).json.error, 'purpose_required');
+    const asked = await call(admin, '/api/admin/sensitive/requests', 'POST', request);
+    assert.equal(asked.status, 200, JSON.stringify(asked.json));
+    const rid = asked.json.request.id;
+    assert.equal((await call(admin, `/api/admin/sensitive/requests/${rid}/view`)).json.error, 'not_approved');
+    assert.equal((await call(admin, `/api/admin/sensitive/requests/${rid}/decide`, 'POST', { approve: true, note: 'Looks justified to me.' })).json.error, 'forbidden', 'admins cannot approve');
+    const ownRequest = await call(owner, '/api/admin/sensitive/requests', 'POST', request);
+    assert.equal((await call(owner, `/api/admin/sensitive/requests/${ownRequest.json.request.id}/decide`, 'POST', { approve: true, note: 'Approving my own request.' })).json.error, 'cannot_approve_own_request');
+    assert.equal((await call(owner, `/api/admin/sensitive/requests/${rid}/decide`, 'POST', { approve: true, note: 'Formal police request LEG-2026-14 checked.', hours: 2 })).status, 200);
+    const opened = await call(admin, `/api/admin/sensitive/requests/${rid}/view`);
+    assert.equal(opened.json.data.note, 'Private note for the specialist');
+    assert.equal((await call(owner, `/api/admin/sensitive/requests/${rid}/view`)).json.error, 'not_your_request');
+    assert.equal((await t.db.query("select count(*)::int as n from audit_log where action = 'sensitive.viewed'")).rows[0].n, 1);
+    t.clock.advance(3 * 60 * 60 * 1000);
+    assert.equal((await call(admin, `/api/admin/sensitive/requests/${rid}/view`)).json.error, 'step_up_required', 'the confirmation expired too');
+    await call(admin, '/api/admin/step-up', 'POST', { password: admin.password });
+    assert.equal((await call(admin, `/api/admin/sensitive/requests/${rid}/view`)).json.error, 'not_approved', 'the approval expires');
+
+    // Ending a verification takes the profile out of the directory.
+    assert.equal((await call(admin, `/api/admin/professionals/${me.id}/verification/expire`, 'POST', { reason: 'licence lapsed per registry' })).status, 200);
+    assert.equal((await call(pro, '/api/pro/me')).json.profile.status, 'expired');
+    assert.equal((await t.api(`/api/pros/${me.id}`)).status, 404);
+  });
+
   test('an application lists what is missing and locks while under review', async () => {
     const u = await t.registered();
     await call(u, '/api/pro/application', 'POST', {});
@@ -88,7 +194,8 @@ describe('Professionals', () => {
     const raw = await t.db.query('select ciphertext from verification_documents where id = $1', [doc.id]);
     assert.ok(!Buffer.from(raw.rows[0].ciphertext).toString('latin1').includes('%PDF'), 'stored encrypted');
     assert.equal((await call(u, `/api/admin/pros/${me.json.profile.id}/documents/${doc.id}`)).status, 403);
-    // Identity documents need a fresh password confirmation, even for an admin.
+    // Identity documents need a fresh password confirmation, even for an admin (earlier ones have lapsed).
+    t.clock.advance(16 * 60 * 1000);
     assert.equal((await call(admin, `/api/admin/pros/${me.json.profile.id}/documents/${doc.id}`)).json.error, 'step_up_required');
     assert.equal((await call(admin, '/api/admin/step-up', 'POST', { password: admin.password })).status, 200);
     const res = await fetch(`${t.base}/api/admin/pros/${me.json.profile.id}/documents/${doc.id}`, { headers: { Authorization: `Bearer ${admin.token}` } });

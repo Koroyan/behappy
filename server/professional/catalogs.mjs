@@ -32,7 +32,19 @@ export const COUNTRY_RULES = {
   // GE: { identityDocument: true, degreeDocument: true, licenseRequired: false, reviewed: true, note: '…' },
 };
 
-export const ruleFor = (country) => ({ ...DEFAULT_RULE, ...(COUNTRY_RULES[String(country || '').toUpperCase()] || {}) });
+// Reviewed policies activated in the staff tools (country_policies), loaded at
+// start and after every change (server/admin/professionals.mjs).
+let activePolicies = {};
+export function setActivePolicies(list) {
+  activePolicies = Object.fromEntries(
+    list.map((p) => [p.country, { identityDocument: p.identityDocument, degreeDocument: p.degreeDocument, licenseRequired: p.licenseRequired, registryUrl: p.registryUrl || null, reviewed: true, policyVersion: p.version, note: p.notes || '' }])
+  );
+}
+
+export const ruleFor = (country) => {
+  const c = String(country || '').toUpperCase();
+  return { ...DEFAULT_RULE, ...(COUNTRY_RULES[c] || {}), ...(activePolicies[c] || {}) };
+};
 
 /** The checklist an admin works through (stored with each decision). */
 export const REVIEW_CHECKLIST = ['identity_matches', 'degree_verified', 'license_checked', 'languages_plausible', 'profile_appropriate', 'no_conflicts'];
