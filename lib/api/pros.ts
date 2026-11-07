@@ -4,6 +4,8 @@
  */
 import { Platform } from 'react-native';
 
+import { trackAction } from '@/lib/analytics';
+
 import { apiFetch, apiJson } from './client';
 import type { Order } from './payments';
 
@@ -190,7 +192,11 @@ export const getSlots = (id: string, serviceId: string, from?: number, days = 14
 
 export const getClientName = async () => (await apiJson<{ displayName: string | null }>('/api/client/profile')).displayName;
 export const setClientName = (displayName: string) => apiJson('/api/client/profile', { method: 'PUT', body: { displayName } });
-export const createBooking = async (b: { professionalId: string; serviceId: string; startsAt: number; note?: string }) => (await apiJson<{ booking: Booking }>('/api/bookings', { method: 'POST', body: b })).booking;
+export const createBooking = async (b: { professionalId: string; serviceId: string; startsAt: number; note?: string }) => {
+  const booking = (await apiJson<{ booking: Booking }>('/api/bookings', { method: 'POST', body: b })).booking;
+  trackAction('specialists', 'booking_requested');
+  return booking;
+};
 export const myBookings = async () => (await apiJson<{ bookings: Booking[] }>('/api/bookings')).bookings;
 export const getBooking = async (id: string) => (await apiJson<{ booking: Booking }>(`/api/bookings/${enc(id)}`)).booking;
 export const cancelBooking = async (id: string, reason?: string) => (await apiJson<{ booking: Booking }>(`/api/bookings/${enc(id)}/cancel`, { method: 'POST', body: { reason } })).booking;
@@ -199,11 +205,19 @@ export const rescheduleBooking = async (id: string, serviceId: string, startsAt:
 export const listThreads = async () => (await apiJson<{ threads: Thread[] }>('/api/threads')).threads;
 export const openThread = async (id: string) => (await apiJson<{ thread: Thread }>(`/api/threads/${enc(id)}`)).thread;
 export const startThread = async (professionalId: string, body?: string) => (await apiJson<{ thread: Thread }>('/api/threads', { method: 'POST', body: { professionalId, body } })).thread;
-export const sendThreadMessage = async (id: string, body: string) => (await apiJson<{ thread: Thread }>(`/api/threads/${enc(id)}/messages`, { method: 'POST', body: { body } })).thread;
+export const sendThreadMessage = async (id: string, body: string) => {
+  const thread = (await apiJson<{ thread: Thread }>(`/api/threads/${enc(id)}/messages`, { method: 'POST', body: { body } })).thread;
+  trackAction('messages', 'message_sent');
+  return thread;
+};
 export const reportThreadMessage = (id: string, messageId: number, reason: string, details?: string) => apiJson(`/api/threads/${enc(id)}/messages/${messageId}/report`, { method: 'POST', body: { reason, details } });
 
 export const proMe = () => apiJson<ProMe>('/api/pro/me');
-export const startApplication = async () => (await apiJson<{ profile: ProProfile }>('/api/pro/application', { method: 'POST', body: {} })).profile;
+export const startApplication = async () => {
+  const profile = (await apiJson<{ profile: ProProfile }>('/api/pro/application', { method: 'POST', body: {} })).profile;
+  trackAction('pro', 'application_started');
+  return profile;
+};
 export const updatePro = async (body: Record<string, unknown>) => (await apiJson<{ profile: ProProfile }>('/api/pro/profile', { method: 'PUT', body })).profile;
 export const setQualifications = async (qualifications: Qualification[]) => (await apiJson<{ profile: ProProfile }>('/api/pro/qualifications', { method: 'PUT', body: { qualifications } })).profile;
 export const setServices = async (services: Partial<Service>[]) => (await apiJson<{ profile: ProProfile }>('/api/pro/services', { method: 'PUT', body: { services } })).profile;
@@ -213,7 +227,11 @@ export const uploadDocument = async (doc: { kind: string; fileName: string; mime
 export const removeDocument = async (id: string) => (await apiJson<{ profile: ProProfile }>(`/api/pro/documents/${enc(id)}`, { method: 'DELETE' })).profile;
 export const startPhone = (phone: string) => apiJson<{ ok: true; phone: string }>('/api/pro/phone', { method: 'POST', body: { phone } });
 export const verifyPhone = async (code: string) => (await apiJson<{ profile: ProProfile }>('/api/pro/phone/verify', { method: 'POST', body: { code } })).profile;
-export const submitApplication = async () => (await apiJson<{ profile: ProProfile }>('/api/pro/submit', { method: 'POST', body: {} })).profile;
+export const submitApplication = async () => {
+  const profile = (await apiJson<{ profile: ProProfile }>('/api/pro/submit', { method: 'POST', body: {} })).profile;
+  trackAction('pro', 'application_submitted');
+  return profile;
+};
 export const setPublished = async (published: boolean) => (await apiJson<{ profile: ProProfile }>('/api/pro/publish', { method: 'POST', body: { published } })).profile;
 export const proBookings = async (scope: 'requests' | 'upcoming' | 'past') => (await apiJson<{ bookings: Booking[] }>(`/api/pro/bookings?scope=${scope}`)).bookings;
 export const proBookingAction = async (id: string, action: 'confirm' | 'decline' | 'cancel', reason?: string) => (await apiJson<{ booking: Booking }>(`/api/pro/bookings/${enc(id)}/${action}`, { method: 'POST', body: { reason } })).booking;

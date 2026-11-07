@@ -6,8 +6,11 @@
 //    professional can turn them off) and the expiry notice (always)
 //  - verification: expires at its review date; the profile leaves the directory
 //  - retention: response-chain owners after 31 days, used codes after 7 days,
-//    resolved report snapshots after 180 days
+//    resolved report snapshots after 180 days, raw analytics events after
+//    analytics.retentionDays (daily totals after 760 days), security events
+//    after 400 days
 
+import { analyticsFor } from './analytics/index.mjs';
 import { ms, ts } from './db/index.mjs';
 import { notify } from './notify/notifications.mjs';
 import { professionalsFor } from './professional/index.mjs';
@@ -48,7 +51,9 @@ export async function runAllJobs(deps, now = deps.clock.now()) {
   const c1 = await db.query('delete from ai_response_owners where created_at < $1', [ts(now - 31 * DAY)]);
   const c2 = await db.query('delete from verification_codes where created_at < $1', [ts(now - 7 * DAY)]);
   const c3 = await db.query("update reports set snapshot = '{}'::jsonb where status in ('resolved', 'dismissed') and resolved_at < $1 and snapshot <> '{}'::jsonb", [ts(now - 180 * DAY)]);
-  out.cleaned = c1.rowCount + c2.rowCount + c3.rowCount;
+  const c4 = await analyticsFor(deps).cleanup(now);
+  const c5 = await db.query('delete from auth_events where created_at < $1', [ts(now - 400 * DAY)]);
+  out.cleaned = c1.rowCount + c2.rowCount + c3.rowCount + c4 + c5.rowCount;
   deps.lastSchedulerRun = { at: now, ...out };
   return out;
 }

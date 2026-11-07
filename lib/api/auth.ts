@@ -5,6 +5,8 @@
  * id), so nothing is lost. Signing in to a different account replaces this
  * device's sign-in; private notes stay on the device either way.
  */
+import { trackAction } from '@/lib/analytics';
+
 import { ApiError, apiJson, getStoredAccount, replaceAccount } from './client';
 
 export interface DeviceSession {
@@ -54,6 +56,7 @@ export async function resendCode(lang: string) {
 export async function verifyEmail(code: string) {
   const res = await apiJson<{ ok: true; email: string }>('/api/auth/verify-email', { method: 'POST', body: { code } });
   // The device token keeps working; the account is now registered.
+  trackAction('account', 'registered');
   return res;
 }
 
@@ -64,6 +67,7 @@ async function adopt(res: { accountId: string; token: string }) {
 export async function signIn(email: string, password: string) {
   const res = await apiJson<{ accountId: string; token: string }>('/api/auth/login', { method: 'POST', body: { email, password }, anonymous: true });
   await adopt(res);
+  trackAction('account', 'signed_in');
   return res;
 }
 

@@ -11,6 +11,8 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { trackAction } from '@/lib/analytics';
+
 import { publish, readJson, uid, writeJson } from './json';
 
 export const JOURNAL_KEY = 'journal_entries';
@@ -94,6 +96,8 @@ export async function createEntry(input: { title?: string; content: string; mood
     promptTitle: input.promptTitle,
   };
   await persist([entry, ...list]);
+  // Only that an entry was saved: never its text or mood.
+  trackAction('journal', 'entry_saved');
   return entry;
 }
 

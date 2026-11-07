@@ -2,11 +2,12 @@
 // stays small and every module gets the same deps.
 
 import { mountAdmin } from './admin/routes.mjs';
+import { mountAnalytics } from './analytics/index.mjs';
 import { mountCommunity, startCommunityRealtime } from './community/index.mjs';
 import { mountProfessionals } from './professional/index.mjs';
 import { startScheduler } from './scheduler.mjs';
 
-export const FEATURE_MODULES = [mountCommunity, mountProfessionals, mountAdmin];
+export const FEATURE_MODULES = [mountCommunity, mountProfessionals, mountAnalytics, mountAdmin];
 
 export const SERVICES = [startCommunityRealtime, startScheduler];
 

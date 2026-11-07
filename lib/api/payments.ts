@@ -8,6 +8,8 @@
  */
 import { Platform } from 'react-native';
 
+import { trackAction } from '@/lib/analytics';
+
 import { apiJson } from './client';
 
 export type ProductKind = 'plus' | 'art' | 'professional';
@@ -69,7 +71,9 @@ export async function startCheckout(productId: string, lang: string): Promise<{ 
     Platform.OS === 'web' && typeof window !== 'undefined'
       ? { platform: 'web', origin: window.location.origin, path: '/checkout/result' }
       : { platform: 'native' };
-  return apiJson('/api/payments/checkout', { method: 'POST', body: { productId, lang, returnTo } });
+  const out = await apiJson<{ order: Order; checkoutUrl: string; product: Product }>('/api/payments/checkout', { method: 'POST', body: { productId, lang, returnTo } });
+  trackAction('membership', 'checkout_started');
+  return out;
 }
 
 export function getOrder(orderId: string): Promise<{ order: Order; entitlements: any }> {

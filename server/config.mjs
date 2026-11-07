@@ -81,6 +81,10 @@ export const config = {
     anuliaHourlyRoomCap: int(env.COMMUNITY_ANULIA_ROOM_HOURLY_CAP, 30),
     anuliaDailyGlobalCap: int(env.COMMUNITY_ANULIA_DAILY_CAP, 2000),
   },
+  analytics: {
+    // Aggregates for groups smaller than this are hidden in the staff tools.
+    minCohort: int(env.ANALYTICS_MIN_COHORT, 5),
+  },
   supportEmail: env.SUPPORT_EMAIL || '',
   port: int(env.PORT, 8787),
   // Public URL of this API, used to build Flitt response/callback URLs.

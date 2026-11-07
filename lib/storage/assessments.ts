@@ -1,5 +1,7 @@
 import type { DassResult, SimpleResult, TestId } from '@/lib/assessments/scoring';
 
+import { trackAction } from '@/lib/analytics';
+
 import { publish, readJson, uid, writeJson } from './json';
 
 const KEY = '@behappy_assessments_v1';
@@ -31,6 +33,8 @@ export async function saveResult(test: TestId, answers: number[], result: Simple
   await writeJson(KEY, [rec, ...(await listResults())].slice(0, 100));
   await clearDraft();
   publish(ASSESSMENT_TOPIC);
+  // Only that a check was completed: never answers or scores.
+  trackAction('assessments', 'assessment_completed');
   return rec;
 }
 

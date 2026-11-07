@@ -60,6 +60,7 @@ export function toAccount(row) {
     stepUpAt: ms(row.session_step_up_at),
     mfaAt: ms(row.session_mfa_at),
     staffSuspendedAt: ms(row.staff_suspended_at),
+    analyticsOptOut: Boolean(row.analytics_opt_out),
   };
 }
 

@@ -906,6 +906,12 @@ export const en3 = {
 
     },
   },
+  usageStats: {
+    title: 'Usage statistics',
+    on: 'On: which parts of the app you use and for how long, never what you write',
+    off: 'Off: nothing about how you use the app is collected',
+    offDone: 'Usage statistics are off, and what was kept for you has been deleted.',
+  },
 };
 
 export { plural as plural3 };

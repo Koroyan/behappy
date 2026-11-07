@@ -895,4 +895,10 @@ export const pl3: PartialMessages = {
       },
     },
   },
+  usageStats: {
+    title: 'Statystyki użycia',
+    on: 'Włączone: z jakich części aplikacji korzystasz i jak długo, nigdy to, co piszesz',
+    off: 'Wyłączone: nic nie jest zbierane o tym, jak korzystasz z aplikacji',
+    offDone: 'Statystyki są wyłączone, a to, co było dla ciebie przechowywane, zostało usunięte.',
+  },
 };

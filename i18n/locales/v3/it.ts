@@ -895,4 +895,10 @@ export const it3: PartialMessages = {
       },
     },
   },
+  usageStats: {
+    title: 'Statistiche di utilizzo',
+    on: 'Attivo: quali parti dell’app usi e per quanto tempo, mai ciò che scrivi',
+    off: 'Disattivato: non viene raccolto nulla su come usi l’app',
+    offDone: 'Le statistiche sono disattivate e ciò che era conservato per te è stato eliminato.',
+  },
 };

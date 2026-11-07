@@ -895,4 +895,10 @@ export const de3: PartialMessages = {
       },
     },
   },
+  usageStats: {
+    title: 'Nutzungsstatistik',
+    on: 'An: welche Bereiche der App du wie lange nutzt, nie was du schreibst',
+    off: 'Aus: Über deine Nutzung der App wird nichts erfasst',
+    offDone: 'Die Nutzungsstatistik ist aus, und was für dich gespeichert war, wurde gelöscht.',
+  },
 };

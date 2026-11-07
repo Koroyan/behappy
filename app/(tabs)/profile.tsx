@@ -8,6 +8,7 @@ import { AppText, Avatar, Badge, Banner, Button, Card, Divider, Icon, ListRow, P
 import { MoreMenu } from '@/features/shell/MoreMenu';
 import { useT } from '@/i18n';
 import { AccountDeletionError, useAccount, useIdentity } from '@/lib/api/account';
+import { saveAnalyticsChoice } from '@/lib/analytics';
 import { setAiConsent, setPersonalize, useConsent } from '@/lib/privacy/consent';
 import { deleteAllData, exportAllData } from '@/lib/storage/dataTools';
 import { getUserProfile } from '@/services/userProfileService';
@@ -155,6 +156,21 @@ export default function ProfileScreen() {
     </Card>
   );
 
+  const analyticsOn = (me?.identity as { analytics?: boolean } | undefined)?.analytics !== false;
+  const [analyticsBusy, setAnalyticsBusy] = useState(false);
+  const onAnalytics = async (on: boolean) => {
+    setAnalyticsBusy(true);
+    try {
+      await saveAnalyticsChoice(on);
+      await refresh();
+      if (!on) toast(t('usageStats.offDone'));
+    } catch {
+      toast(t('common.errorBody'));
+    } finally {
+      setAnalyticsBusy(false);
+    }
+  };
+
   const privacy = (
     <Card padding={20}>
       <SectionHeader title={t('profile.privacy')} />
@@ -172,6 +188,14 @@ export default function ProfileScreen() {
         title={t('profile.personalization')}
         subtitle={t('profile.personalizationHint')}
         right={<Toggle value={consent.personalize} onValueChange={(v) => setPersonalize(v)} label={t('profile.personalization')} />}
+      />
+      <Divider />
+      <ListRow
+        icon="analytics-outline"
+        iconTone="muted"
+        title={t('usageStats.title')}
+        subtitle={analyticsOn ? t('usageStats.on') : t('usageStats.off')}
+        right={<Toggle value={analyticsOn} onValueChange={(v) => !analyticsBusy && onAnalytics(v)} label={t('usageStats.title')} testID="toggle-analytics" />}
       />
       <Divider />
       <ListRow icon="download-outline" iconTone="muted" title={t('profile.exportData')} subtitle={t('profile.exportHint')} onPress={onExport} />

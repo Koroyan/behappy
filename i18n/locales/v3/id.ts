@@ -895,4 +895,10 @@ export const id3: PartialMessages = {
       },
     },
   },
+  usageStats: {
+    title: 'Statistik penggunaan',
+    on: 'Aktif: bagian aplikasi mana yang dipakai dan berapa lama, tidak pernah apa yang ditulis',
+    off: 'Nonaktif: tidak ada data tentang cara aplikasi dipakai yang dikumpulkan',
+    offDone: 'Statistik dinonaktifkan dan data yang disimpan telah dihapus.',
+  },
 };

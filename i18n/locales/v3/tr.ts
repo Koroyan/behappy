@@ -895,4 +895,10 @@ export const tr3: PartialMessages = {
       },
     },
   },
+  usageStats: {
+    title: 'Kullanım istatistikleri',
+    on: 'Açık: uygulamanın hangi bölümlerini ne kadar süre kullandığın, asla yazdıkların değil',
+    off: 'Kapalı: uygulamayı nasıl kullandığına dair hiçbir şey toplanmaz',
+    offDone: 'İstatistikler kapatıldı ve senin için saklananlar silindi.',
+  },
 };

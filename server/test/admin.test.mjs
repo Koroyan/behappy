@@ -135,3 +135,104 @@ describe('Staff security', () => {
     assert.ok(rows.rows.find((r) => r.kind === 'login_failed' && r.account_id === null));
   });
 });
+
+describe('Analytics', () => {
+  let t;
+  const call = (u, path, method = 'GET', body) => t.api(path, { token: u?.token, method, body });
+  let seq = 0;
+  const ev = (name, extra = {}) => ({ id: `ev${Date.now().toString(36)}${(seq += 1).toString().padStart(4, '0')}`, session: 'sess_test_0001', at: t.clock.now(), name, ...extra });
+  const send = (u, events, platform = 'web') => call(u, '/api/events', 'POST', { events, platform, appVersion: '3.1.0' });
+
+  before(async () => {
+    const { mountAnalytics } = await import('../analytics/index.mjs');
+    t = await startTestServer({ extend: [mountCommunity, mountProfessionals, mountAnalytics, mountAdmin] });
+  });
+  after(() => t.stop());
+
+  test('only allowlisted events with enum or number fields are kept; free text never is', async () => {
+    const u = await t.newAccount();
+    const res = await send(u, [
+      ev('session_start', { props: { kind: 'cold' } }),
+      ev('engagement', { feature: 'journal', props: { seconds: 60 } }),
+      ev('action', { feature: 'journal', props: { kind: 'entry_saved', text: 'my private thoughts' } }),
+      ev('action', { feature: 'journal', props: { kind: 'I felt sad today' } }),
+      ev('journal_text', { feature: 'journal', props: { body: 'secret' } }),
+      ev('screen_view', { feature: 'admin' }),
+      ev('engagement', { feature: 'anulia', props: { seconds: 99999 } }),
+      ev('screen_view', { feature: 'today', at: t.clock.now() - 30 * 86400000 }),
+      { name: 'screen_view', feature: 'today', id: 'x', session: 'sess_test_0001', at: t.clock.now() },
+    ]);
+    assert.equal(res.status, 200);
+    assert.equal(res.json.accepted, 3);
+    const rows = await t.db.query('select name, feature, props::text as props from analytics_events where account_id = $1 order by id', [u.accountId]);
+    assert.deepEqual(rows.rows.map((r) => r.name), ['session_start', 'engagement', 'action']);
+    for (const r of rows.rows) assert.ok(!/private|sad|secret/.test(r.props), 'no free text stored');
+    assert.equal(rows.rows[2].props, '{"kind": "entry_saved"}');
+    // The same event id twice is counted once.
+    const dup = ev('screen_view', { feature: 'today' });
+    await send(u, [dup]);
+    assert.equal((await send(u, [dup])).json.accepted, 0);
+    const daily = await t.db.query('select active_seconds, sessions, actions, events, features from analytics_daily where account_id = $1', [u.accountId]);
+    assert.equal(daily.rows[0].active_seconds, 60);
+    assert.equal(daily.rows[0].sessions, 1);
+    assert.equal(daily.rows[0].actions, 1);
+    assert.deepEqual(daily.rows[0].features, { journal: 60 });
+  });
+
+  test('aggregates hide small groups; analysts see them, support does not; exports are confirmed and logged', async () => {
+    const people = [];
+    for (let i = 0; i < 6; i += 1) people.push(await t.newAccount());
+    for (const p of people) await send(p, [ev('session_start'), ev('engagement', { feature: 'community', props: { seconds: 120 } }), ev('action', { feature: 'community', props: { kind: 'room_joined' } })], 'android');
+    for (const p of people.slice(0, 2)) await send(p, [ev('engagement', { feature: 'art', props: { seconds: 300 } })], 'android');
+    const analyst = await t.registered(`analyst-${Date.now()}@example.org`);
+    await t.grantRole(analyst.accountId, 'analyst');
+    const support = await t.registered(`support-${Date.now()}@example.org`);
+    await t.grantRole(support.accountId, 'support');
+    assert.equal((await call(support, '/api/admin/analytics/overview')).json.error, 'forbidden');
+    const o = await call(analyst, '/api/admin/analytics/overview');
+    assert.equal(o.status, 200);
+    assert.ok(o.json.current.activeUsers >= 6);
+    assert.ok(o.json.activeNow.dau >= 6);
+    assert.equal(o.json.daily.length, 30);
+    const f = await call(analyst, '/api/admin/analytics/features');
+    const community = f.json.features.find((x) => x.feature === 'community');
+    assert.equal(community.users, 6);
+    assert.equal(community.minutes, 12);
+    assert.equal(community.actions.find((a) => a.kind === 'room_joined').people, 6);
+    const art = f.json.features.find((x) => x.feature === 'art');
+    assert.equal(art.suppressed, true, 'fewer than 5 people: hidden');
+    assert.equal(art.users, null);
+    const ret = await call(analyst, '/api/admin/analytics/retention');
+    assert.equal(ret.status, 200);
+    assert.ok(Array.isArray(ret.json.cohorts));
+    // Export: aggregated rows only, a fresh confirmation, an audit entry.
+    assert.equal((await call(analyst, '/api/admin/analytics/export')).json.error, 'step_up_required');
+    await call(analyst, '/api/admin/step-up', 'POST', { password: analyst.password });
+    const csv = await fetch(`${t.base}/api/admin/analytics/export`, { headers: { Authorization: `Bearer ${analyst.token}` } });
+    const text = await csv.text();
+    assert.match(text, /^day,active_users,active_minutes,sessions,new_accounts/);
+    assert.ok(!text.includes('acc_'), 'no account ids in exports');
+    assert.equal((await t.db.query("select count(*)::int as n from audit_log where action = 'analytics.exported' and actor_account_id = $1", [analyst.accountId])).rows[0].n, 1);
+  });
+
+  test('switching analytics off stops collection and deletes what was kept; the owner can stop it for everyone', async () => {
+    const u = await t.newAccount();
+    await send(u, [ev('engagement', { feature: 'breathing', props: { seconds: 90 } })]);
+    assert.equal((await t.db.query('select count(*)::int as n from analytics_events where account_id = $1', [u.accountId])).rows[0].n, 1);
+    assert.equal((await call(u, '/api/account/privacy', 'PUT', { analytics: false })).json.analytics, false);
+    assert.equal((await t.db.query('select count(*)::int as n from analytics_events where account_id = $1', [u.accountId])).rows[0].n, 0);
+    assert.equal((await t.db.query('select count(*)::int as n from analytics_daily where account_id = $1', [u.accountId])).rows[0].n, 0);
+    assert.equal((await send(u, [ev('screen_view', { feature: 'today' })])).json.disabled, 'opted_out');
+    assert.equal((await call(u, '/api/account/me')).json.identity.analytics, false);
+    assert.equal((await call(u, '/api/account/privacy', 'PUT', { analytics: true })).json.analytics, true);
+
+    const owner = await t.registered(`owner-an-${Date.now()}@example.org`);
+    await t.grantRole(owner.accountId, 'owner');
+    await call(owner, '/api/admin/step-up', 'POST', { password: owner.password });
+    assert.equal((await call(owner, '/api/admin/settings/analytics.enabled', 'PUT', { value: false, reason: 'privacy review' })).status, 200);
+    t.clock.advance(6000);
+    assert.equal((await send(u, [ev('screen_view', { feature: 'today' })])).json.disabled, 'platform');
+    await call(owner, '/api/admin/settings/analytics.enabled', 'PUT', { value: true, reason: 'review done' });
+    t.clock.advance(6000);
+  });
+});

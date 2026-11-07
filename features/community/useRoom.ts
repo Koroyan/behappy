@@ -10,6 +10,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { trackAction } from '@/lib/analytics';
 import { ApiError } from '@/lib/api/client';
 import * as api from '@/lib/api/community';
 import type { ReactionKey, Room, RoomMessage } from '@/lib/api/community';
@@ -191,6 +192,7 @@ export function useRoom(roomId: string) {
         setPending((p) => p.filter((x) => x.nonce !== n));
         merge([res.message]);
         if (res.safetyNotice) setSafetyNotice(true);
+        trackAction('community', 'message_sent');
         return { ok: true, held: res.held, safetyNotice: res.safetyNotice };
       } catch (e: any) {
         const code = e?.code || (e instanceof ApiError ? e.code : undefined) || 'network';
@@ -218,6 +220,7 @@ export function useRoom(roomId: string) {
       try {
         const res = await request<{ reactions: RoomMessage['reactions']; myReactions: ReactionKey[] }>('message:react', { messageId: m.id, reaction, on }).catch(() => api.react(m.id, reaction, on));
         merge([{ ...optimistic, reactions: res.reactions, myReactions: res.myReactions }]);
+        if (on) trackAction('community', 'reaction_added');
       } catch {
         merge([m]);
       }
@@ -228,6 +231,7 @@ export function useRoom(roomId: string) {
   /** Joins, then loads the history and subscribes to the live stream. */
   const join = useCallback(async () => {
     const r = await api.joinRoom(roomId);
+    trackAction('community', 'room_joined');
     joinedRef.current = true;
     setRoom(r);
     await load();

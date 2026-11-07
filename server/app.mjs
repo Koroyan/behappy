@@ -194,6 +194,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
         staffPermissions: a.roles.some(isStaffRole) && !a.staffSuspendedAt ? [...permissionsFor(a.roles)].sort() : [],
         sessionKind: a.sessionKind,
         status: a.status,
+        analytics: !a.analyticsOptOut,
         emailAvailable: mail.available,
         testCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null,
       },

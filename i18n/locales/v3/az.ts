@@ -895,4 +895,10 @@ export const az3: PartialMessages = {
       },
     },
   },
+  usageStats: {
+    title: 'İstifadə statistikası',
+    on: 'Aktiv: tətbiqin hansı bölmələrindən nə qədər istifadə etdiyiniz, heç vaxt yazdıqlarınız deyil',
+    off: 'Deaktiv: tətbiqdən necə istifadə etdiyiniz barədə heç nə toplanmır',
+    offDone: 'Statistika söndürüldü və sizin üçün saxlanılanlar silindi.',
+  },
 };

@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { FeedbackProvider, ThemeProvider, useTheme } from '@/design';
+import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
 import { ConsentProvider } from '@/features/common/Consent';
 import { AppShell, FontGate } from '@/features/shell/AppShell';
 import { AccountProvider } from '@/lib/api/account';
@@ -24,6 +25,7 @@ function Navigator() {
   return (
     <NavigationThemeProvider value={navTheme}>
       <AppShell>
+        <AnalyticsTracker />
         <Stack
           screenOptions={{
             headerShown: false,
