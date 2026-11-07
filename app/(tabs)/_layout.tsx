@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs } from 'expo-router/js-tabs';
 import React from 'react';
 
 import { useLayout, useTheme } from '@/design';
@@ -14,13 +14,12 @@ export default function TabLayout() {
       tabBar={(props) => (hasSideNav ? null : <MobileTabBar {...props} />)}
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.bg } }}
     >
-      {/* Phones: Today, Tools, Anulia (centre), Community, Specialists. Profile opens from the avatar at the top. */}
+      {/* Phones: Today, Tools, Anulia (centre), Community, Specialists. Profile is its own page (app/profile), opened from the avatar at the top. */}
       <Tabs.Screen name="index" options={{ title: t('nav.today') }} />
       <Tabs.Screen name="tools" options={{ title: t('tools.tab') }} />
       <Tabs.Screen name="anulia" options={{ title: t('nav.anulia') }} />
       <Tabs.Screen name="community" options={{ title: t('shell.community_tab') }} />
       <Tabs.Screen name="specialists" options={{ title: t('shell.specialists') }} />
-      <Tabs.Screen name="profile" options={{ title: t('nav.profile'), href: null }} />
     </Tabs>
   );
 }

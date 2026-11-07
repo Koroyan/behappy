@@ -1,5 +1,5 @@
 import React, { forwardRef, useState } from 'react';
-import { Platform, StyleProp, TextInput, TextInputProps, TextStyle, View, ViewStyle } from 'react-native';
+import { Platform, StyleProp, TextInput, TextInputProps, TextStyle, View, ViewStyle, type TextInputInstance } from 'react-native';
 
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -18,7 +18,7 @@ export interface TextFieldProps extends TextInputProps {
   bare?: boolean;
 }
 
-export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
+export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function TextField(
   { label, helper, error, variant = 'body', containerStyle, inputStyle, bare, multiline, onFocus, onBlur, ...rest },
   ref
 ) {

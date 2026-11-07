@@ -5,7 +5,7 @@
  */
 import { Image } from 'expo-image';
 import React, { forwardRef, useEffect, useRef } from 'react';
-import { ActivityIndicator, Animated, Platform, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Platform, ScrollView, TextInput, View, type ScrollViewInstance, type TextInputInstance } from 'react-native';
 
 import { AnuliaMark, AppText, Icon, IconButton, Press, radius, space, useLayout, useTextStyle, useTheme } from '@/design';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -145,7 +145,7 @@ export interface ComposerProps {
   testID?: string;
 }
 
-export const Composer = forwardRef<TextInput, ComposerProps>(function Composer(
+export const Composer = forwardRef<TextInputInstance, ComposerProps>(function Composer(
   { value, onChangeText, onSend, placeholder, sending, disabled, onAttach, attachLabel, onCamera, onVoice, recording, transcribing, above, testID },
   ref
 ) {
@@ -154,8 +154,8 @@ export const Composer = forwardRef<TextInput, ComposerProps>(function Composer(
   const { isRTL } = useLanguage();
   const text = useTextStyle('body');
   const canSend = value.trim().length > 0 && !sending && !disabled;
-  const inputRef = useRef<TextInput | null>(null);
-  const setInputRef = (node: TextInput | null) => {
+  const inputRef = useRef<TextInputInstance | null>(null);
+  const setInputRef = (node: TextInputInstance | null) => {
     inputRef.current = node;
     if (typeof ref === 'function') ref(node);
     else if (ref) ref.current = node;
@@ -248,8 +248,8 @@ export const Composer = forwardRef<TextInput, ComposerProps>(function Composer(
 });
 
 /** Scroll container that keeps the newest message in view. */
-export const ChatScroll = forwardRef<ScrollView, { children: React.ReactNode; contentKey: string | number; padding?: number }>(function ChatScroll({ children, contentKey, padding = 0 }, ref) {
-  const inner = useRef<ScrollView>(null);
+export const ChatScroll = forwardRef<ScrollViewInstance, { children: React.ReactNode; contentKey: string | number; padding?: number }>(function ChatScroll({ children, contentKey, padding = 0 }, ref) {
+  const inner = useRef<ScrollViewInstance>(null);
   useEffect(() => {
     const id = setTimeout(() => inner.current?.scrollToEnd({ animated: true }), 60);
     return () => clearTimeout(id);

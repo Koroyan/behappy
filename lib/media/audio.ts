@@ -1,8 +1,9 @@
 /**
  * Voice input (record → transcribe) and read-aloud (text → speech), both via
- * the BeHappy server. Web uses MediaRecorder; native uses expo-av.
+ * the BeHappy server. Web records with MediaRecorder; native records and
+ * plays with expo-audio (expo-av was removed from Expo SDK 55 on).
  */
-import { Audio } from 'expo-av';
+import { createAudioPlayer, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder, type AudioPlayer } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useCallback, useRef, useState } from 'react';
 import { Platform } from 'react-native';
@@ -14,7 +15,9 @@ export class VoiceUnsupportedError extends Error {}
 
 export function useVoiceRecorder() {
   const [recording, setRecording] = useState(false);
-  const nativeRef = useRef<Audio.Recording | null>(null);
+  // Native recorder. Creating it does not open the microphone; recording starts in start().
+  const nativeRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const nativeActive = useRef(false);
   const webRef = useRef<{ recorder: any; chunks: BlobPart[]; stream: MediaStream } | null>(null);
 
   const start = useCallback(async () => {
@@ -37,13 +40,14 @@ export function useVoiceRecorder() {
       setRecording(true);
       return;
     }
-    const perm = await Audio.requestPermissionsAsync();
+    const perm = await requestRecordingPermissionsAsync();
     if (!perm.granted) throw new MicPermissionError();
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    const { recording: rec } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-    nativeRef.current = rec;
+    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+    await nativeRecorder.prepareToRecordAsync();
+    nativeRecorder.record();
+    nativeActive.current = true;
     setRecording(true);
-  }, []);
+  }, [nativeRecorder]);
 
   /** Stops and returns { uri, mime } of the recording, or null if nothing was recorded. */
   const stop = useCallback(async (): Promise<{ uri: string; mime: string } | null> => {
@@ -63,14 +67,13 @@ export function useVoiceRecorder() {
       if (!blob.size) return null;
       return { uri: URL.createObjectURL(blob), mime: type };
     }
-    const rec = nativeRef.current;
-    nativeRef.current = null;
-    if (!rec) return null;
-    await rec.stopAndUnloadAsync();
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
-    const uri = rec.getURI();
+    if (!nativeActive.current) return null;
+    nativeActive.current = false;
+    await nativeRecorder.stop();
+    await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+    const uri = nativeRecorder.uri;
     return uri ? { uri, mime: 'audio/mp4' } : null;
-  }, []);
+  }, [nativeRecorder]);
 
   return { recording, start, stop };
 }
@@ -94,19 +97,25 @@ export async function transcribeRecording(uri: string, mime: string, language?: 
   return aiTranscribe(base64, mime, fileName, language && /^[a-z]{2}$/.test(language) ? language : undefined);
 }
 
-let currentSound: Audio.Sound | null = null;
+let currentPlayer: AudioPlayer | null = null;
+let finishCurrent: (() => void) | null = null;
+/** A spoken reply is at most 2000 characters; never wait longer than this for it to end. */
+const MAX_PLAYBACK_MS = 4 * 60 * 1000;
 
 export async function stopSpeaking() {
-  const s = currentSound;
-  currentSound = null;
-  if (s) {
+  const player = currentPlayer;
+  const finish = finishCurrent;
+  currentPlayer = null;
+  finishCurrent = null;
+  if (player) {
     try {
-      await s.stopAsync();
-      await s.unloadAsync();
+      player.pause();
+      player.remove();
     } catch {
       // already stopped
     }
   }
+  finish?.();
 }
 
 /** Reads text aloud. Resolves when playback ends or is stopped. */
@@ -130,22 +139,34 @@ export async function speakText(text: string, language: string): Promise<void> {
       FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
     };
   }
-  const sound = new Audio.Sound();
-  currentSound = sound;
+  if (Platform.OS !== 'web') await setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+  const player = createAudioPlayer({ uri });
+  currentPlayer = player;
   try {
-    await sound.loadAsync({ uri });
-    await sound.playAsync();
     await new Promise<void>((resolve) => {
-      sound.setOnPlaybackStatusUpdate((status: any) => {
-        if (!status?.isLoaded || status?.didJustFinish) resolve();
+      const timer = setTimeout(resolve, MAX_PLAYBACK_MS);
+      const done = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      finishCurrent = done;
+      const sub = player.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish) {
+          sub.remove();
+          done();
+        }
       });
+      player.play();
     });
   } finally {
-    if (currentSound === sound) currentSound = null;
-    try {
-      await sound.unloadAsync();
-    } catch {
-      // ignore
+    if (currentPlayer === player) {
+      currentPlayer = null;
+      finishCurrent = null;
+      try {
+        player.remove();
+      } catch {
+        // ignore
+      }
     }
     cleanup();
   }

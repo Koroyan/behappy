@@ -8,7 +8,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
-import { AppText, Badge, Button, Card, Chip, Icon, Press, Screen, SectionHeader, space, TextField, useLayout, useTheme } from '@/design';
+import { AppText, Badge, Card, Chip, Icon, Press, Screen, SectionHeader, space, TextField, useLayout, useTheme } from '@/design';
 import { ProfileButton } from '@/features/shell/ProfileButton';
 import { QUICK, TONE_BG, TONE_FG, Tool, ToolSection, TOOLS } from '@/features/tools/catalog';
 import { useToolFlags } from '@/features/tools/useToolFlags';
@@ -92,8 +92,14 @@ export default function ToolsScreen() {
           <AppText variant="small" color="textSecondary">
             {t('tools.featuredBody')}
           </AppText>
+          {/* The whole card is the button; this only looks like one (a button inside a button isn't allowed on the web). */}
           <View style={{ flexDirection: 'row', marginTop: space[2] }}>
-            <Button label={t('tools.featuredCta')} size="sm" icon="albums-outline" onPress={() => open('/cards', 'cards')} testID="tools-featured-start" />
+            <View testID="tools-featured-start" style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 14 }}>
+              <Icon name="albums-outline" size={16} color="onPrimary" />
+              <AppText variant="smallStrong" color="onPrimary">
+                {t('tools.featuredCta')}
+              </AppText>
+            </View>
           </View>
         </View>
         <CardStack />

@@ -1,4 +1,4 @@
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import React from 'react';
 import { Keyboard, Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +20,7 @@ export const tabLabelSize = (label: string, tabWidth: number, base: number) => M
  * Phone navigation: five calm destinations, large touch targets, labels always
  * visible. Anulia sits in the middle as a raised button.
  */
-export function MobileTabBar({ state, navigation }: BottomTabBarProps) {
+export function MobileTabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const { colors } = useTheme();
   const { width } = useLayout();
   const insets = useSafeAreaInsets();
@@ -58,8 +58,8 @@ export function MobileTabBar({ state, navigation }: BottomTabBarProps) {
         if (!item) return null;
         const focused = state.index === index;
         const press = () => {
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!focused && !event.defaultPrevented) navigation.navigate(route.name as never);
+          const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) navigateToTab(route.key);
         };
         const labelSize = tabLabelSize(item.label, (width - 12) / Math.max(primary.length, 1), width < 360 ? 10.5 : 11.5);
         if (key === 'anulia') {

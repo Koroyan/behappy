@@ -77,6 +77,11 @@ async function client(user, viewport, label, { lang = 'en', theme = 'light' } = 
   );
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
+  // Console errors count as failures: Expo shows them on screen on the web (SDK 55+). The browser's own
+  // 'Failed to load resource' lines are expected API refusals (for example 403 for a role).
+  page.on('console', (m) => {
+    if (m.type() === 'error' && !/^Failed to load resource/.test(m.text())) errors.push(`${label}: console: ${m.text().slice(0, 200)}`);
+  });
   const id = (t) => `[data-testid="${t}"]`;
   const visible = (t) => {
     active = page;

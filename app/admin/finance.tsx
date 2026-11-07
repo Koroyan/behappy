@@ -20,6 +20,7 @@ export default function AdminFinance() {
   const d = q.data;
   const status = useOrderStatus();
   const [order, setOrder] = useState<string | null>(null);
+  const rowOpens = can('users.transactions.view');
   const refund = async (o: any) => {
     const reason = await ask({ title: t('ac.finance.refundTitle'), body: t('ac.finance.refundBody', { amount: f.money(o.amountMinor, o.currency) }), min: 5, destructive: true });
     if (!reason) return;
@@ -78,19 +79,20 @@ export default function AdminFinance() {
           <DataTable
             rows={payments.data.payments}
             keyFor={(r: any) => r.id}
-            onRowPress={can('users.transactions.view') ? (r: any) => setOrder(r.id) : undefined}
+            onRowPress={rowOpens ? (r: any) => setOrder(r.id) : undefined}
             rowTestID="admin-finance-payment"
             columns={[
               { key: 'date', label: t('ac.finance.cols.date'), render: (r: any) => f.dateTime(r.createdAt) },
               { key: 'product', label: t('ac.finance.cols.product'), render: (r: any) => (r.professionalName ? `${t('ac.finance.products.professional')} · ${r.professionalName}` : r.productId) },
               { key: 'amount', label: t('ac.finance.cols.amount'), align: 'right', render: (r: any) => f.money(r.amountMinor, r.currency) },
               { key: 'status', label: t('ac.finance.cols.status'), render: (r: any) => <Pill label={status(r.status)} tone={TONE[r.status] || 'neutral'} /> },
-              { key: 'refund', label: '', render: (r: any) => (r.status === 'approved' && can('payments.refund') ? <Button label={t('ac.finance.refund')} size="sm" variant="ghost" onPress={() => refund(r)} /> : null) },
+              // When rows open the payment drawer, Refund lives in the drawer (a button can't sit inside a clickable row).
+              ...(rowOpens ? [] : [{ key: 'refund', label: '', render: (r: any) => (r.status === 'approved' && can('payments.refund') ? <Button label={t('ac.finance.refund')} size="sm" variant="ghost" onPress={() => refund(r)} /> : null) }]),
             ]}
           />
         </Panel>
       ) : null}
-      <TransactionDrawer orderId={order} onClose={() => setOrder(null)} />
+      <TransactionDrawer orderId={order} onClose={() => setOrder(null)} onRefund={refund} />
     </AdminPage>
   );
 }

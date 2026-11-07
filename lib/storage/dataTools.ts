@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 
+import { resetAnalytics } from '@/lib/analytics';
 import { deleteServerAccount, forgetAccountOnThisDevice } from '@/lib/api/account';
 import { clearArtworks } from '@/lib/media/artworkStore';
 
@@ -56,6 +57,8 @@ export async function exportAllData(): Promise<void> {
 export async function deleteAllData({ localOnly = false }: { localOnly?: boolean } = {}): Promise<void> {
   if (localOnly) await forgetAccountOnThisDevice();
   else await deleteServerAccount();
+  // Unsent usage events live in memory too; drop them before clearing storage.
+  await resetAnalytics();
   await clearArtworks();
   await AsyncStorage.clear();
 }

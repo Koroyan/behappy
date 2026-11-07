@@ -1,7 +1,7 @@
 import type { AppLanguage } from '@/contexts/LanguageContext';
-import { aiResponses, aiResponsesStream, aiSpeech, aiTranscribe, StaleChainError } from '@/lib/api/ai';
+import { aiResponses, aiResponsesStream, aiTranscribe, StaleChainError } from '@/lib/api/ai';
 import { canPersonalize } from '@/lib/privacy/consent';
-import { Audio } from 'expo-av';
+import { speakText } from '@/lib/media/audio';
 // Use standard expo-file-system (legacy path breaks web export and Metro resolution)
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
@@ -295,59 +295,10 @@ class ArtTherapyService {
     return aiTranscribe(base64, mime, name, language);
   }
 
-  /**
-   * Text-to-Speech using OpenAI TTS. Plays audio and resolves when finished.
-   * Uses expo-av for playback on native and web.
-   */
+  /** Text-to-Speech through the BeHappy server; resolves when playback ends (shared player in lib/media/audio). */
   async speakTextTTS(text: string, userLanguage: AppLanguage = 'ru'): Promise<void> {
     if (!text?.trim()) return;
-    // Choose a stable multilingual voice
-    const voice = userLanguage === 'en' ? 'alloy' : 'marin';
-    const format: 'mp3' | 'wav' = 'mp3';
-    const arrayBuf = await aiSpeech(text.slice(0, 2000), voice);
-
-    if (Platform.OS === 'web') {
-      const mime = format === 'mp3' ? 'audio/mpeg' : 'audio/wav';
-      const blob = new Blob([arrayBuf], { type: mime });
-      const url = URL.createObjectURL(blob);
-      try {
-        const sound = new Audio.Sound();
-        // On web, expo-av can play blob URLs
-        await sound.loadAsync({ uri: url });
-        await sound.playAsync();
-        await new Promise<void>((resolve) => {
-          sound.setOnPlaybackStatusUpdate((status: any) => {
-            if (status?.didJustFinish) resolve();
-          });
-        });
-        await sound.unloadAsync();
-      } finally {
-        URL.revokeObjectURL(url);
-      }
-      return;
-    }
-
-    // Native: write to cache and play
-    const bytes = new Uint8Array(arrayBuf);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    const base64 = (globalThis as any).btoa ? (globalThis as any).btoa(binary) : Buffer.from(binary, 'binary').toString('base64');
-    const filename = `${FileSystem.cacheDirectory}tts_${Date.now()}.${format}`;
-    await FileSystem.writeAsStringAsync(filename, base64, { encoding: FileSystem.EncodingType.Base64 });
-
-    const sound = new Audio.Sound();
-    try {
-      await sound.loadAsync({ uri: filename });
-      await sound.playAsync();
-      await new Promise<void>((resolve) => {
-        sound.setOnPlaybackStatusUpdate((status: any) => {
-          if (status?.didJustFinish) resolve();
-        });
-      });
-    } finally {
-      await sound.unloadAsync();
-      try { await FileSystem.deleteAsync(filename, { idempotent: true }); } catch {}
-    }
+    await speakText(text, userLanguage);
   }
 
   /**

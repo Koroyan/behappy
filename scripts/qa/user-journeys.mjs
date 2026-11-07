@@ -314,6 +314,7 @@ await step('delete everything', async () => {
   const photosBefore = await countPhotos();
   if (!skipAi && photosBefore < 1) throw new Error('the art photo was not stored before deleting');
   const oldToken = await page.evaluate(() => JSON.parse(localStorage.getItem('@behappy_account_v1') || '{}').token);
+  const deletedAt = Date.now();
   await page.click(tid('profile-delete'));
   await page.click(tid('confirm-accept'));
   await page.waitForSelector(tid('screen-onboarding'), { timeout: 30000 });
@@ -326,7 +327,11 @@ await step('delete everything', async () => {
   if (token && token === oldToken) throw new Error('the old account token is still stored');
   // On start-up the app creates a fresh, empty anonymous account and its caches; nothing personal may survive.
   const startup = ['@behappy_language', '@behappy_account_v1', '@behappy_me_cache_v1', '@behappy_mood_checkins_migrated'];
-  const survived = keys.filter((k) => !startup.includes(k));
+  // Usage statistics restart for the new anonymous account; only events from before the deletion would be a leak.
+  const queue = await page.evaluate(() => JSON.parse(localStorage.getItem('@behappy_analytics_queue_v1') || '[]'));
+  const oldEvents = queue.filter((e) => e.at < deletedAt);
+  if (oldEvents.length) throw new Error(`${oldEvents.length} usage event(s) from before the deletion survived`);
+  const survived = keys.filter((k) => !startup.includes(k) && k !== '@behappy_analytics_queue_v1');
   if (survived.length) throw new Error(`still stored: ${survived.join(', ')}`);
   const photosAfter = await countPhotos();
   if (photosAfter !== 0) throw new Error(`artwork photos left: ${photosAfter}`);

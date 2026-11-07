@@ -40,7 +40,8 @@ export function useProductLabel() {
 }
 
 /** `accountId` scopes the lookup to one account (the order must belong to it). */
-export function TransactionDrawer({ orderId, accountId, onClose }: { orderId: string | null; accountId?: string; onClose: () => void }) {
+/** `onRefund`: offered for paid orders; the drawer closes first so the reason prompt is on top. */
+export function TransactionDrawer({ orderId, accountId, onClose, onRefund }: { orderId: string | null; accountId?: string; onClose: () => void; onRefund?: (order: { id: string; amountMinor: number; currency: string }) => void }) {
   const c = useAdminColors();
   const { t } = useT();
   const f = useFmt();
@@ -129,6 +130,20 @@ export function TransactionDrawer({ orderId, accountId, onClose }: { orderId: st
               </View>
             ) : null}
             {o.accountDeleted ? <Note>{t('ac.u360.accountDeleted')}</Note> : null}
+            {onRefund && o.status === 'approved' && can('payments.refund') ? (
+              <Button
+                label={t('ac.finance.refund')}
+                variant="danger"
+                size="sm"
+                icon="arrow-undo-outline"
+                onPress={() => {
+                  onClose();
+                  onRefund({ id: o.id, amountMinor: o.amountMinor, currency: o.currency });
+                }}
+                style={{ alignSelf: 'flex-start' }}
+                testID="admin-tx-refund"
+              />
+            ) : null}
             {!accountId && o.accountId && can('users.view') ? (
               <Button
                 label={t('ac.u360.openAccount')}

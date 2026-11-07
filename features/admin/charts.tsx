@@ -327,8 +327,8 @@ export function RankedBars({ items, format, testID }: { items: { label: string; 
   const max = Math.max(1, ...items.map((i) => i.value || 0));
   return (
     <View style={{ gap: 10 }} testID={testID}>
-      {items.map((it) => (
-        <View key={it.label} style={{ gap: 4 }}>
+      {items.map((it, i) => (
+        <View key={`${i}-${it.label}`} style={{ gap: 4 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
             <AppText variant="small" style={{ color: c.text, flexShrink: 1 }} numberOfLines={1}>
               {it.label}

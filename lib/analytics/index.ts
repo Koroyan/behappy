@@ -203,6 +203,21 @@ export function setAnalyticsEnabled(on: boolean) {
   }
 }
 
+/**
+ * "Delete everything": forget unsent events and the current session, so
+ * nothing from before the deletion is stored again or sent under the new
+ * anonymous account.
+ */
+export async function resetAnalytics() {
+  queue = [];
+  loaded = true;
+  sessionId = '';
+  lastActivity = 0;
+  firstSession = true;
+  current = { feature: null, since: null };
+  await AsyncStorage.removeItem(QUEUE_KEY).catch(() => {});
+}
+
 /** Starts timers and visibility listeners once (root layout). */
 export function startAnalytics() {
   if (started) return () => {};

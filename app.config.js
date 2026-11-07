@@ -26,7 +26,7 @@ module.exports = {
     scheme: 'behappy',
     userInterfaceStyle: 'automatic',
     backgroundColor: '#F7F8F5',
-    newArchEnabled: true,
+    // The New Architecture is the only one from Expo SDK 55 on (no flag needed).
     ios: {
       supportsTablet: true,
       infoPlist: {
@@ -40,7 +40,7 @@ module.exports = {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#F7F8F5',
       },
-      edgeToEdgeEnabled: true,
+      // Edge-to-edge is always on from Expo SDK 55.
       permissions: ['RECORD_AUDIO', 'CAMERA'],
     },
     web: {
@@ -57,7 +57,7 @@ module.exports = {
       'expo-font',
       'expo-asset',
       ['expo-image-picker', { photosPermission: PHOTOS, cameraPermission: CAMERA }],
-      ['expo-av', { microphonePermission: MIC }],
+      ['expo-audio', { microphonePermission: MIC }],
       [
         'expo-splash-screen',
         {
