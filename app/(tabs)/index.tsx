@@ -4,11 +4,12 @@ import { View } from 'react-native';
 
 import { pickLocalized } from '@/content/types';
 import { QUOTES } from '@/content/quotes';
-import { AppText, Avatar, Button, Card, Chip, Icon, IconButton, IconName, MoodGlyph, ProgressBar, Press, SectionHeader, Screen, space, TextField, useLayout, useTheme } from '@/design';
+import { AppText, Avatar, Banner, Button, Card, Chip, Icon, IconButton, IconName, MoodGlyph, ProgressBar, Press, SectionHeader, Screen, space, TextField, useLayout, useTheme } from '@/design';
 import { conversationTitle, listConversations, type Conversation } from '@/features/anulia/anuliaService';
 import { loadProgram, type ProgramState } from '@/features/art/program';
 import { MoodPicker } from '@/features/mood/MoodPicker';
 import { useT } from '@/i18n';
+import { useAccount } from '@/lib/api/account';
 import { loadActivity, summarize } from '@/lib/storage/activity';
 import { addCheckIn, CheckIn, FEELINGS, Feeling, latestToday, loadCheckIns } from '@/lib/storage/checkins';
 import { JournalEntry, loadEntries, MoodLevel, saveDraft } from '@/lib/storage/journal';
@@ -45,6 +46,10 @@ export default function TodayScreen() {
   const { isCompact, isDesktop } = useLayout();
 
   const [name, setName] = useState<string>('');
+  // A short notice from the BeHappy team (admin center › Settings), English or Georgian.
+  const { me } = useAccount();
+  const ann = (me?.platform as { announcement?: { tone: 'info' | 'warning'; title: Record<string, string>; body: Record<string, string> } | null } | undefined)?.announcement;
+  const [annHidden, setAnnHidden] = useState(false);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -410,6 +415,14 @@ export default function TodayScreen() {
       testID="screen-today"
     >
       <View style={{ gap: space[5] }}>
+        {ann && !annHidden ? (
+          <Banner
+            tone={ann.tone === 'warning' ? 'warning' : 'info'}
+            title={(language === 'ka' && ann.title.ka) || ann.title.en}
+            body={(language === 'ka' && ann.body.ka) || ann.body.en || ''}
+            action={<Button label={t('common.close')} size="sm" variant="ghost" onPress={() => setAnnHidden(true)} testID="today-announcement-close" />}
+          />
+        ) : null}
         {firstTime}
         {checkInCard}
         {suggestionCard}

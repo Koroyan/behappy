@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { LANGUAGE_NAMES } from '@/contexts/LanguageContext';
 import { AppText, Banner, Button, Card, Divider, Icon, Press, Screen, SectionHeader, Skeleton, space, TextField, useFeedback } from '@/design';
 import { StaffGate } from '@/features/account/StaffGate';
+import { useAdmin } from '@/features/admin/AdminProvider';
 import { InfoRow, MembershipBadge, ProAvatar, VerificationBadge } from '@/features/pro/ProParts';
 import { useT } from '@/i18n';
 import { canStaff, useIdentity } from '@/lib/api/account';
@@ -38,6 +39,7 @@ export default function AdminApplication() {
   const identity = useIdentity();
   const { t, formatDate, formatTime, formatPrice } = useT();
   const { confirm, toast } = useFeedback();
+  const { act: withConfirm } = useAdmin();
   const allowed = canStaff(identity, 'professionals.view');
   const [p, setP] = useState<ProProfile | null>(null);
   const [membership, setMembership] = useState<MembershipState | null>(null);
@@ -182,7 +184,7 @@ export default function AdminApplication() {
                   <AppText variant="small" style={{ flex: 1 }} numberOfLines={1}>
                     {t(`pro.apply.documentKinds.${d.kind}`)} · {d.fileName} · {Math.ceil(d.size / 1024)} KB
                   </AppText>
-                  <Button label={t('admin.applications.openDocument')} size="sm" variant="quiet" onPress={() => openAdminDocument(p.id, d.id)} testID="admin-open-document" />
+                  <Button label={t('admin.applications.openDocument')} size="sm" variant="quiet" onPress={() => withConfirm(() => openAdminDocument(p.id, d.id)).catch(() => toast(t('common.errorBody')))} testID="admin-open-document" />
                 </View>
               ))
             ) : (

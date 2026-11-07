@@ -82,7 +82,7 @@ export function MessageRow({ message: m, myName, time, grouped, onReply, onMore,
               {name}
             </AppText>
             {ai ? <Badge label={t('community.room.ai')} tone="lavender" icon="sparkles-outline" /> : null}
-            {official ? <Badge label={t('shell.staff')} tone="sage" icon="shield-checkmark-outline" /> : null}
+            {official ? <Badge label={t('shell.staff')} tone="primary" icon="shield-checkmark-outline" /> : null}
             <AppText variant="caption" color="textTertiary">
               {time}
             </AppText>

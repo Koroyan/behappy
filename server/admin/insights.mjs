@@ -18,6 +18,7 @@ import { PROMPT_SET_VERSION, SERVER_PROMPTS } from '../prompts/index.mjs';
 import { professionalsFor } from '../professional/index.mjs';
 import { maskEmail } from './users.mjs';
 import { permissionsFor, primaryRole, STAFF_ROLES } from './permissions.mjs';
+import { safetyFor } from './safety.mjs';
 import { settingsFor } from './settings.mjs';
 import { handle, StaffError, staffFor } from './staff.mjs';
 
@@ -258,6 +259,8 @@ export function createInsights(deps) {
       aiCalls: await pair('select count(*)::int as n from ai_usage where created_at >= $1 and created_at < $2'),
     };
     const totals = (await db.query("select count(*)::int as accounts, count(*) filter (where email_verified_at is not null and password_hash is not null)::int as registered from accounts")).rows[0];
+    // Urgent reports become cases before they are counted.
+    await safetyFor(deps).sync();
     const queues = {
       applications: await count("select count(*)::int as n from professional_profiles where status in ('submitted', 'under_review')"),
       reports: await count("select count(*)::int as n from reports where status in ('open', 'in_review')"),

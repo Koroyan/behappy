@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 
 import { trackAction } from '@/lib/analytics';
 
-import { apiFetch, apiJson } from './client';
+import { apiFetch, apiJson, parseError } from './client';
 import type { Order } from './payments';
 
 export interface Service {
@@ -60,7 +60,7 @@ export interface PublicPro {
   listed?: boolean;
 }
 
-export type BookingStatus = 'requested' | 'confirmed' | 'declined' | 'cancelled_by_client' | 'cancelled_by_professional' | 'expired';
+export type BookingStatus = 'requested' | 'confirmed' | 'declined' | 'cancelled_by_client' | 'cancelled_by_professional' | 'cancelled_by_admin' | 'expired';
 
 export interface Booking {
   id: string;
@@ -259,7 +259,8 @@ export const adminPayments = async () => (await apiJson<{ payments: any[] }>('/a
 /** Opens a verification document (fetched with the admin's session, never a public URL). */
 export async function openAdminDocument(proId: string, docId: string): Promise<string | null> {
   const res = await apiFetch(`/api/admin/pros/${enc(proId)}/documents/${enc(docId)}`, { headers: { Accept: '*/*' } });
-  if (!res.ok) return null;
+  // Opening identity documents needs a fresh confirmation: errors carry their code (step_up_required…).
+  if (!res.ok) await parseError(res);
   const blob = await res.blob();
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const url = URL.createObjectURL(blob);

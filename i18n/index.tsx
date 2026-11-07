@@ -75,6 +75,34 @@ const directionDeep = (lang: AppLanguage, item: unknown): unknown =>
       ? Object.fromEntries(Object.entries(item).map(([k, v]) => [k, typeof v === 'string' ? direction(lang, v) : v]))
       : item;
 
+const leafKeys = (obj: unknown, prefix = '', out: string[] = []): string[] => {
+  for (const [k, v] of Object.entries((obj as Record<string, unknown>) || {})) {
+    const key = prefix ? prefix + '.' + k : k;
+    if (v && typeof v === 'object' && !Array.isArray(v)) leafKeys(v, key, out);
+    else out.push(key);
+  }
+  return out;
+};
+
+/**
+ * Share of the English interface strings each language has. The admin center
+ * (namespace ac) is English and Georgian only, so it counts for those two.
+ */
+export function translationCoverage(): Partial<Record<AppLanguage, { have: number; total: number; percent: number }>> {
+  const all = leafKeys(CATALOG.en);
+  const out: Partial<Record<AppLanguage, { have: number; total: number; percent: number }>> = {};
+  for (const lang of Object.keys(CATALOG) as AppLanguage[]) {
+    const keys = lang === 'en' || lang === 'ka' ? all : all.filter((k) => !k.startsWith('ac.'));
+    let have = 0;
+    for (const k of keys) {
+      const v = lookup(CATALOG[lang], k);
+      if (v !== undefined && v !== null && v !== '') have += 1;
+    }
+    out[lang] = { have, total: keys.length, percent: Math.floor((have / Math.max(1, keys.length)) * 1000) / 10 };
+  }
+  return out;
+}
+
 export function translate(lang: AppLanguage, key: string, vars?: Record<string, string | number>): string {
   const local = lookup(CATALOG[lang], key);
   const value = typeof local === 'string' && local.trim() !== '' ? local : lookup(en, key);

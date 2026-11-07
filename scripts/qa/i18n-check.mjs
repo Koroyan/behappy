@@ -80,7 +80,9 @@ const problems = [];
 const checkLocale = (code, tree) => {
   const loc = flatten(tree);
   let have = 0;
-  for (const key of enKeys) {
+  // The admin center (ac.*) is English and Georgian only; other languages fall back to English.
+  const keys = code === 'ka' ? [...enKeys] : [...enKeys].filter((k) => !k.startsWith('ac.'));
+  for (const key of keys) {
     const value = loc[key];
     if (value === undefined) continue;
     have += 1;
@@ -102,7 +104,7 @@ const checkLocale = (code, tree) => {
     const isPluralForm = /\.(zero|one|two|few|many|other)$/.test(key) && enKeys.has(`${parent}.other`);
     if (!enKeys.has(key) && !isPluralForm) problems.push(`${code} ${key}: not in English (typo?)`);
   }
-  return `${code}: ${have}/${enKeys.size}`;
+  return `${code}: ${have}/${keys.length}`;
 };
 
 const report = [];
@@ -115,5 +117,6 @@ if (fs.existsSync(extraDir)) {
   }
 }
 console.log('coverage:', report.join(' · '));
+console.log('admin center (ac.*): English and Georgian; other languages show it in English');
 console.log(problems.length ? `PROBLEMS (${problems.length}):\n  ${problems.slice(0, 60).join('\n  ')}` : 'placeholders and lists match English');
 if (missing.length || problems.length) process.exitCode = 1;

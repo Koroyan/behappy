@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { acKa } from '../admin/ka';
 
 /** ქართული — BeHappy 3.0 (საზოგადოება, სპეციალისტები, პროფესიული სივრცე). თბილი ტონი, „შენ“. */
 export const ka3: PartialMessages = {
+  // ადმინისტრირების ცენტრი (იხ. ../admin).
+  ac: acKa,
   shell: {
     personal: 'პირადი',
     community: 'საზოგადოება',
@@ -380,6 +383,9 @@ export const ka3: PartialMessages = {
       booking_reminder: 'შეხსენება: სესია {date}',
       pro_message: 'ახალი შეტყობინება — {from}',
       pro_verification: 'განახლება შენი გადამოწმების შესახებ',
+      membership_changed: 'BeHappy-ის გუნდმა შენი წევრობა განაახლა',
+      booking_cancelled_by_admin: 'BeHappy-მ {date}-ის სესია გააუქმა',
+      support_reply: 'BeHappy-ის გუნდმა შენს მოთხოვნას უპასუხა',
       membership_trial_started: 'შენი უფასო საცდელი პერიოდი აქტიურია {date}-მდე',
       membership_activated: 'შენი წევრობა აქტიურია {date}-მდე',
       membership_reminder: 'შენი წევრობა {days} დღეში სრულდება',
@@ -517,6 +523,7 @@ export const ka3: PartialMessages = {
       declined: 'არ მიიღეს',
       cancelled_by_client: 'გააუქმა კლიენტმა',
       cancelled_by_professional: 'გააუქმა სპეციალისტმა',
+      cancelled_by_admin: 'გააუქმა BeHappy-მ',
       expired: 'მოთხოვნას ვადა გაუვიდა',
     },
     attendance: { attended: 'სპეციალისტმა მონიშნა, რომ სესია შედგა', client_no_show: 'სპეციალისტმა მონიშნა, რომ სესიაზე არ გამოცხადდი' },
@@ -900,5 +907,44 @@ export const ka3: PartialMessages = {
     on: 'ჩართულია: აპის რომელ ნაწილებს იყენებ და რამდენ ხანს — არასდროს იმას, რასაც წერ',
     off: 'გამორთულია: აპის გამოყენებაზე არაფერი გროვდება',
     offDone: 'სტატისტიკა გამოირთო და შენთვის შენახული მონაცემები წაიშალა.',
+  },
+  help: {
+    title: 'დახმარება და მხარდაჭერა',
+    subtitle: 'მისწერე BeHappy-ის გუნდს. ყველა შეტყობინებას ვკითხულობთ და სამუშაო დღეებში რაც შეიძლება მალე ვპასუხობთ.',
+    new: 'ახალი მოთხოვნა',
+    empty: 'მოთხოვნები ჯერ არ არის.',
+    category: 'თემა',
+    subject: 'სათაური',
+    body: 'შეტყობინება',
+    bodyHint: 'ნუ დაწერ პაროლებს ან ბარათის ნომრებს.',
+    send: 'გაგზავნა',
+    sent: 'გაიგზავნა. როცა გუნდი გიპასუხებს, შეტყობინებას მიიღებ.',
+    safetyTitle: 'თუ შეიძლება საფრთხეში იყო',
+    safetyBody: 'მხარდაჭერა გადაუდებელი სამსახური არ არის. ახლავე დაუკავშირდი ადგილობრივ გადაუდებელ სამსახურებს ან კრიზისულ ხაზს.',
+    reply: 'დაწერე პასუხი',
+    you: 'შენ',
+    team: 'BeHappy-ის გუნდი',
+    close: 'მოთხოვნის დახურვა',
+    closed: 'ეს მოთხოვნა დახურულია.',
+    slowDown: 'დღეს უკვე რამდენიმე მოთხოვნა გაგზავნე. ახალს ცოტა მოგვიანებით გაგზავნე.',
+    deletionHint: 'ანგარიშის წაშლა შეგიძლია თავადაც: პროფილი › მონაცემების წაშლა.',
+    categories: {
+      account: 'ანგარიში და შესვლა',
+      payment: 'გადახდები',
+      professional: 'სპეციალისტებისთვის',
+      community: 'საზოგადოება',
+      privacy: 'კონფიდენციალურობა',
+      deletion: 'ჩემი მონაცემების წაშლა',
+      bug: 'რაღაც არ მუშაობს',
+      safety: 'უსაფრთხოება',
+      other: 'სხვა რამ',
+    },
+    status: {
+      open: 'ღია',
+      waiting_on_staff: 'ელოდება გუნდს',
+      waiting_on_user: 'გელოდება შენ',
+      resolved: 'მოგვარებული',
+      closed: 'დახურული',
+    },
   },
 };

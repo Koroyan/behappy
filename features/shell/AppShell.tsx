@@ -91,6 +91,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [colors.bg]);
 
   const chromeless = NO_CHROME.some((p) => pathname.startsWith(p));
+  // The admin center brings its own navigation (app/admin/_layout.tsx).
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return <View style={{ flex: 1, backgroundColor: colors.bg }}>{children}</View>;
   if (!hasSideNav || chromeless) return <View style={{ flex: 1, backgroundColor: colors.bg }}>{children}</View>;
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.bg }}>

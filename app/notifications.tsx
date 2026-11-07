@@ -39,11 +39,16 @@ function hrefFor(n: AppNotification, isPro: boolean): string | null {
     case 'booking_declined':
     case 'booking_expired':
     case 'booking_reminder':
+    case 'booking_cancelled_by_admin':
       return d.bookingId ? `/appointments/${d.bookingId}` : '/appointments';
     case 'pro_message':
       return d.threadId ? `/messages/${d.threadId}` : '/messages';
     case 'pro_verification':
       return '/pro';
+    case 'support_reply':
+      return d.ticketId ? `/support/${d.ticketId}` : '/support';
+    case 'membership_changed':
+      return '/pro/membership';
     case 'membership_trial_started':
     case 'membership_activated':
     case 'membership_reminder':

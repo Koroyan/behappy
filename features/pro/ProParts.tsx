@@ -30,6 +30,7 @@ const BOOKING_TONE: Record<BookingStatus, 'primary' | 'gold' | 'muted' | 'danger
   declined: 'muted',
   cancelled_by_client: 'muted',
   cancelled_by_professional: 'danger',
+  cancelled_by_admin: 'danger',
   expired: 'muted',
 };
 

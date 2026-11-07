@@ -209,6 +209,8 @@ export default function ProfileScreen() {
       <SectionHeader title={t('profile.support')} />
       <ListRow icon="heart-circle-outline" iconTone="danger" title={t('safety.title')} onPress={() => router.push('/safety')} />
       <Divider />
+      <ListRow icon="chatbox-ellipses-outline" title={t('help.title')} onPress={() => router.push('/support' as any)} testID="profile-support" />
+      <Divider />
       <ListRow icon="information-circle-outline" title={t('about.title')} onPress={() => router.push('/about')} />
       <Divider />
       <ListRow icon="flag-outline" iconTone="gold" title={t('goals.title')} onPress={() => router.push('/goals')} />

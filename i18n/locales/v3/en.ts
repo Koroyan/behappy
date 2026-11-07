@@ -7,10 +7,14 @@
  * Voice: the same as 2.0 — warm, plain, unhurried; no clinical promises, no
  * guarantees about clients or income, no pressure.
  */
+import { acEn } from '../admin/en';
+
 type Plural = { zero?: string; one: string; two?: string; few?: string; many?: string; other: string };
 const plural = (one: string, other: string): Plural => ({ one, other });
 
 export const en3 = {
+  // Admin center (English and Georgian; see ../admin).
+  ac: acEn,
   shell: {
     personal: 'Personal',
     community: 'Community',
@@ -389,6 +393,9 @@ export const en3 = {
       booking_reminder: 'Reminder: session on {date}',
       pro_message: 'New message from {from}',
       pro_verification: 'Update on your verification',
+      membership_changed: 'The BeHappy team updated your membership',
+      booking_cancelled_by_admin: 'BeHappy cancelled the session on {date}',
+      support_reply: 'The BeHappy team answered your support request',
       membership_trial_started: 'Your free trial is active until {date}',
       membership_activated: 'Your membership is active until {date}',
       membership_reminder: 'Your membership ends in {days} days',
@@ -526,6 +533,7 @@ export const en3 = {
       declined: 'Not accepted',
       cancelled_by_client: 'Cancelled by the client',
       cancelled_by_professional: 'Cancelled by the specialist',
+      cancelled_by_admin: 'Cancelled by BeHappy',
       expired: 'Request expired',
     },
     attendance: { attended: 'Marked as attended by the specialist', client_no_show: 'Marked as missed by the specialist' },
@@ -911,6 +919,45 @@ export const en3 = {
     on: 'On: which parts of the app you use and for how long, never what you write',
     off: 'Off: nothing about how you use the app is collected',
     offDone: 'Usage statistics are off, and what was kept for you has been deleted.',
+  },
+  help: {
+    title: 'Help and support',
+    subtitle: 'Write to the BeHappy team. We read every message and answer as soon as we can on working days.',
+    new: 'New request',
+    empty: 'No requests yet.',
+    category: 'Topic',
+    subject: 'Subject',
+    body: 'Message',
+    bodyHint: 'Please don’t include passwords or card numbers.',
+    send: 'Send',
+    sent: 'Sent. You’ll get a notification when the team answers.',
+    safetyTitle: 'If you might be in danger',
+    safetyBody: 'Support is not an emergency service. Please contact local emergency services or a crisis line now.',
+    reply: 'Write a reply',
+    you: 'You',
+    team: 'BeHappy team',
+    close: 'Close request',
+    closed: 'This request is closed.',
+    slowDown: 'You’ve sent several requests today. Please wait a little before sending another.',
+    deletionHint: 'You can also delete your account yourself in Profile › Delete data.',
+    categories: {
+      account: 'Account and sign-in',
+      payment: 'Payments',
+      professional: 'For professionals',
+      community: 'Community',
+      privacy: 'Privacy',
+      deletion: 'Delete my data',
+      bug: 'Something isn’t working',
+      safety: 'Safety',
+      other: 'Something else',
+    },
+    status: {
+      open: 'Open',
+      waiting_on_staff: 'Waiting for the team',
+      waiting_on_user: 'Waiting for you',
+      resolved: 'Resolved',
+      closed: 'Closed',
+    },
   },
 };
 
