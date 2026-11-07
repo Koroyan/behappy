@@ -121,7 +121,9 @@ class Window {
 
 const langOf = (req) => (typeof req.body?.lang === 'string' && /^[a-z]{2}$/.test(req.body.lang) ? req.body.lang : 'en');
 
-export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }, devFixedCode = null, limits = {} }) {
+export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }, devFixedCode = null, limits = {}, onSessionsRevoked = () => {} }) {
+  // Open live connections of revoked sessions are closed right away (not only at their next check).
+  const closeLive = (accountId, opts) => Promise.resolve(onSessionsRevoked(accountId, opts)).catch(() => {});
   const router = express.Router();
   const auth = requireAccount(db, { clock });
   const loginByIp = new Window(limits.loginsPer15MinPerIp ?? 20, 15 * MINUTE);
@@ -216,6 +218,7 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
 
   router.post('/logout', auth, async (req, res) => {
     await revokeSession(db, req.account.sessionId, clock.now());
+    await closeLive(req.account.id, { sessionId: req.account.sessionId });
     res.json({ ok: true });
   });
 
@@ -255,6 +258,7 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
       return { ok: true };
     });
     if (!result.ok) return fail(res, 400, result.error);
+    await closeLive(id, {});
     res.json({ accountId: id, token });
   });
 
@@ -270,6 +274,7 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
       await t.query('update accounts set password_hash = $2, password_changed_at = $3 where id = $1', [req.account.id, passwordHash, ts(now)]);
       await t.query('update sessions set revoked_at = $3 where account_id = $1 and id <> $2 and revoked_at is null', [req.account.id, req.account.sessionId, ts(now)]);
     });
+    await closeLive(req.account.id, { exceptSessionId: req.account.sessionId });
     res.json({ ok: true });
   });
 
@@ -283,6 +288,7 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
   router.delete('/sessions/:id', auth, async (req, res) => {
     const r = await db.query('update sessions set revoked_at = $3 where id = $1 and account_id = $2 and revoked_at is null', [req.params.id, req.account.id, ts(clock.now())]);
     if (!r.rowCount) return fail(res, 404, 'not_found');
+    await closeLive(req.account.id, { sessionId: req.params.id });
     res.json({ ok: true });
   });
 

@@ -240,6 +240,8 @@ export const ja3: PartialMessages = {
       sendFailed: '送信できませんでした。タップして再試行してください。',
       retry: '再試行',
       joinToWrite: 'ここに書くにはルームに参加してください。',
+      joinToRead: 'このルームはメンバーだけが読めます。参加すると会話を見て、加わることができます。',
+      paused: 'モデレーターがこのルームを一時停止しています。読むことはできますが、新しいメッセージとリアクションは受け付けていません。',
     },
     safety: {
       title: 'ひとりで抱え込まなくていいんです',
@@ -297,6 +299,8 @@ export const ja3: PartialMessages = {
       profile_required: '先にコミュニティでの名前を決めてください。',
       suspended: '投稿が一時停止されています。',
       room_not_found: 'このルームは存在しません。',
+      not_a_member: '先にルームに参加してください。',
+      room_paused: 'このルームは一時停止中です。',
       bad_reply: 'このメッセージにはもう返信できません。',
       empty_message: '先に何か書いてください。',
       generic: '問題が発生しました。もう一度お試しください。',

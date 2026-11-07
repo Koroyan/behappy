@@ -177,9 +177,31 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
 
   async function requireMember(q, account) {
     if (!account?.registered) fail(403, 'registration_required');
+    if (account.status && account.status !== 'active') fail(403, 'account_suspended');
     const profile = await loadProfile(q, account.id);
     if (!profile) fail(403, 'profile_required');
+    if (!profile.guidelinesAcceptedAt) fail(403, 'guidelines_required');
     return profile;
+  }
+
+  async function membershipOf(q, accountId, roomId) {
+    const r = await q.query('select joined_at, last_read_message_id, notify from room_memberships where room_id = $1 and account_id = $2', [roomId, accountId]);
+    return r.rows[0] || null;
+  }
+
+  /**
+   * Reading a room's messages (history, search, live stream, pinned message)
+   * requires a registered member who accepted the guidelines AND joined that
+   * room. Knowing a room id is never enough. A platform-wide suspension also
+   * closes reading; a community suspension only stops writing.
+   */
+  async function assertRoomAccess(q, account, roomId) {
+    const profile = await requireMember(q, account);
+    const roomRow = await getRoom(q, roomId);
+    if (!(await membershipOf(q, account.id, roomId))) fail(403, 'not_a_member');
+    const s = await activeSuspension(q, account.id, clock.now());
+    if (s?.scope === 'platform') fail(403, 'suspended', { suspension: s });
+    return { profile, room: roomRow };
   }
 
   async function assertNotSuspended(q, accountId, now) {
@@ -226,7 +248,7 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
   }
 
   // ---------- Rooms ----------
-  const ROOM_SELECT = `select r.id, r.topic_id, r.language, r.pinned_message_id, t.icon, t.sort,
+  const ROOM_SELECT = `select r.id, r.topic_id, r.language, r.pinned_message_id, r.is_paused, t.icon, t.sort,
       (select count(*)::int from room_memberships rm where rm.room_id = r.id) as members,
       (select cm.created_at from community_messages cm where cm.room_id = r.id and cm.status = 'visible' order by cm.id desc limit 1) as last_at,
       m.joined_at, m.last_read_message_id, m.notify,
@@ -249,6 +271,7 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
     unread: r.unread || 0,
     notify: r.notify || null,
     pinnedMessageId: r.pinned_message_id || null,
+    paused: Boolean(r.is_paused),
   });
 
   async function rooms(account, language) {
@@ -261,11 +284,12 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
     return r.rows.map(toRoom);
   }
 
+  /** Room details anyone signed in may see (topic, language, member count); the pinned message only for members. */
   async function room(account, roomId) {
     await getRoom(db, roomId);
     const r = await db.query(`${ROOM_SELECT} where r.id = $2`, [account?.id || '', roomId]);
     const out = toRoom(r.rows[0]);
-    if (out.pinnedMessageId) {
+    if (out.pinnedMessageId && out.joined) {
       const viewer = account ? await relationsFor(db, account.id) : null;
       const rows = await loadMessageRows(db, [out.pinnedMessageId]);
       out.pinned = messageForViewer(rows[0], viewer, new Map());
@@ -275,6 +299,7 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
 
   async function join(account, roomId) {
     await requireMember(db, account);
+    await assertNotSuspended(db, account.id, clock.now());
     await getRoom(db, roomId);
     const last = await db.query("select coalesce(max(id), 0)::int8 as id from community_messages where room_id = $1", [roomId]);
     // Joining starts "read" at the newest message: no wall of unread history.
@@ -283,7 +308,9 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
   }
 
   async function leave(account, roomId) {
-    await db.query('delete from room_memberships where room_id = $1 and account_id = $2', [roomId, account.id]);
+    const r = await db.query('delete from room_memberships where room_id = $1 and account_id = $2', [roomId, account.id]);
+    // Every device of this person stops receiving the room's live stream.
+    if (r.rowCount) bus.emit('membership:left', { roomId, accountId: account.id });
     return { ok: true };
   }
 
@@ -308,7 +335,7 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
 
   /** Newest first from the database; returned oldest → newest. */
   async function messages(account, roomId, { before, after, limit = PAGE } = {}) {
-    await getRoom(db, roomId);
+    await assertRoomAccess(db, account, roomId);
     const viewer = await viewerFor(account);
     const lim = Math.max(1, Math.min(Number(limit) || PAGE, 100));
     const b = Number(before) > 0 ? Number(before) : null;
@@ -330,7 +357,7 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
   }
 
   async function search(account, roomId, query) {
-    await getRoom(db, roomId);
+    await assertRoomAccess(db, account, roomId);
     const text = String(query || '').trim();
     if (text.length < 2 || text.length > 100) fail(400, 'bad_query');
     const viewer = await viewerFor(account);
@@ -354,9 +381,9 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
     if (!account?.registered) fail(403, 'registration_required');
 
     const result = await db.tx(async (t) => {
-      const profile = await requireMember(t, account);
+      const { profile, room: roomRow } = await assertRoomAccess(t, account, roomId);
       await assertNotSuspended(t, account.id, now);
-      await getRoom(t, roomId);
+      if (roomRow.is_paused) fail(423, 'room_paused');
       if (clientNonce) {
         const existing = await t.query('select id from community_messages where author_account_id = $1 and client_nonce = $2', [account.id, clientNonce]);
         if (existing.rowCount) return { id: existing.rows[0].id, duplicate: true };
@@ -374,7 +401,6 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
         replyAuthor = target.author_account_id;
       }
 
-      await t.query('insert into room_memberships (room_id, account_id, joined_at) values ($1, $2, $3) on conflict (room_id, account_id) do nothing', [roomId, account.id, ts(now)]);
       const analysis = analyzeMessage(text, { newMember: now - profile.createdAt < 7 * DAY });
       const asks = Boolean(askAnulia) || mentionsAnulia(text);
       const flags = { ...analysis.flags, ...(analysis.hold ? { hold: analysis.hold } : {}) };
@@ -459,6 +485,8 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
     await assertNotSuspended(db, account.id, clock.now());
     const r = await db.query("select room_id, author_account_id from community_messages where id = $1 and status = 'visible'", [Number(messageId)]);
     if (!r.rowCount) fail(404, 'not_found');
+    const { room: roomRow } = await assertRoomAccess(db, account, r.rows[0].room_id);
+    if (roomRow.is_paused) fail(423, 'room_paused');
     if (on) await db.query('insert into message_reactions (message_id, account_id, reaction) values ($1, $2, $3) on conflict do nothing', [Number(messageId), account.id, reaction]);
     else await db.query('delete from message_reactions where message_id = $1 and account_id = $2 and reaction = $3', [Number(messageId), account.id, reaction]);
     bus.emit('message:reactions', { roomId: r.rows[0].room_id, messageId: Number(messageId) });
@@ -513,11 +541,15 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
     const note = details ? String(details).slice(0, 1000) : null;
     let target;
     if (messageId) {
+      await requireMember(db, account);
       const r = await db.query('select id, room_id, author_account_id, author_pseudonym, body, status from community_messages where id = $1', [Number(messageId)]);
       const m = r.rows[0];
-      if (!m) fail(404, 'not_found');
+      // Only messages the reporter can see: a member of that room, a message that was shown.
+      if (!m || !['visible', 'deleted'].includes(m.status)) fail(404, 'not_found');
+      if (!(await membershipOf(db, account.id, m.room_id))) fail(404, 'not_found');
       target = { type: 'message', id: String(m.id), accountId: m.author_account_id, roomId: m.room_id, snapshot: { body: m.body, pseudonym: m.author_pseudonym, roomId: m.room_id, status: m.status } };
     } else if (memberRef) {
+      await requireMember(db, account);
       const m = await memberFromRef(memberRef);
       target = { type: 'member', id: memberRef, accountId: m.account_id, roomId: null, snapshot: { pseudonym: m.pseudonym } };
     } else fail(400, 'bad_target');
@@ -605,6 +637,7 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
     meSection,
     viewerFor,
     shape,
+    assertRoomAccess: (account, roomId) => assertRoomAccess(db, account, roomId),
     onAnulia(fn) {
       anuliaHandler = fn;
     },

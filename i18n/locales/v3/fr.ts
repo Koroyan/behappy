@@ -240,6 +240,8 @@ export const fr3: PartialMessages = {
       sendFailed: 'Non envoyé. Touchez pour réessayer.',
       retry: 'Réessayer',
       joinToWrite: 'Rejoignez ce salon pour y écrire.',
+      joinToRead: 'Seuls les membres peuvent lire ce salon. Rejoignez-le pour voir la conversation et y participer.',
+      paused: 'Les modérateurs ont mis ce salon en pause pour le moment. Vous pouvez lire, mais les nouveaux messages et réactions sont fermés.',
     },
     safety: {
       title: 'Vous n’avez pas à porter cela seul·e',
@@ -297,6 +299,8 @@ export const fr3: PartialMessages = {
       profile_required: 'Choisissez d’abord un nom pour la communauté.',
       suspended: 'Vos publications sont suspendues.',
       room_not_found: 'Ce salon n’existe pas.',
+      not_a_member: 'Rejoignez d’abord ce salon.',
+      room_paused: 'Ce salon est en pause pour le moment.',
       bad_reply: 'On ne peut plus répondre à ce message.',
       empty_message: 'Écrivez d’abord quelque chose.',
       generic: 'Un problème est survenu. Veuillez réessayer.',

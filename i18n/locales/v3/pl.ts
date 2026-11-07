@@ -240,6 +240,8 @@ export const pl3: PartialMessages = {
       sendFailed: 'Nie wysłano. Dotknij, aby spróbować ponownie.',
       retry: 'Spróbuj ponownie',
       joinToWrite: 'Dołącz do pokoju, aby tu pisać.',
+      joinToRead: 'Ten pokój mogą czytać tylko członkowie. Dołącz, aby zobaczyć rozmowę i wziąć w niej udział.',
+      paused: 'Moderatorzy tymczasowo wstrzymali ten pokój. Możesz czytać, ale nowe wiadomości i reakcje są zamknięte.',
     },
     safety: {
       title: 'Nie musisz dźwigać tego w pojedynkę',
@@ -297,6 +299,8 @@ export const pl3: PartialMessages = {
       profile_required: 'Najpierw wybierz nazwę w społeczności.',
       suspended: 'Pisanie jest wstrzymane.',
       room_not_found: 'Ten pokój nie istnieje.',
+      not_a_member: 'Najpierw dołącz do pokoju.',
+      room_paused: 'Ten pokój jest teraz wstrzymany.',
       bad_reply: 'Na tę wiadomość nie można już odpowiedzieć.',
       empty_message: 'Najpierw coś napisz.',
       generic: 'Coś poszło nie tak. Spróbuj ponownie.',

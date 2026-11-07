@@ -240,6 +240,8 @@ export const tr3: PartialMessages = {
       sendFailed: 'Gönderilemedi. Tekrar denemek için dokun.',
       retry: 'Tekrar dene',
       joinToWrite: 'Buraya yazmak için odaya katıl.',
+      joinToRead: 'Bu odayı yalnızca üyeler okuyabilir. Sohbeti görmek ve katılmak için odaya katıl.',
+      paused: 'Moderatörler bu odayı şimdilik durdurdu. Okuyabilirsin ama yeni mesajlar ve tepkiler kapalı.',
     },
     safety: {
       title: 'Bunu tek başına taşımak zorunda değilsin',
@@ -297,6 +299,8 @@ export const tr3: PartialMessages = {
       profile_required: 'Önce bir topluluk adı seç.',
       suspended: 'Paylaşımların durduruldu.',
       room_not_found: 'Böyle bir oda yok.',
+      not_a_member: 'Önce odaya katıl.',
+      room_paused: 'Bu oda şimdilik durduruldu.',
       bad_reply: 'Bu mesaja artık yanıt verilemez.',
       empty_message: 'Önce bir şey yaz.',
       generic: 'Bir şeyler ters gitti. Tekrar dene.',

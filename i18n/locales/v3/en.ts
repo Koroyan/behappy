@@ -249,6 +249,8 @@ export const en3 = {
       sendFailed: 'Couldn’t send. Tap to try again.',
       retry: 'Try again',
       joinToWrite: 'Join this room to write here.',
+      joinToRead: 'Only members can read this room. Join to see the conversation and take part.',
+      paused: 'Moderators have paused this room for now. You can read, but new messages and reactions are closed.',
     },
     safety: {
       title: 'You don’t have to carry this alone',
@@ -306,6 +308,8 @@ export const en3 = {
       profile_required: 'Choose a community name first.',
       suspended: 'Your posting is paused.',
       room_not_found: 'This room doesn’t exist.',
+      not_a_member: 'Join this room first.',
+      room_paused: 'This room is paused for now.',
       bad_reply: 'That message can’t be replied to anymore.',
       empty_message: 'Write something first.',
       generic: 'Something went wrong. Please try again.',

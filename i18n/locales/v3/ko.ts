@@ -240,6 +240,8 @@ export const ko3: PartialMessages = {
       sendFailed: '보내지 못했어요. 눌러서 다시 시도해 주세요.',
       retry: '다시 시도',
       joinToWrite: '여기에 쓰려면 방에 참여해 주세요.',
+      joinToRead: '이 방은 멤버만 읽을 수 있어요. 참여하면 대화를 보고 함께할 수 있어요.',
+      paused: '모더레이터가 이 방을 잠시 멈췄어요. 읽을 수는 있지만 새 메시지와 반응은 닫혀 있어요.',
     },
     safety: {
       title: '혼자 짊어지지 않아도 돼요',
@@ -297,6 +299,8 @@ export const ko3: PartialMessages = {
       profile_required: '먼저 커뮤니티 이름을 정해 주세요.',
       suspended: '글쓰기가 일시 중지되었어요.',
       room_not_found: '없는 방이에요.',
+      not_a_member: '먼저 방에 참여해 주세요.',
+      room_paused: '이 방은 지금 잠시 멈춰 있어요.',
       bad_reply: '이 메시지에는 더 이상 답장할 수 없어요.',
       empty_message: '먼저 무언가를 써 주세요.',
       generic: '문제가 생겼어요. 다시 시도해 주세요.',

@@ -37,7 +37,10 @@ export interface Room {
   unread: number;
   notify: 'all' | 'mentions' | 'none' | null;
   pinnedMessageId: number | null;
+  /** Present only for members of the room. */
   pinned?: RoomMessage | null;
+  /** Paused by staff: members read, nobody posts or reacts. */
+  paused?: boolean;
 }
 
 export interface RoomMessage {

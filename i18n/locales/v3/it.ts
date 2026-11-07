@@ -240,6 +240,8 @@ export const it3: PartialMessages = {
       sendFailed: 'Non inviato. Tocca per riprovare.',
       retry: 'Riprova',
       joinToWrite: 'Entra nella stanza per scrivere qui.',
+      joinToRead: 'Solo i membri possono leggere questa stanza. Entra per vedere la conversazione e partecipare.',
+      paused: 'I moderatori hanno messo in pausa questa stanza per ora. Puoi leggere, ma nuovi messaggi e reazioni sono chiusi.',
     },
     safety: {
       title: 'Non devi portare tutto da solo',
@@ -297,6 +299,8 @@ export const it3: PartialMessages = {
       profile_required: 'Prima scegli un nome per la community.',
       suspended: 'La pubblicazione è sospesa.',
       room_not_found: 'Questa stanza non esiste.',
+      not_a_member: 'Prima entra nella stanza.',
+      room_paused: 'Questa stanza è in pausa per ora.',
       bad_reply: 'Non si può più rispondere a questo messaggio.',
       empty_message: 'Prima scrivi qualcosa.',
       generic: 'Qualcosa è andato storto. Riprova.',

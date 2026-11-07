@@ -240,6 +240,8 @@ export const id3: PartialMessages = {
       sendFailed: 'Gagal terkirim. Ketuk untuk mencoba lagi.',
       retry: 'Coba lagi',
       joinToWrite: 'Gabung ke ruang ini untuk menulis di sini.',
+      joinToRead: 'Hanya anggota yang dapat membaca ruang ini. Gabung untuk melihat percakapan dan ikut serta.',
+      paused: 'Moderator menjeda ruang ini untuk sementara. Pesan tetap bisa dibaca, tetapi pesan dan reaksi baru ditutup.',
     },
     safety: {
       title: 'Kamu tidak harus menanggung ini sendirian',
@@ -297,6 +299,8 @@ export const id3: PartialMessages = {
       profile_required: 'Pilih nama komunitas dulu.',
       suspended: 'Kamu sementara tidak bisa memposting.',
       room_not_found: 'Ruang ini tidak ada.',
+      not_a_member: 'Gabung ke ruang ini dulu.',
+      room_paused: 'Ruang ini sedang dijeda.',
       bad_reply: 'Pesan itu sudah tidak bisa dibalas.',
       empty_message: 'Tulis sesuatu dulu.',
       generic: 'Ada yang tidak beres. Coba lagi.',

@@ -2,8 +2,13 @@
 //
 //  - The handshake carries the same bearer token as the HTTP API; the
 //    server checks it and keeps only the account on the socket.
-//  - Clients join "room:<id>"; every message is filtered per recipient
-//    (blocked authors, held messages) before it is sent.
+//  - Clients join "room:<id>" only after the same access check as the HTTP
+//    API (registered, guidelines accepted, member of that room). Leaving a
+//    room, an archived room or a revoked session removes the socket.
+//  - Every message is filtered per recipient (blocked authors, held
+//    messages) before it is sent.
+//  - The session behind a socket is checked again at least once a minute,
+//    so a revoked or expired token stops working on open connections too.
 //  - Reconnection: Socket.IO reconnects automatically; the client then asks
 //    for "room:sync" with the last id it saw and receives what it missed.
 //  - Writes go through the same service as the HTTP API (same limits and
@@ -51,56 +56,73 @@ export function startRealtime({ server, deps, community }) {
   const reply = (ack, payload) => {
     if (typeof ack === 'function') ack(payload);
   };
-  const guard = (fn) => async (payload, ack) => {
+  const SESSION_RECHECK_MS = 60 * 1000;
+  /** The socket's account, re-read from the session at most once a minute. */
+  const current = async (socket) => {
+    const now = clock.now();
+    if (now - (socket.data.checkedAt || 0) < SESSION_RECHECK_MS) return socket.data.account;
+    const account = await findAccountByToken(db, socket.handshake.auth?.token, now);
+    if (!account) {
+      socket.disconnect(true);
+      throw Object.assign(new Error('unauthorized'), { code: 'unauthorized' });
+    }
+    socket.data.account = account;
+    socket.data.checkedAt = now;
+    return account;
+  };
+  const guard = (socket, fn) => async (payload, ack) => {
     try {
-      reply(ack, { ok: true, ...(await fn(payload || {})) });
+      const account = await current(socket);
+      reply(ack, { ok: true, ...(await fn(account, payload || {})) });
     } catch (e) {
       reply(ack, { ok: false, error: e.code || 'server_error', ...(e.extra || {}) });
     }
   };
 
   io.on('connection', (socket) => {
-    const account = socket.data.account;
-    socket.join(`user:${account.id}`);
+    socket.data.checkedAt = clock.now();
+    socket.join(`user:${socket.data.account.id}`);
 
     socket.on(
       'room:join',
-      guard(async ({ roomId }) => {
+      guard(socket, async (account, { roomId }) => {
+        // The access check runs before the socket is subscribed.
+        const { messages, hasMore } = await community.messages(account, roomId, { limit: 40 });
         const room = await community.room(account, roomId);
         socket.join(`room:${roomId}`);
-        const { messages, hasMore } = await community.messages(account, roomId, { limit: 40 });
         return { room, messages, hasMore };
       })
     );
     socket.on(
       'room:leave',
-      guard(async ({ roomId }) => {
+      guard(socket, async (_account, { roomId }) => {
         socket.leave(`room:${roomId}`);
         return {};
       })
     );
     socket.on(
       'room:sync',
-      guard(async ({ roomId, afterId }) => {
+      guard(socket, async (account, { roomId, afterId }) => {
+        const res = await community.messages(account, roomId, { after: afterId, limit: 100 });
         socket.join(`room:${roomId}`);
-        return community.messages(account, roomId, { after: afterId, limit: 100 });
+        return res;
       })
     );
     socket.on(
       'message:send',
-      guard(async ({ roomId, body, replyToId, nonce, askAnulia }) => community.post(account, roomId, { body, replyToId, nonce, askAnulia }))
+      guard(socket, async (account, { roomId, body, replyToId, nonce, askAnulia }) => community.post(account, roomId, { body, replyToId, nonce, askAnulia }))
     );
     socket.on(
       'message:react',
-      guard(async ({ messageId, reaction, on }) => community.react(account, messageId, reaction, on !== false))
+      guard(socket, async (account, { messageId, reaction, on }) => community.react(account, messageId, reaction, on !== false))
     );
     socket.on(
       'room:read',
-      guard(async ({ roomId, messageId }) => community.markRead(account, roomId, messageId))
+      guard(socket, async (account, { roomId, messageId }) => community.markRead(account, roomId, messageId))
     );
     socket.on(
       'relations:refresh',
-      guard(async () => {
+      guard(socket, async () => {
         await refreshRelations(socket);
         return {};
       })
@@ -137,11 +159,29 @@ export function startRealtime({ server, deps, community }) {
   community.bus.on('relations', async ({ accountId }) => {
     for (const s of await io.in(`user:${accountId}`).fetchSockets()) await refreshRelations(s);
   });
+  // Membership ends: stop that person's live stream for the room on every device.
+  community.bus.on('membership:left', ({ roomId, accountId }) => io.in(`user:${accountId}`).socketsLeave(`room:${roomId}`));
+  // A room is archived: nobody keeps its stream.
+  community.bus.on('room:archived', ({ roomId }) => {
+    io.to(`room:${roomId}`).emit('room:update', { roomId });
+    io.in(`room:${roomId}`).socketsLeave(`room:${roomId}`);
+  });
 
-  // Other modules (private messages, bookings) push to a person's devices.
+  // Other modules (private messages, bookings, staff tools) push to or close a person's connections.
   deps.realtime = {
     toUser: (accountId, event, payload) => io.to(`user:${accountId}`).emit(event, payload),
     connections: () => io.engine.clientsCount,
+    /** Closes live connections: all of a person's, or only those of one session. */
+    disconnect: async (accountId, { sessionId, exceptSessionId } = {}) => {
+      let n = 0;
+      for (const s of await io.in(`user:${accountId}`).fetchSockets()) {
+        if (sessionId && s.data.account?.sessionId !== sessionId) continue;
+        if (exceptSessionId && s.data.account?.sessionId === exceptSessionId) continue;
+        s.disconnect(true);
+        n += 1;
+      }
+      return n;
+    },
   };
 
   return {

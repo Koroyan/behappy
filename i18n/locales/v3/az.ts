@@ -240,6 +240,8 @@ export const az3: PartialMessages = {
       sendFailed: 'Göndərilmədi. Yenidən cəhd üçün toxunun.',
       retry: 'Yenidən cəhd et',
       joinToWrite: 'Burada yazmaq üçün otağa qoşulun.',
+      joinToRead: 'Bu otağı yalnız üzvlər oxuya bilər. Söhbəti görmək və iştirak etmək üçün otağa qoşulun.',
+      paused: 'Moderatorlar bu otağı hələlik dayandırıb. Oxuya bilərsiniz, amma yeni mesajlar və reaksiyalar bağlıdır.',
     },
     safety: {
       title: 'Bunu tək daşımaq məcburiyyətində deyilsiniz',
@@ -297,6 +299,8 @@ export const az3: PartialMessages = {
       profile_required: 'Əvvəlcə icma adı seçin.',
       suspended: 'Paylaşım dayandırılıb.',
       room_not_found: 'Belə otaq yoxdur.',
+      not_a_member: 'Əvvəlcə otağa qoşulun.',
+      room_paused: 'Bu otaq hələlik dayandırılıb.',
       bad_reply: 'Bu mesaja artıq cavab vermək olmaz.',
       empty_message: 'Əvvəlcə nəsə yazın.',
       generic: 'Nəsə alınmadı. Yenidən cəhd edin.',

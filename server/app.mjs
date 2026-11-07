@@ -200,11 +200,22 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
       await t.query('delete from accounts where id = $1', [id]);
       await audit(t, { actorRole: 'system', action: 'account.deleted', targetType: 'account', targetId: crypto.createHash('sha256').update(id).digest('hex').slice(0, 16) });
     });
+    await Promise.resolve(deps.realtime?.disconnect(id)).catch(() => {});
     res.json({ ok: true });
   });
 
   // ---------- Email + password ----------
-  app.use('/api/auth', createAuthRouter({ db, mailer: mail, clock, limits: config.limits || {}, devFixedCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null }));
+  app.use(
+    '/api/auth',
+    createAuthRouter({
+      db,
+      mailer: mail,
+      clock,
+      limits: config.limits || {},
+      devFixedCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null,
+      onSessionsRevoked: (accountId, opts) => deps.realtime?.disconnect(accountId, opts),
+    })
+  );
 
   // ---------- Notifications ----------
   app.get('/api/notifications', auth, async (req, res) => {

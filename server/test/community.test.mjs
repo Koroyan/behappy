@@ -46,8 +46,16 @@ describe('Community', () => {
     assert.equal(p.status, 200, JSON.stringify(p.json));
     return { ...u, ref: p.json.profile.ref, name };
   };
-  const say = (u, roomId, body, extra = {}) => t.api(`/api/community/rooms/${roomId}/messages`, { token: u.token, method: 'POST', body: { body, ...extra } });
-  const read = (u, roomId, q = '') => t.api(`/api/community/rooms/${roomId}/messages${q}`, { token: u.token });
+  // Reading and writing need membership: these helpers join first (joining twice is harmless).
+  const joinRoom = (u, roomId) => t.api(`/api/community/rooms/${roomId}/join`, { token: u.token, method: 'POST' });
+  const say = async (u, roomId, body, extra = {}) => {
+    await joinRoom(u, roomId);
+    return t.api(`/api/community/rooms/${roomId}/messages`, { token: u.token, method: 'POST', body: { body, ...extra } });
+  };
+  const read = async (u, roomId, q = '') => {
+    await joinRoom(u, roomId);
+    return t.api(`/api/community/rooms/${roomId}/messages${q}`, { token: u.token });
+  };
 
   let nino;
   let luka;
@@ -212,6 +220,7 @@ describe('Community', () => {
     t.clock.advance(31 * SECOND);
     const bad = await say(luka, 'general:en', 'You are all pathetic.');
     assert.equal((await t.api(`/api/community/messages/${bad.json.message.id}/report`, { token: luka.token, method: 'POST', body: { reason: 'harassment' } })).json.error, 'cannot_report_self');
+    await joinRoom(nino, 'general:en');
     const rep = await t.api(`/api/community/messages/${bad.json.message.id}/report`, { token: nino.token, method: 'POST', body: { reason: 'harassment', details: 'insulting' } });
     assert.equal(rep.status, 200);
     assert.equal((await t.api(`/api/community/messages/${bad.json.message.id}/report`, { token: nino.token, method: 'POST', body: { reason: 'harassment' } })).json.alreadyReported, true);
@@ -255,6 +264,7 @@ describe('Community', () => {
   test('search finds visible messages in the room', async () => {
     t.clock.advance(31 * SECOND);
     await say(mari, 'burnout:en', 'Taking a short walk after lunch helps my burnout.');
+    await joinRoom(nino, 'burnout:en');
     const res = await t.api(`/api/community/rooms/burnout:en/search?q=${encodeURIComponent('short walk')}`, { token: nino.token });
     assert.equal(res.json.results.length, 1);
     assert.equal((await t.api('/api/community/rooms/burnout:en/search?q=a', { token: nino.token })).status, 400);
@@ -298,6 +308,7 @@ describe('Community', () => {
     const b = connect(base, opts(luka.token));
     const c = connect(base, opts(mari.token));
     await Promise.all([once(a, 'connect'), once(b, 'connect'), once(c, 'connect')]);
+    for (const u of [nino, luka, mari]) await joinRoom(u, 'grief:en');
     for (const s of [a, b, c]) assert.equal((await emit(s, 'room:join', { roomId: 'grief:en' })).ok, true);
     await t.api(`/api/community/members/${luka.ref}/block`, { token: mari.token, method: 'POST' });
     await emit(c, 'relations:refresh', {});
@@ -328,6 +339,118 @@ describe('Community', () => {
     assert.deepEqual(sync.messages.map((m) => m.body), ['It still feels unreal.', 'Thank you for reading.']);
     // A suspended member can't send over the socket either.
     for (const s of [a2, b, c]) s.close();
+  });
+
+  test('access control: only joined members read or subscribe; a room id alone is never enough', async () => {
+    const base = t.base;
+    const opts = (token) => ({ path: '/socket.io', auth: { token }, transports: ['websocket'], reconnection: false, forceNew: true });
+    const ROOM = 'loneliness:en';
+    const OTHER = 'stress:en';
+    const raw = (u, roomId, q = '') => t.api(`/api/community/rooms/${roomId}/messages${q}`, { token: u.token });
+    const insider = await member('Inside Voice');
+    const outsider = await member('Outside Voice');
+    t.clock.advance(31 * SECOND);
+    const first = await say(insider, ROOM, 'Evenings are the hardest for me lately.');
+    assert.equal(first.status, 200, JSON.stringify(first.json));
+    await t.db.query('update community_rooms set pinned_message_id = $2 where id = $1', [ROOM, first.json.message.id]);
+
+    // Anonymous device account and a registered account without a community profile.
+    const anon = await t.newAccount();
+    assert.equal((await raw(anon, ROOM)).json.error, 'registration_required');
+    const noProfile = await t.registered();
+    assert.equal((await raw(noProfile, ROOM)).json.error, 'profile_required');
+
+    // A member who has not joined: room details yes, content no.
+    const info = await t.api(`/api/community/rooms/${ROOM}`, { token: outsider.token });
+    assert.equal(info.status, 200);
+    assert.equal(info.json.room.joined, false);
+    assert.equal(info.json.room.pinned, undefined, 'the pinned message is for members only');
+    const notMember = await raw(outsider, ROOM);
+    assert.equal(notMember.status, 403);
+    assert.equal(notMember.json.error, 'not_a_member');
+    assert.equal((await t.api(`/api/community/rooms/${ROOM}/search?q=evenings`, { token: outsider.token })).json.error, 'not_a_member');
+    assert.equal((await t.api(`/api/community/rooms/${ROOM}/messages`, { token: outsider.token, method: 'POST', body: { body: 'Hello there' } })).json.error, 'not_a_member');
+    assert.equal((await t.api(`/api/community/messages/${first.json.message.id}/reactions`, { token: outsider.token, method: 'POST', body: { reaction: 'support' } })).json.error, 'not_a_member');
+    assert.equal((await t.api(`/api/community/messages/${first.json.message.id}/report`, { token: outsider.token, method: 'POST', body: { reason: 'spam' } })).status, 404);
+
+    // The same rules over the live connection.
+    const sOut = connect(base, opts(outsider.token));
+    const sIn = connect(base, opts(insider.token));
+    await Promise.all([once(sOut, 'connect'), once(sIn, 'connect')]);
+    const refusedJoin = await emit(sOut, 'room:join', { roomId: ROOM });
+    assert.equal(refusedJoin.ok, false);
+    assert.equal(refusedJoin.error, 'not_a_member');
+    assert.equal((await emit(sOut, 'room:sync', { roomId: ROOM, afterId: 0 })).error, 'not_a_member');
+    assert.equal((await emit(sOut, 'message:send', { roomId: ROOM, body: 'Sneaking in', nonce: 'ac-1' })).error, 'not_a_member');
+    let outsiderGot = 0;
+    sOut.on('message:new', (m) => {
+      if (m.roomId === ROOM) outsiderGot += 1;
+    });
+    assert.equal((await emit(sIn, 'room:join', { roomId: ROOM })).ok, true);
+    t.clock.advance(31 * SECOND);
+    await emit(sIn, 'message:send', { roomId: ROOM, body: 'Anyone else up late tonight?', nonce: 'ac-2' });
+    await new Promise((r) => setTimeout(r, 300));
+    assert.equal(outsiderGot, 0, 'a refused socket receives nothing from the room');
+
+    // Cross-room: membership of one room opens only that room.
+    await joinRoom(outsider, OTHER);
+    assert.equal((await raw(outsider, OTHER)).status, 200);
+    assert.equal((await raw(outsider, ROOM)).json.error, 'not_a_member');
+
+    // Joining opens it; leaving closes it again, on HTTP and on every open socket.
+    await joinRoom(outsider, ROOM);
+    assert.equal((await raw(outsider, ROOM)).status, 200);
+    const joinedInfo = await t.api(`/api/community/rooms/${ROOM}`, { token: outsider.token });
+    assert.equal(joinedInfo.json.room.pinned.id, first.json.message.id);
+    assert.equal((await emit(sOut, 'room:join', { roomId: ROOM })).ok, true);
+    const live = once(sOut, 'message:new');
+    t.clock.advance(31 * SECOND);
+    await emit(sIn, 'message:send', { roomId: ROOM, body: 'Glad you are here.', nonce: 'ac-3' });
+    assert.equal((await live).body, 'Glad you are here.');
+    await t.api(`/api/community/rooms/${ROOM}/leave`, { token: outsider.token, method: 'POST' });
+    assert.equal((await raw(outsider, ROOM)).json.error, 'not_a_member');
+    await new Promise((r) => setTimeout(r, 100));
+    outsiderGot = 0;
+    t.clock.advance(31 * SECOND);
+    await emit(sIn, 'message:send', { roomId: ROOM, body: 'Still here if anyone needs.', nonce: 'ac-4' });
+    await new Promise((r) => setTimeout(r, 300));
+    assert.equal(outsiderGot, 0, 'after leaving, the live stream stops');
+    assert.equal((await emit(sOut, 'room:sync', { roomId: ROOM, afterId: 0 })).error, 'not_a_member');
+
+    // A community suspension stops writing, not reading; a platform-wide one stops both.
+    const now = t.clock.now();
+    const susp = await t.db.query("insert into suspensions (account_id, scope, kind, reason, starts_at, ends_at, created_by) values ($1, 'community', 'temporary', 'test', $2, $3, 'test') returning id", [
+      insider.accountId,
+      new Date(now - 1000),
+      new Date(now + 86400000),
+    ]);
+    assert.equal((await raw(insider, ROOM)).status, 200);
+    t.clock.advance(31 * SECOND);
+    const blocked = await t.api(`/api/community/rooms/${ROOM}/messages`, { token: insider.token, method: 'POST', body: { body: 'Can I still write?' } });
+    assert.equal(blocked.status, 403);
+    assert.equal(blocked.json.error, 'suspended');
+    await t.db.query("update suspensions set scope = 'platform' where id = $1", [susp.rows[0].id]);
+    assert.equal((await raw(insider, ROOM)).json.error, 'suspended');
+    await t.db.query('update suspensions set lifted_at = $2 where id = $1', [susp.rows[0].id, new Date(t.clock.now())]);
+    assert.equal((await raw(insider, ROOM)).status, 200);
+
+    // A paused room: members keep reading, nobody posts or reacts.
+    await t.db.query('update community_rooms set is_paused = true where id = $1', [ROOM]);
+    assert.equal((await raw(insider, ROOM)).status, 200);
+    assert.equal((await t.api(`/api/community/rooms/${ROOM}`, { token: insider.token })).json.room.paused, true);
+    t.clock.advance(31 * SECOND);
+    const paused = await t.api(`/api/community/rooms/${ROOM}/messages`, { token: insider.token, method: 'POST', body: { body: 'Is anyone around?' } });
+    assert.equal(paused.status, 423);
+    assert.equal(paused.json.error, 'room_paused');
+    await t.db.query('update community_rooms set is_paused = false where id = $1', [ROOM]);
+
+    // Signing out closes that session's open live connections at once.
+    const closed = once(sIn, 'disconnect');
+    await t.api('/api/auth/logout', { token: insider.token, method: 'POST' });
+    await closed;
+    const again = connect(base, opts(insider.token));
+    assert.match((await once(again, 'connect_error')).message, /unauthorized/);
+    for (const s of [sOut, again]) s.close();
   });
 
   test('deleting an account empties its messages and shows a former member', async () => {

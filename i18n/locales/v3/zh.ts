@@ -240,6 +240,8 @@ export const zh3: PartialMessages = {
       sendFailed: '发送失败。点按重试。',
       retry: '重试',
       joinToWrite: '加入这个房间后才能在这里发言。',
+      joinToRead: '只有成员可以阅读这个房间。加入后即可查看对话并参与。',
+      paused: '版主暂时暂停了这个房间。你可以阅读，但暂不开放新消息和回应。',
     },
     safety: {
       title: '你不必独自承受',
@@ -297,6 +299,8 @@ export const zh3: PartialMessages = {
       profile_required: '请先选择一个社区名字。',
       suspended: '你的发言已暂停。',
       room_not_found: '这个房间不存在。',
+      not_a_member: '请先加入这个房间。',
+      room_paused: '这个房间暂时暂停了。',
       bad_reply: '这条消息已无法回复。',
       empty_message: '请先写点什么。',
       generic: '出了点问题。请重试。',

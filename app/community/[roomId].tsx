@@ -12,7 +12,7 @@ import { useRoom } from '@/features/community/useRoom';
 import { useT } from '@/i18n';
 import { useAccount, useIdentity } from '@/lib/api/account';
 import { ApiError } from '@/lib/api/client';
-import { deleteMessage, leaveRoom, reportMessage, RoomMessage, searchRoom, setBlocked, setMuted, setRoomNotify, Suspension } from '@/lib/api/community';
+import { deleteMessage, reportMessage, RoomMessage, searchRoom, setBlocked, setMuted, setRoomNotify, Suspension } from '@/lib/api/community';
 
 const FIVE_MIN = 5 * 60 * 1000;
 
@@ -68,6 +68,8 @@ export default function RoomScreen() {
     if (code === 'message_too_long') return t('community.room.tooLong');
     if (code === 'suspended') return t('community.errors.suspended');
     if (code === 'bad_reply') return t('community.errors.bad_reply');
+    if (code === 'not_a_member') return t('community.errors.not_a_member');
+    if (code === 'room_paused') return t('community.errors.room_paused');
     return t('community.errors.generic');
   };
 
@@ -125,7 +127,8 @@ export default function RoomScreen() {
   );
 
   const suspended = community?.suspension ?? null;
-  const canWrite = identity.registered && Boolean(community?.profile) && !suspended;
+  const joined = Boolean(r.room?.joined);
+  const canWrite = identity.registered && Boolean(community?.profile) && !suspended && joined && !r.room?.paused;
 
   const header = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: space[3], borderBottomWidth: 1, borderBottomColor: colors.divider }}>
@@ -139,8 +142,8 @@ export default function RoomScreen() {
           {r.room ? ` · ${tp('community.members', r.room.members)}` : ''}
         </AppText>
       </View>
-      <IconButton icon="search-outline" label={t('community.room.search')} onPress={() => setSearchOpen(true)} size={40} testID="room-search" />
-      {r.room?.joined ? <IconButton icon="ellipsis-horizontal" label={t('community.room.notifications')} onPress={() => setSettingsOpen(true)} size={40} testID="room-settings" /> : null}
+      {joined ? <IconButton icon="search-outline" label={t('community.room.search')} onPress={() => setSearchOpen(true)} size={40} testID="room-search" /> : null}
+      {joined ? <IconButton icon="ellipsis-horizontal" label={t('community.room.notifications')} onPress={() => setSettingsOpen(true)} size={40} testID="room-settings" /> : null}
     </View>
   );
 
@@ -178,7 +181,8 @@ export default function RoomScreen() {
           <ChatScroll contentKey={`${visible.length}-${r.anuliaThinking ?? ''}`}>
             {r.hasMore ? <Button label={t('community.room.loadEarlier')} variant="ghost" size="sm" onPress={r.loadEarlier} loading={r.loadingEarlier} style={{ alignSelf: 'center' }} testID="room-load-earlier" /> : null}
             {r.error ? <Banner tone="danger" body={t(`community.errors.${r.error}`) === `community.errors.${r.error}` ? t('community.errors.generic') : t(`community.errors.${r.error}`)} action={<Button label={t('common.retry')} size="sm" variant="secondary" onPress={r.reload} />} /> : null}
-            {!r.loading && !r.error && !visible.length ? <EmptyState icon="chatbubbles-outline" title={title} body={t('community.room.empty')} /> : null}
+            {!r.loading && !r.error && r.room && !joined ? <EmptyState icon="lock-closed-outline" title={title} body={t('community.room.joinToRead')} /> : null}
+            {!r.loading && !r.error && joined && !visible.length ? <EmptyState icon="chatbubbles-outline" title={title} body={t('community.room.empty')} /> : null}
             {grouped.map(({ m, grouped: g }) => (
               <MessageRow
                 key={m.nonce && m.pending ? m.nonce : m.id}
@@ -217,6 +221,8 @@ export default function RoomScreen() {
                 </AppText>
                 <Button label={t('community.join')} icon="enter-outline" onPress={() => r.join().catch(() => toast(t('community.errors.generic')))} fullWidth testID="room-join" />
               </View>
+            ) : r.room.paused ? (
+              <Banner tone="info" body={t('community.room.paused')} />
             ) : (
               <Composer
                 value={input}
@@ -331,8 +337,7 @@ export default function RoomScreen() {
           onPress={async () => {
             setSettingsOpen(false);
             if (!(await confirm({ title: t('community.leaveConfirmTitle'), body: t('community.leaveConfirmBody'), confirmLabel: t('community.leave') }))) return;
-            await leaveRoom(roomId).catch(() => {});
-            r.setRoom(r.room ? { ...r.room, joined: false } : r.room);
+            await r.leave().catch(() => toast(t('community.errors.generic')));
           }}
           testID="room-leave"
         />

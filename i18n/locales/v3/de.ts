@@ -240,6 +240,8 @@ export const de3: PartialMessages = {
       sendFailed: 'Nicht gesendet. Tippe, um es erneut zu versuchen.',
       retry: 'Erneut versuchen',
       joinToWrite: 'Tritt dem Raum bei, um hier zu schreiben.',
+      joinToRead: 'Nur Mitglieder können diesen Raum lesen. Tritt bei, um das Gespräch zu sehen und mitzumachen.',
+      paused: 'Die Moderation hat diesen Raum vorübergehend pausiert. Du kannst lesen, aber neue Nachrichten und Reaktionen sind geschlossen.',
     },
     safety: {
       title: 'Du musst das nicht allein tragen',
@@ -297,6 +299,8 @@ export const de3: PartialMessages = {
       profile_required: 'Wähle zuerst einen Community-Namen.',
       suspended: 'Dein Schreiben ist pausiert.',
       room_not_found: 'Diesen Raum gibt es nicht.',
+      not_a_member: 'Tritt dem Raum zuerst bei.',
+      room_paused: 'Dieser Raum ist gerade pausiert.',
       bad_reply: 'Auf diese Nachricht kann nicht mehr geantwortet werden.',
       empty_message: 'Schreib zuerst etwas.',
       generic: 'Etwas ist schiefgelaufen. Bitte versuch es noch einmal.',

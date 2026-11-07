@@ -240,6 +240,8 @@ export const es3: PartialMessages = {
       sendFailed: 'No se envió. Toca para reintentar.',
       retry: 'Reintentar',
       joinToWrite: 'Únete a esta sala para escribir aquí.',
+      joinToRead: 'Solo los miembros pueden leer esta sala. Únete para ver la conversación y participar.',
+      paused: 'Los moderadores han pausado esta sala por ahora. Puedes leer, pero los mensajes y reacciones nuevos están cerrados.',
     },
     safety: {
       title: 'No tienes que cargar con esto a solas',
@@ -297,6 +299,8 @@ export const es3: PartialMessages = {
       profile_required: 'Primero elige un nombre para la comunidad.',
       suspended: 'Tus publicaciones están en pausa.',
       room_not_found: 'Esta sala no existe.',
+      not_a_member: 'Primero únete a esta sala.',
+      room_paused: 'Esta sala está en pausa por ahora.',
       bad_reply: 'Ya no se puede responder a ese mensaje.',
       empty_message: 'Escribe algo primero.',
       generic: 'Algo salió mal. Vuelve a intentarlo.',

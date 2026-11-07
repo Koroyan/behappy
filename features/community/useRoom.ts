@@ -3,6 +3,10 @@
  * optimistic sends (retry-safe by nonce), reactions, read markers and
  * catch-up after a reconnect. Falls back to plain HTTP when the live
  * connection is unavailable.
+ *
+ * Messages and the live stream are for members only: someone who hasn't
+ * joined gets the room's details and a "join to read" state, and the
+ * socket subscribes only after joining.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -34,6 +38,7 @@ export function useRoom(roomId: string) {
   const [anuliaNotice, setAnuliaNotice] = useState<string | null>(null);
   const [safetyNotice, setSafetyNotice] = useState(false);
   const lastId = useRef(0);
+  const joinedRef = useRef(false);
   const wasOffline = useRef(false);
   const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -57,9 +62,17 @@ export function useRoom(roomId: string) {
         await getSocket();
         res = await request<{ room: Room; messages: RoomMessage[]; hasMore: boolean }>('room:join', { roomId });
       } catch {
-        const [r, m] = await Promise.all([api.getRoom(roomId), api.getMessages(roomId, { limit: 40 })]);
-        res = { room: r, messages: m.messages, hasMore: m.hasMore };
+        // Not a member yet, or no live connection: the room's details over
+        // HTTP, and its messages only for members.
+        const info = await api.getRoom(roomId);
+        if (info.joined) {
+          const m = await api.getMessages(roomId, { limit: 40 });
+          res = { room: info, messages: m.messages, hasMore: m.hasMore };
+        } else {
+          res = { room: info, messages: [], hasMore: false };
+        }
       }
+      joinedRef.current = Boolean(res.room.joined);
       setRoom(res.room);
       setMessages([]);
       lastId.current = 0;
@@ -82,7 +95,14 @@ export function useRoom(roomId: string) {
       }),
       onEvent('message:update', (m: RoomMessage) => m.roomId === roomId && merge([m])),
       onEvent('room:update', (p: { roomId: string }) => {
-        if (p.roomId === roomId) api.getRoom(roomId).then(setRoom).catch(() => {});
+        if (p.roomId !== roomId) return;
+        api
+          .getRoom(roomId)
+          .then((next) => {
+            joinedRef.current = next.joined;
+            setRoom(next);
+          })
+          .catch(() => {});
       }),
       onEvent('anulia:thinking', (p: { roomId: string; replyToId: number }) => p.roomId === roomId && setAnuliaThinking(p.replyToId)),
       onEvent('anulia:unavailable', (p: { roomId: string; reason: string }) => {
@@ -97,7 +117,7 @@ export function useRoom(roomId: string) {
         // Whenever the live connection is (back) up: join the room on the
         // server and fetch only what was missed since the last message seen.
         // This also covers a first load that fell back to plain HTTP.
-        if (s === 'online') {
+        if (s === 'online' && joinedRef.current) {
           wasOffline.current = false;
           request<{ messages: RoomMessage[] }>('room:sync', { roomId, afterId: lastId.current })
             .then((r) => merge(r.messages))
@@ -171,12 +191,11 @@ export function useRoom(roomId: string) {
         setPending((p) => p.filter((x) => x.nonce !== n));
         merge([res.message]);
         if (res.safetyNotice) setSafetyNotice(true);
-        if (!room?.joined) setRoom((r) => (r ? { ...r, joined: true } : r));
         return { ok: true, held: res.held, safetyNotice: res.safetyNotice };
       } catch (e: any) {
         const code = e?.code || (e instanceof ApiError ? e.code : undefined) || 'network';
         // Permanent refusals are not kept as "failed" bubbles.
-        if (['slow_down', 'duplicate_message', 'message_too_long', 'suspended', 'profile_required', 'registration_required', 'empty_message', 'bad_reply'].includes(code)) {
+        if (['slow_down', 'duplicate_message', 'message_too_long', 'suspended', 'account_suspended', 'profile_required', 'registration_required', 'guidelines_required', 'not_a_member', 'room_paused', 'empty_message', 'bad_reply'].includes(code)) {
           setPending((p) => p.filter((x) => x.nonce !== n));
         } else {
           setPending((p) => p.map((x) => (x.nonce === n ? { ...x, pending: 'failed', error: code } : x)));
@@ -184,7 +203,7 @@ export function useRoom(roomId: string) {
         return { ok: false, error: code };
       }
     },
-    [roomId, merge, room?.joined]
+    [roomId, merge]
   );
 
   const toggleReaction = useCallback(
@@ -206,10 +225,25 @@ export function useRoom(roomId: string) {
     [merge]
   );
 
+  /** Joins, then loads the history and subscribes to the live stream. */
   const join = useCallback(async () => {
     const r = await api.joinRoom(roomId);
+    joinedRef.current = true;
     setRoom(r);
+    await load();
     return r;
+  }, [roomId, load]);
+
+  /** Leaves: the history and the live stream close for this person. */
+  const leave = useCallback(async () => {
+    await api.leaveRoom(roomId);
+    joinedRef.current = false;
+    request('room:leave', { roomId }).catch(() => {});
+    setMessages([]);
+    setPending([]);
+    setHasMore(false);
+    lastId.current = 0;
+    setRoom((r) => (r ? { ...r, joined: false, pinned: undefined, unread: 0, notify: null } : r));
   }, [roomId]);
 
   const refreshRelations = useCallback(async () => {
@@ -237,6 +271,7 @@ export function useRoom(roomId: string) {
     send,
     toggleReaction,
     join,
+    leave,
     refreshRelations,
     removeLocal: (id: number) => setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, status: 'deleted', body: '' } : m))),
   };
