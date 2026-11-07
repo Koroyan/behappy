@@ -3,9 +3,10 @@ import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@/contexts/LanguageContext';
-import { AppText, Banner, Button, Card, Icon, Press, Screen, SectionHeader, Sheet, Skeleton, space, TextField, useFeedback } from '@/design';
+import { AppText, Banner, Button, Card, Icon, Press, Screen, SectionHeader, Sheet, Skeleton, space, TextField, useFeedback, useLayout } from '@/design';
 import { AccountGate } from '@/features/account/AccountParts';
 import { RoomCard } from '@/features/community/RoomCard';
+import { ProfileButton } from '@/features/shell/ProfileButton';
 import { GuidelinesList, MemberAvatar } from '@/features/community/RoomParts';
 import { useT } from '@/i18n';
 import { useAccount, useIdentity } from '@/lib/api/account';
@@ -20,6 +21,7 @@ interface CommunityMe {
 
 export default function CommunityHome() {
   const router = useRouter();
+  const { isCompact } = useLayout();
   const { t, formatDate } = useT();
   const { language } = useLanguage();
   const { me, refresh } = useAccount();
@@ -120,7 +122,7 @@ export default function CommunityHome() {
   ) : null;
 
   return (
-    <Screen tab title={t('community.title')} subtitle={t('community.subtitle')} aside={aside} asideOnNarrow="below" testID="screen-community">
+    <Screen tab title={t('community.title')} subtitle={t('community.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} aside={aside} asideOnNarrow="below" testID="screen-community">
       <View style={{ gap: space[5] }}>
         {peer}
         {!identity.registered ? (

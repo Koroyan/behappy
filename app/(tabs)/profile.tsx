@@ -221,7 +221,7 @@ export default function ProfileScreen() {
   );
 
   return (
-    <Screen tab title={t('profile.title')} testID="screen-profile" aside={<>{membership}{support}</>} asideOnNarrow="hidden">
+    <Screen tab back={!hasSideNav} title={t('profile.title')} testID="screen-profile" aside={<>{membership}{support}</>} asideOnNarrow="hidden">
       <View style={{ gap: space[5] }}>
         <Press onPress={() => router.push('/profile/personal')} accessibilityLabel={t('profile.personal')} style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }} testID="profile-personal">
           <Avatar name={name} size={64} />

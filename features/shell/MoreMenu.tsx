@@ -7,7 +7,7 @@ import { Badge, Card, Divider, ListRow, SectionHeader } from '@/design';
 import { NavItem, usePrimaryNav } from './Sidebar';
 
 /** Items the phone tab bar already shows (or the profile screen itself covers). */
-const SKIP = new Set(['today', 'specialists', 'profile', 'about', 'membership', 'community', 'topics', 'journal', 'art', 'cards', 'exercises', 'insights', 'anulia']);
+const SKIP = new Set(['today', 'tools', 'specialists', 'profile', 'about', 'membership', 'community', 'topics', 'journal', 'art', 'cards', 'exercises', 'insights', 'anulia']);
 
 /**
  * Phones have five tabs and no sidebar: this lists the rest of the sidebar

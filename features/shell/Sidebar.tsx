@@ -41,7 +41,16 @@ export function usePrimaryNav() {
   const profile: NavItem = { key: 'profile', label: t('nav.profile'), icon: 'person-circle-outline', activeIcon: 'person-circle', href: '/profile', match: (p) => p.startsWith('/profile') || p.startsWith('/settings') || p.startsWith('/account') };
 
   const specialists: NavItem = { key: 'specialists', label: t('shell.specialists'), icon: 'medkit-outline', activeIcon: 'medkit', href: '/specialists', match: (p) => p.startsWith('/specialists') };
-  const primary: NavItem[] = [today, community, anulia, specialists, profile];
+  const tools: NavItem = {
+    key: 'tools',
+    label: t('tools.tab'),
+    icon: 'apps-outline',
+    activeIcon: 'apps',
+    href: '/tools',
+    match: (p) => ['/tools', '/explore', '/breathing', '/meditation', '/grounding', '/assessments', '/goals', '/safety-plan', '/wellbeing-summary'].some((x) => p.startsWith(x)),
+  };
+  // Phone tab bar, in order. Profile is reached from the avatar at the top of each tab.
+  const primary: NavItem[] = [today, tools, anulia, community, specialists];
   const client = me?.client as { unreadMessages?: number } | undefined;
   const professional = me?.professional as { status?: string } | null | undefined;
 
@@ -60,8 +69,8 @@ export function usePrimaryNav() {
           label: t('shell.exercises'),
           icon: 'leaf-outline',
           activeIcon: 'leaf',
-          href: '/explore',
-          match: (p) => ['/explore', '/breathing', '/meditation', '/grounding', '/assessments', '/goals', '/safety-plan'].some((x) => p.startsWith(x)),
+          href: '/tools',
+          match: tools.match,
         },
         { key: 'insights', label: t('explore.items.insights.title'), icon: 'analytics-outline', activeIcon: 'analytics', href: '/insights', match: (p) => p.startsWith('/insights') },
       ],

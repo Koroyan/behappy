@@ -7,6 +7,7 @@
  * which owns entitlements and usage limits.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 const ACCOUNT_KEY = '@behappy_account_v1';
@@ -16,12 +17,29 @@ const ACCOUNT_KEY = '@behappy_account_v1';
  * on the same origin (the dev proxy, scripts/dev/proxy.mjs, and the
  * production TLS proxy route /api and /socket.io), so the app works the same
  * on localhost and through a tunnel on a phone. Set EXPO_PUBLIC_API_URL when
- * the API is on another origin (and for native builds).
+ * the API is on another origin (and for native release builds).
+ *
+ * Native development (Expo Go or a dev build on a phone): "localhost" would
+ * be the phone itself, so the API is looked for on the computer that serves
+ * the app, at the address the phone loaded it from (port 8787).
  */
+function devServerHost(): string | null {
+  const c = Constants as unknown as { expoConfig?: { hostUri?: string }; expoGoConfig?: { debuggerHost?: string }; manifest2?: { extra?: { expoGo?: { debuggerHost?: string } } } };
+  const hostUri = c.expoConfig?.hostUri || c.expoGoConfig?.debuggerHost || c.manifest2?.extra?.expoGo?.debuggerHost || '';
+  const host = hostUri.split(':')[0];
+  // Tunnels (exp.direct) don't carry port 8787; set EXPO_PUBLIC_API_URL for those.
+  if (!host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.exp.direct')) return null;
+  return host;
+}
+
 function defaultBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
   if (fromEnv) return fromEnv.replace(/\/$/, '');
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
+  if (__DEV__) {
+    const host = devServerHost();
+    if (host) return `http://${host}:8787`;
+  }
   return 'http://localhost:8787';
 }
 

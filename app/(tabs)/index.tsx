@@ -1,13 +1,16 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { pickLocalized } from '@/content/types';
 import { QUOTES } from '@/content/quotes';
-import { AppText, Avatar, Banner, Button, Card, Chip, Icon, IconButton, IconName, MoodGlyph, ProgressBar, Press, SectionHeader, Screen, space, TextField, useLayout, useTheme } from '@/design';
+import { AppText, Avatar, Banner, Button, Card, Chip, Icon, IconName, MoodGlyph, ProgressBar, Press, SectionHeader, Screen, space, TextField, useLayout, useTheme } from '@/design';
 import { conversationTitle, listConversations, type Conversation } from '@/features/anulia/anuliaService';
 import { loadProgram, type ProgramState } from '@/features/art/program';
 import { MoodPicker } from '@/features/mood/MoodPicker';
+import { ProfileButton } from '@/features/shell/ProfileButton';
+import { TODAY_TOOLS, TONE_BG, TONE_FG, TOOLS } from '@/features/tools/catalog';
+import { markToolUsed } from '@/lib/storage/recentTools';
 import { useT } from '@/i18n';
 import { useAccount } from '@/lib/api/account';
 import { loadActivity, summarize } from '@/lib/storage/activity';
@@ -370,6 +373,35 @@ export default function TodayScreen() {
     </Card>
   ) : null;
 
+  // The tools people look for most, one tap away (all of them are on the Tools tab).
+  const toolsStrip = (
+    <View testID="today-tools">
+      <SectionHeader title={t('tools.todayTitle')} actionLabel={t('tools.todayAll')} onAction={() => router.push('/tools')} style={{ marginBottom: space[2] }} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space[3], paddingRight: space[2] }}>
+        {TODAY_TOOLS.map((key) => TOOLS.find((x) => x.key === key)!).map((tool) => (
+          <Press
+            key={tool.key}
+            onPress={() => {
+              markToolUsed(tool.key).catch(() => {});
+              router.push(tool.route as any);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t(tool.title)}
+            testID={`today-tool-${tool.key}`}
+            style={{ width: 96, alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 6, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+          >
+            <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: colors[TONE_BG[tool.tone]], alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name={tool.icon} size={24} color={TONE_FG[tool.tone]} />
+            </View>
+            <AppText variant="caption" numberOfLines={2} style={{ textAlign: 'center' }}>
+              {t(tool.title)}
+            </AppText>
+          </Press>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
   const connectCard = (
     <View>
       <SectionHeader title={t('todayConnect.title')} style={{ marginBottom: space[2] }} />
@@ -410,7 +442,7 @@ export default function TodayScreen() {
       eyebrow={formatDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long' })}
       title={title}
       subtitle={t('today.intro')}
-      headerRight={isCompact ? <IconButton icon="person-circle-outline" label={t('nav.profile')} onPress={() => router.push('/profile')} variant="soft" /> : <Avatar name={name} size={40} />}
+      headerRight={isCompact ? <ProfileButton /> : <Avatar name={name} size={40} />}
       aside={aside}
       testID="screen-today"
     >
@@ -425,6 +457,7 @@ export default function TodayScreen() {
         ) : null}
         {firstTime}
         {checkInCard}
+        {toolsStrip}
         {suggestionCard}
         <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: space[5] }}>
           <View style={{ flex: 1 }}>{anuliaCard}</View>
@@ -434,7 +467,7 @@ export default function TodayScreen() {
         {recentCard}
         {connectCard}
         <View style={{ alignItems: 'center', marginTop: space[4] }}>
-          <Button label={t('today.exploreAll')} variant="ghost" iconRight="arrow-forward" onPress={() => router.push('/explore')} />
+          <Button label={t('today.exploreAll')} variant="ghost" iconRight="arrow-forward" onPress={() => router.push('/tools')} />
         </View>
       </View>
     </Screen>

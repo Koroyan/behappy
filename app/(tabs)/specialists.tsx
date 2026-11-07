@@ -3,8 +3,9 @@ import React, { useCallback, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@/contexts/LanguageContext';
-import { AppText, Banner, Button, Chip, EmptyState, Icon, Press, Screen, Segmented, Sheet, Skeleton, space, TextField, useTheme } from '@/design';
+import { AppText, Banner, Button, Chip, EmptyState, Icon, Press, Screen, Segmented, Sheet, Skeleton, space, TextField, useLayout, useTheme } from '@/design';
 import { ProCard } from '@/features/pro/ProParts';
+import { ProfileButton } from '@/features/shell/ProfileButton';
 import { useT } from '@/i18n';
 import { PublicPro, searchPros } from '@/lib/api/pros';
 
@@ -13,6 +14,7 @@ const PRICES = [0, 8000, 12000, 18000];
 
 export default function Specialists() {
   const router = useRouter();
+  const { isCompact } = useLayout();
   const { t, tp, formatPrice } = useT();
   const { language } = useLanguage();
   const { colors } = useTheme();
@@ -57,7 +59,7 @@ export default function Specialists() {
   );
 
   return (
-    <Screen tab title={t('specialists.title')} subtitle={t('specialists.subtitle')} testID="screen-specialists">
+    <Screen tab title={t('specialists.title')} subtitle={t('specialists.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} testID="screen-specialists">
       <View style={{ gap: space[4] }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
           {filterChip(lang ? LANGUAGE_NAMES[lang] : t('specialists.anyLanguage'), Boolean(lang), () => setSheet('language'), 'filter-language')}
