@@ -319,10 +319,17 @@ try {
     return `paid period until ${new Date(paid[paid.length - 1].endsAt).toISOString().slice(0, 10)}`;
   });
 
-  await step('admin: overview counts the listed professional and the TEST revenue', async () => {
+  await step('admin center: overview, the professional listed in the directory, TEST revenue in finance', async () => {
     await A.go('/admin');
-    await A.wait('admin-listed', 60000);
+    await A.wait('admin-kpi-new', 60000);
     await A.shot('4-overview');
+    await A.go('/admin/professionals');
+    await A.wait('screen-admin-professionals', 60000);
+    await A.page.locator('[data-testid="admin-pro-row"]').filter({ hasText: PRO_NAME }).filter({ hasText: 'Listed' }).first().waitFor({ timeout: 30000 });
+    await A.go('/admin/finance');
+    await A.wait('screen-admin-finance', 60000);
+    await A.text('not real money');
+    await A.shot('5-finance');
   });
 } catch {
   // The failing step is already recorded; keep what each person saw.

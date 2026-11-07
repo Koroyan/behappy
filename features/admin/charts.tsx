@@ -23,6 +23,9 @@ export interface Point {
   y: number | null;
 }
 
+/** Room for the y-axis labels: measured from the longest label, so long values (200.00 GEL) aren't cut off. */
+const axisWidth = (labels: string[]) => Math.max(36, Math.min(130, Math.round(Math.max(...labels.map((l) => l.length)) * 6.4) + 14));
+
 const niceMax = (v: number) => {
   if (v <= 0) return 1;
   const exp = Math.pow(10, Math.floor(Math.log10(v)));
@@ -99,7 +102,7 @@ function useHover(count: number, left: number, step: number) {
 
 function Tooltip({ x, width, lines, title }: { x: number; width: number; title: string; lines: { color?: string; value: string; label?: string }[] }) {
   const c = useAdminColors();
-  const w = 168;
+  const w = Math.min(220, Math.max(150, width - 16));
   const left = Math.max(0, Math.min(width - w, x + 12 > width - w ? x - w - 12 : x + 12));
   return (
     <View pointerEvents="none" style={{ position: 'absolute', top: 4, left, width: w, backgroundColor: c.card, borderColor: c.border, borderWidth: 1, borderRadius: 10, padding: 8, gap: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
@@ -109,7 +112,7 @@ function Tooltip({ x, width, lines, title }: { x: number; width: number; title: 
       {lines.map((l, i) => (
         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           {l.color ? <View style={{ width: 10, height: 2, borderRadius: 1, backgroundColor: l.color }} /> : null}
-          <AppText variant="smallStrong" style={{ color: c.text }}>
+          <AppText variant="smallStrong" style={{ color: c.text, flexShrink: 0 }}>
             {l.value}
           </AppText>
           {l.label ? (
@@ -130,14 +133,14 @@ export function TrendChart({ data, format, kind = 'line', height = 190, valueLab
   const [table, setTable] = useState(false);
   const { width, onLayout } = useWidth();
   const color = c.series[0];
-  const left = 44;
-  const right = kind === 'line' ? 56 : 12;
+  const values = data.map((d) => d.y ?? 0);
+  const yMax = niceMax(Math.max(0, ...values));
+  const left = axisWidth([format(0), format(yMax / 2), format(yMax)]);
+  const right = kind === 'line' ? Math.max(40, Math.min(110, format(Math.max(0, ...values)).length * 7 + 14)) : 12;
   const top = 12;
   const bottom = 26;
   const plotW = Math.max(10, width - left - right);
   const plotH = height - top - bottom;
-  const values = data.map((d) => d.y ?? 0);
-  const yMax = niceMax(Math.max(0, ...values));
   const n = data.length;
   const step = kind === 'bars' ? plotW / Math.max(1, n) : plotW / Math.max(1, n - 1);
   const xAt = (i: number) => (kind === 'bars' ? left + step * i + step / 2 : left + step * i);
@@ -234,14 +237,14 @@ export function StackedColumns({ data, series, format, height = 200, testID }: {
   const { t } = useT();
   const [table, setTable] = useState(false);
   const { width, onLayout } = useWidth();
-  const left = 52;
+  const totals = data.map((d) => d.values.reduce((s, v) => s + v, 0));
+  const yMax = niceMax(Math.max(0, ...totals));
+  const left = axisWidth([format(0), format(yMax / 2), format(yMax)]);
   const right = 12;
   const top = 12;
   const bottom = 26;
   const plotW = Math.max(10, width - left - right);
   const plotH = height - top - bottom;
-  const totals = data.map((d) => d.values.reduce((s, v) => s + v, 0));
-  const yMax = niceMax(Math.max(0, ...totals));
   const n = data.length;
   const step = plotW / Math.max(1, n);
   const xAt = (i: number) => left + step * i + step / 2;

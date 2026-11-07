@@ -121,7 +121,7 @@ export function KpiTile({ label, value, change, goodWhenUp = true, note, onPress
       <AppText variant="small" style={{ color: c.textSecondary }} numberOfLines={2}>
         {label}
       </AppText>
-      <AppText style={{ color: c.text, fontSize: 28, lineHeight: 34, fontWeight: '600' }} numberOfLines={1} adjustsFontSizeToFit>
+      <AppText style={{ color: c.text, fontSize: value.length > 12 ? 20 : value.length > 8 ? 24 : 28, lineHeight: value.length > 12 ? 26 : value.length > 8 ? 30 : 34, fontWeight: '600' }}>
         {value}
       </AppText>
       {change === null ? (
