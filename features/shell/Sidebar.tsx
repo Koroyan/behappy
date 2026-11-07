@@ -119,7 +119,7 @@ export function usePrimaryNav() {
     staffItems.push({ key: 'applications', label: t('shell.applications'), icon: 'document-text-outline', activeIcon: 'document-text', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') });
   }
   if (staffMay(identity, 'moderation.act')) {
-    staffItems.push({ key: 'moderation', label: t('shell.moderation'), icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark', href: '/moderation', match: (p) => p.startsWith('/moderation') });
+    staffItems.push({ key: 'moderation', label: t('shell.moderation'), icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark', href: '/admin/moderation', match: (p) => p.startsWith('/admin/moderation') || p.startsWith('/moderation') });
   }
   if (staffItems.length) sections.push({ key: 'staff', title: t('shell.staff'), items: staffItems });
 

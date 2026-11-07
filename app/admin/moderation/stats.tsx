@@ -8,7 +8,7 @@ import { RankedBars, TrendChart } from '@/features/admin/charts';
 import { AdminPage, AdminState, Grid, KeyValues, KpiTile, Panel, useFmt } from '@/features/admin/ui';
 import { useT } from '@/i18n';
 
-export default function AdminModeration() {
+export default function AdminModerationStats() {
   const { t } = useT();
   const f = useFmt();
   const router = useRouter();
@@ -18,10 +18,10 @@ export default function AdminModeration() {
   const perDay = d ? fill(range.from, range.to, d.reportsPerDay) : [];
   return (
     <AdminPage
-      title={t('ac.nav.moderation')}
+      title={t('ac.nav.moderationStats')}
       subtitle={t('ac.moderation.subtitle')}
-      actions={<Button label={t('ac.nav.desk')} icon="flag-outline" size="sm" onPress={() => router.push('/moderation' as any)} testID="admin-open-desk" />}
-      testID="screen-admin-moderation"
+      actions={<Button label={t('ac.mod.queue')} icon="flag-outline" size="sm" onPress={() => router.push('/admin/moderation' as any)} testID="admin-open-queue" />}
+      testID="screen-admin-moderation-stats"
     >
       <AdminState error={q.error} loading={q.loading} hasData={Boolean(d)} onRetry={q.reload}>
         {d ? (

@@ -378,7 +378,28 @@ export function createModerationCenter(deps) {
     return mod.lift(actor, suspensionId, why);
   }
 
-  return { counts, queue, detail, context, member, assign, addNote, secondReview, decide, escalate, restrictMember, liftRestriction };
+  /** Staff who can take reports (for reassigning). Staff addresses only; never members. */
+  async function moderators(actor) {
+    const r = await db.query('select id, email, roles from accounts where staff_suspended_at is null and cardinality(roles) > 0 order by email');
+    return { moderators: r.rows.filter((a) => permissionsFor(a.roles).has('moderation.act')).map((a) => ({ id: a.id, label: a.email, me: a.id === actor.id })) };
+  }
+
+  /** Puts a removed message back, with a reason, linked to the report. */
+  async function restore(actor, id, reason) {
+    const why = needText(reason, 3);
+    const rep = await loadReport(db, id);
+    if (rep.target_type !== 'message') fail(409, 'no_message');
+    const m = await db.query('select status from community_messages where id = $1', [Number(rep.target_id)]);
+    if (!m.rows[0]) fail(404, 'not_found');
+    const from = m.rows[0].status;
+    if (from !== 'removed') fail(409, 'not_removed');
+    await mod.restoreMessage(actor, rep.target_id);
+    await db.query("update moderation_actions set report_id = $1, reason = $2 where id = (select max(id) from moderation_actions where target_message_id = $3 and action = 'restore_message')", [rep.id, why, Number(rep.target_id)]);
+    await audit(db, { actorId: actor.id, actorRole: role(actor), action: 'moderation.message_restored', targetType: 'report', targetId: rep.id, metadata: { from, to: 'visible', reason: why, messageId: Number(rep.target_id) } });
+    return { ok: true };
+  }
+
+  return { counts, queue, detail, context, member, assign, addNote, secondReview, decide, escalate, restrictMember, liftRestriction, moderators, restore };
 }
 
 export function mountModerationCenter(app, deps) {
@@ -389,6 +410,9 @@ export function mountModerationCenter(app, deps) {
   const can = (p) => [json, auth, staff.guard(p)];
   const r = express.Router();
   r.get('/moderation/queue', ...can('moderation.act'), handle((req) => m.queue(req.account, req.query)));
+  r.get('/moderation/moderators', ...can('moderation.act'), handle((req) => m.moderators(req.account)));
+  r.get('/moderation/counts', ...can('moderation.act'), handle((req) => m.counts(req.account)));
+  r.post('/moderation/reports/:id/restore', ...can('moderation.act'), handle((req) => m.restore(req.account, req.params.id, req.body?.reason)));
   r.get('/moderation/reports/:id', ...can('moderation.act'), handle((req) => m.detail(req.account, req.params.id)));
   r.get('/moderation/reports/:id/context', ...can('moderation.context'), handle((req) => m.context(req.account, req.params.id, { before: req.query.before, after: req.query.after })));
   r.post('/moderation/reports/:id/assign', ...can('moderation.act'), handle((req) => m.assign(req.account, req.params.id, req.body?.assigneeId)));

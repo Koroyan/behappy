@@ -40,9 +40,9 @@ export default function AdminOverview() {
             <Panel title={t('ac.overview.waitingTitle')} subtitle={t('ac.overview.waitingSub')}>
               <Grid min={170}>
                 {can('professionals.view') ? queue('applications', d.queues.applications, '/admin/applications') : null}
-                {can('moderation.act') ? queue('reports', d.queues.reports, '/moderation') : null}
-                {can('moderation.act') ? queue('urgentReports', d.queues.urgentReports, '/moderation', true) : null}
-                {can('moderation.appeals') ? queue('appeals', d.queues.appeals, '/moderation') : null}
+                {can('moderation.act') ? queue('reports', d.queues.reports, '/admin/moderation') : null}
+                {can('moderation.act') ? queue('urgentReports', d.queues.urgentReports, '/admin/moderation?view=urgent', true) : null}
+                {can('moderation.appeals') ? queue('appeals', d.queues.appeals, '/admin/moderation?view=appeals') : null}
                 {can('safety.view') ? queue('safetyCases', d.queues.safetyCases, '/admin/safety', true) : null}
                 {can('support.view') ? queue('supportWaiting', d.queues.supportWaiting, '/admin/support') : null}
               </Grid>

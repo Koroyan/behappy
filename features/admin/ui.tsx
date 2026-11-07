@@ -34,7 +34,11 @@ export function useFmt() {
 }
 
 // ---------- Page frame ----------
-export function AdminPage({ title, subtitle, actions, filters, children, testID, scroll = true }: { title: string; subtitle?: string; actions?: React.ReactNode; filters?: React.ReactNode; children: React.ReactNode; testID?: string; scroll?: boolean }) {
+/**
+ * `scroll={false}` gives the page the full height instead (for workspaces
+ * whose columns scroll on their own); `maxWidth` widens the frame.
+ */
+export function AdminPage({ title, subtitle, actions, filters, children, testID, scroll = true, maxWidth = 1360 }: { title: string; subtitle?: string; actions?: React.ReactNode; filters?: React.ReactNode; children: React.ReactNode; testID?: string; scroll?: boolean; maxWidth?: number }) {
   const c = useAdminColors();
   const { isCompact } = useLayout();
   const pad = isCompact ? 16 : 28;
@@ -57,9 +61,9 @@ export function AdminPage({ title, subtitle, actions, filters, children, testID,
     </View>
   );
   const body = (
-    <View style={{ padding: pad, paddingBottom: 48, width: '100%', maxWidth: 1360, alignSelf: 'center' }}>
+    <View style={{ padding: pad, paddingBottom: scroll ? 48 : pad, width: '100%', maxWidth, alignSelf: 'center', flex: scroll ? undefined : 1, minHeight: 0 }}>
       {header}
-      <View style={{ gap: 16 }}>{children}</View>
+      <View style={{ gap: 16, flex: scroll ? undefined : 1, minHeight: 0 }}>{children}</View>
     </View>
   );
   return (

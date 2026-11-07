@@ -24,6 +24,7 @@
     "qa:journeys": "node scripts/qa/user-journeys.mjs",
     "qa:desktop": "node scripts/qa/desktop-journey.mjs",
     "qa:pro": "node scripts/qa/pro-journey.mjs",
+    "qa:moderation": "node scripts/qa/moderation-journey.mjs",
     "qa:admin": "node scripts/qa/admin-journey.mjs",
     "build:web": "npx expo export -p web",
     "preview:web": "npx serve dist",

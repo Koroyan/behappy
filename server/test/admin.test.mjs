@@ -540,6 +540,17 @@ describe('Moderation 2.0 and the account 360° view', () => {
     // A moderator can't open the account profile.
     assert.equal((await call(moderator, `/api/admin/users/${b.accountId}`)).json.error, 'forbidden');
 
+    // Remove, then put back with a reason (linked to the report); staff list for reassigning.
+    const removed = await call(moderator, `/api/admin/moderation/reports/${reportId}/decide`, 'POST', { action: 'remove_message', reason: 'Insulting the room.' });
+    assert.equal(removed.json.status, 'resolved');
+    assert.equal((await call(moderator, `/api/admin/moderation/reports/${reportId}/restore`, 'POST', {})).json.error, 'reason_required');
+    assert.equal((await call(moderator, `/api/admin/moderation/reports/${reportId}/restore`, 'POST', { reason: 'Context shows it was a quote.' })).status, 200);
+    const back = await call(moderator, `/api/admin/moderation/reports/${reportId}`);
+    assert.equal(back.json.current.status, 'visible');
+    assert.ok(back.json.history.some((h) => h.action === 'restore_message' && h.reason === 'Context shows it was a quote.'));
+    const mods = await call(moderator, '/api/admin/moderation/moderators');
+    assert.ok(mods.json.moderators.some((x) => x.me));
+    assert.ok(!mods.json.moderators.some((x) => x.id === a.accountId), 'members are not listed');
     // Removed and deleted messages: the evidence stays, the current state says what happened.
     await call(b, `/api/community/messages/${before[0].id}`, 'DELETE');
     const rep2 = await call(a, `/api/community/messages/${before[1].id}/report`, 'POST', { reason: 'spam' });

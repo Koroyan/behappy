@@ -40,8 +40,8 @@ export const ADMIN_NAV: { key: string; items: AdminNavItem[] }[] = [
     key: 'community',
     items: [
       { key: 'rooms', href: '/admin/community', icon: 'chatbubbles-outline', perm: 'community.view', range: true },
-      { key: 'moderation', href: '/admin/moderation', icon: 'shield-checkmark-outline', perm: 'moderation.act', range: true },
-      { key: 'desk', href: '/moderation', icon: 'flag-outline', perm: 'moderation.act', external: true },
+      { key: 'moderation', href: '/admin/moderation', icon: 'shield-checkmark-outline', perm: 'moderation.act' },
+      { key: 'moderationStats', href: '/admin/moderation/stats', icon: 'stats-chart-outline', perm: 'moderation.act', range: true },
       { key: 'safety', href: '/admin/safety', icon: 'heart-circle-outline', perm: 'safety.view' },
     ],
   },
