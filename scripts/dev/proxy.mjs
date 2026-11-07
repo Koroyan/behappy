@@ -30,7 +30,11 @@ function forwardedHeaders(req) {
 const server = http.createServer((req, res) => {
   const target = targetFor(req.url);
   const upstream = http.request({ ...target, method: req.method, path: req.url, headers: forwardedHeaders(req) }, (r) => {
-    res.writeHead(r.statusCode || 502, r.statusMessage, r.headers);
+    // Expo's dev server sends the app page with a 404 status for deep links
+    // (/admin, /notifications…). The page is the same single-page app, so
+    // answer 200: browsers and tunnels then treat it as the normal page.
+    const page = target === WEB && req.method === 'GET' && r.statusCode === 404 && String(r.headers['content-type'] || '').includes('text/html');
+    res.writeHead(page ? 200 : r.statusCode || 502, page ? 'OK' : r.statusMessage, r.headers);
     r.pipe(res);
   });
   upstream.on('error', () => {
