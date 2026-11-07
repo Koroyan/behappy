@@ -5,6 +5,7 @@ A well-being platform with three parts:
 - **Personal well-being** — a private journal, Anulia (an AI well-being companion), art therapy on paper, reflection cards, breathing, meditation, grounding, self-check questionnaires and a safety plan.
 - **Community** — real-time peer-support rooms on 13 topics in 19 languages, with Anulia on request and human moderation.
 - **Professionals** — a directory of verified psychologists: booking on their own hours, private messages, a professional workspace, and a flat monthly membership with **0% commission** on sessions.
+- **Admin control center** (`/admin`) — overview and analytics, accounts, support, verification and country policies, appointments, rooms, moderation and safety cases, AI usage and controls, finance (TEST), security, staff roles and settings. Every staff action is checked by permission on the server and recorded; private content stays out of reach.
 
 BeHappy is not medical care, therapy or a crisis service. Safety resources are free and never behind a paywall. See [docs/ETHICS.md](docs/ETHICS.md).
 
@@ -12,10 +13,10 @@ BeHappy is not medical care, therapy or a crisis service. Safety resources are f
 
 - **App**: Expo SDK 54, React Native 0.81, React 19, expo-router 6 (iOS, Android, web)
 - **API server**: Node 24 + Express 5 (`server/`), PostgreSQL (PGlite for development and tests), Socket.IO for live rooms and messages
-- **Accounts**: anonymous device accounts; registration with email code and password for the community and professional features; staff roles
+- **Accounts**: anonymous device accounts; registration with email code and password for the community and professional features; seven staff roles (owner, admin, verifier, moderator, finance, support, analyst) with named permissions, step-up confirmation and optional two-step codes
 - **AI**: OpenAI, called only from the server with server-owned instructions (`server/prompts/`)
 - **Payments**: Flitt, **TEST mode only** (Plus, the art program, the professional membership)
-- **Languages**: 19 interface languages, all complete (1,566 strings each), right-to-left for Arabic
+- **Languages**: 19 interface languages, all complete (1,611 strings each), right-to-left for Arabic; the admin center in English and Georgian
 
 ## Quick start (development)
 
@@ -33,7 +34,7 @@ The proxy serves the app and forwards `/api` and `/socket.io` to the API, so one
 
 Leave the root `.env` without API keys. Do not start Expo with `CI=1`: it disables file watching. Native: `npm run ios` / `npm run android`.
 
-Staff roles: register the account in the app, then `npm run admin:grant -- you@example.org admin` (or `moderator`). Staff tools need a password sign-in.
+Staff: register your account in the app, then `npm run admin:grant -- you@example.org owner` once on the server; after that, owners give roles in the admin center (Staff and access). Staff tools need a password sign-in. See [Admin operations](docs/BEHAPPY_ADMIN_OPERATIONS.md).
 
 Production: `deploy/docker-compose.yml` (PostgreSQL, API, Caddy with automatic HTTPS). The server refuses to start in production without a database URL, https URLs and encryption keys — see [docs/BEHAPPY_3_SECURITY.md](docs/BEHAPPY_3_SECURITY.md).
 
@@ -43,14 +44,15 @@ Production: `deploy/docker-compose.yml` (PostgreSQL, API, Caddy with automatic H
 |---|---|
 | `npm run server:local` / `server:dev` | API with dev tools / restart on changes |
 | `npm run web:local` · `npm run web:proxy` | Expo web on 8082 · proxy on 8081 |
-| `npm test` | 88 tests: payments, AI proxy, quotas, accounts, community, moderation, professionals, bookings, membership, scoring, text helpers, secret scan |
+| `npm test` | 103 tests: payments, AI proxy, quotas, accounts, community access, moderation, professionals, bookings, membership, staff security, analytics, the admin authorization matrix, scoring, text helpers, secret scan |
 | `npm run typecheck` · `npm run lint` | TypeScript · ESLint |
 | `npm run qa:i18n` | Every used key exists; coverage, placeholders and lists per language |
 | `npm run qa:pro` | Browser journey: apply → verify → trial → publish → book → confirm → message → membership checkout (`--pay` pays with the Flitt test card, `--app` targets a tunnel) |
+| `npm run qa:admin` | Admin center in browsers: owner on desktop, analyst on a phone, Georgian in dark mode, Arabic right to left |
 | `npm run qa:payments` | A real browser payment in the Flitt sandbox |
 | `npm run qa:journeys` · `qa:desktop` | 2.0 user journeys (live AI and the Flitt sandbox) |
 | `npm run qa:scroll` · `qa:shots` | Scroll and bar checks; screenshots |
-| `npm run admin:grant` | Grant or revoke a staff role |
+| `npm run admin:grant` | Set up the first owner (or grant/revoke a role) with the server's ADMIN_TOKEN |
 | `npm run build:web` | Static web build in `dist/` (not committed) |
 
 ## Project layout
@@ -69,6 +71,18 @@ docs/         architecture, features, security, design, test results
 ```
 
 ## Documentation
+
+Admin control center:
+[Architecture](docs/BEHAPPY_ADMIN_ARCHITECTURE.md) ·
+[Permissions](docs/BEHAPPY_ADMIN_PERMISSIONS.md) ·
+[Analytics](docs/BEHAPPY_ADMIN_ANALYTICS.md) ·
+[Professionals](docs/BEHAPPY_ADMIN_PROFESSIONALS.md) ·
+[Community](docs/BEHAPPY_ADMIN_COMMUNITY.md) ·
+[Moderation and support](docs/BEHAPPY_ADMIN_MODERATION.md) ·
+[Security](docs/BEHAPPY_ADMIN_SECURITY.md) ·
+[Privacy](docs/BEHAPPY_ADMIN_PRIVACY.md) ·
+[Operations](docs/BEHAPPY_ADMIN_OPERATIONS.md) ·
+[Test results](docs/BEHAPPY_ADMIN_TEST_RESULTS.md)
 
 BeHappy 3.0:
 [Architecture](docs/BEHAPPY_3_ARCHITECTURE.md) ·
