@@ -9,11 +9,15 @@ import crypto from 'node:crypto';
 import cors from 'cors';
 import express from 'express';
 
+import { isStaffRole, permissionsFor } from './admin/permissions.mjs';
+import { settingsFor } from './admin/settings.mjs';
+import { staffFor, staffRouter } from './admin/staff.mjs';
 import { createAiRouter } from './ai.mjs';
 import { audit } from './audit.mjs';
-import { bearerToken, createAccount, requireAccount, requireStaff, restoreAccount, rotateRecoveryCode } from './auth.mjs';
+import { bearerToken, createAccount, requireAccount, restoreAccount, rotateRecoveryCode } from './auth.mjs';
 import { getCatalog } from './catalog.mjs';
 import { createClock } from './clock.mjs';
+import { createCrypto } from './crypto.mjs';
 import { schemaVersion } from './db/migrate.mjs';
 import { entitlementsForAccount, ordersForAccount } from './entitlements.mjs';
 import { FlittClient } from './flitt.mjs';
@@ -105,7 +109,10 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
   const mail = mailer || createMailer({ driver: config.mail?.driver || 'log', from: config.mail?.from, resendApiKey: config.mail?.resendApiKey, isProduction: config.isProduction });
   // meSections: extra parts of GET /api/account/me, added by feature modules.
   const deps = { db, config, flitt, clock, mailer: mail, fetchImpl, meSections: [] };
+  // One field-encryption instance for every module (documents, messages, staff codes).
+  deps.crypto = createCrypto({ ...config, persistDevKeys: !config.isProduction && Boolean(config.dataDir) });
   app.locals.deps = deps;
+  const authEvent = (kind, info) => staffFor(deps).recordEvent(kind, info).catch(() => {});
 
   const allowedOrigins = new Set([...config.appPublicUrls, ...config.corsOrigins]);
   app.use(
@@ -178,7 +185,19 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
       usage: await usageSummary({ db, accountId: a.id, entitlements, now }),
       payments: { provider: 'flitt', mode: 'test' },
       ai: { available: Boolean(config.openai.apiKey) },
-      identity: { registered: a.registered, email: a.email, emailVerified: a.emailVerified, roles: a.roles, sessionKind: a.sessionKind, status: a.status, emailAvailable: mail.available, testCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null },
+      identity: {
+        registered: a.registered,
+        email: a.email,
+        emailVerified: a.emailVerified,
+        roles: a.roles,
+        // What the staff tools will allow (the server checks again on every request).
+        staffPermissions: a.roles.some(isStaffRole) && !a.staffSuspendedAt ? [...permissionsFor(a.roles)].sort() : [],
+        sessionKind: a.sessionKind,
+        status: a.status,
+        emailAvailable: mail.available,
+        testCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null,
+      },
+      platform: await settingsFor(deps).publicView(now),
       notifications: { unread: await unreadCount(db, a.id) },
       ...Object.fromEntries(await Promise.all(deps.meSections.map(async (s) => [s.name, await s.fn(db, a, now)]))),
     });
@@ -214,6 +233,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
       limits: config.limits || {},
       devFixedCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null,
       onSessionsRevoked: (accountId, opts) => deps.realtime?.disconnect(accountId, opts),
+      onAuthEvent: authEvent,
     })
   );
 
@@ -305,43 +325,55 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
     res.redirect(303, withQuery(order.returnUrl || `${config.appPublicUrls[0]}/checkout/result`, { orderId }));
   });
 
-  // ---------- Owner tools (legacy token for scripts, or an admin password session) ----------
-  const adminGate = [
-    async (req, res, next) => {
-      if (config.adminToken && req.get('x-admin-token') && sameSecret(req.get('x-admin-token'), config.adminToken)) {
-        req.adminVia = 'token';
-        return next();
-      }
-      if (!bearerToken(req)) return res.status(403).json({ error: 'forbidden' });
-      return auth(req, res, () => requireStaff('admin')(req, res, next));
-    },
-  ];
+  // ---------- Owner tools: the server-side ADMIN_TOKEN (scripts), or a staff session with the permission ----------
+  // The token lives only in server/.env on the server. It is documented in
+  // docs/BEHAPPY_ADMIN_SECURITY.md, every use is audited as "owner_token",
+  // and it can do only what these three routes do.
+  const tokenOr = (permission) => async (req, res, next) => {
+    if (config.adminToken && req.get('x-admin-token') && sameSecret(req.get('x-admin-token'), config.adminToken)) {
+      req.adminVia = 'token';
+      return next();
+    }
+    if (!bearerToken(req)) return res.status(403).json({ error: 'forbidden' });
+    return auth(req, res, () => staffFor(deps).guard(permission)(req, res, next));
+  };
 
-  // Grants or revokes a staff role for a registered account. The owner's
-  // ADMIN_TOKEN bootstraps the first administrator; after that admins can do it.
-  app.post('/api/admin/roles', json, ...adminGate, async (req, res) => {
+  // Grants or revokes a staff role for a registered account. The ADMIN_TOKEN
+  // bootstraps the first owner (npm run admin:grant); after that, owners do it
+  // in the staff tools (never for themselves).
+  app.post('/api/admin/roles', json, tokenOr('staff.manage'), async (req, res) => {
     const role = String(req.body?.role || '');
-    if (!['admin', 'moderator'].includes(role)) return res.status(400).json({ error: 'bad_role' });
-    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!isStaffRole(role)) return res.status(400).json({ error: 'bad_role' });
     const grant = req.body?.grant !== false;
-    const r = await db.query(
-      grant
-        ? 'update accounts set roles = array(select distinct unnest(roles || array[$2]::text[])) where email = $1 and email_verified_at is not null returning id'
-        : 'update accounts set roles = array_remove(roles, $2) where email = $1 and email_verified_at is not null returning id',
-      [email, role]
-    );
-    const id = r.rows[0]?.id;
+    if (req.adminVia !== 'token') {
+      try {
+        const out = await staffFor(deps).changeRole(req.account, { email: req.body?.email, role, grant, reason: req.body?.reason || 'staff tools' }, req.ip);
+        return res.json({ ...out, role, granted: grant });
+      } catch (e) {
+        return res.status(e.status || 500).json({ error: e.code || 'server_error' });
+      }
+    }
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const id = await db.tx(async (t) => {
+      const r = await t.query('select id, roles from accounts where email = $1 and email_verified_at is not null and password_hash is not null for update', [email]);
+      const row = r.rows[0];
+      if (!row) return null;
+      const roles = grant ? [...new Set([...row.roles, role])] : row.roles.filter((x) => x !== role);
+      await t.query('update accounts set roles = $2::text[] where id = $1', [row.id, roles]);
+      await audit(t, { actorRole: 'owner_token', action: grant ? 'staff.role_granted' : 'staff.role_revoked', targetType: 'account', targetId: row.id, metadata: { role, via: 'ADMIN_TOKEN' } });
+      return row.id;
+    });
     if (!id) return res.status(404).json({ error: 'not_found', message: 'No registered account with this email.' });
-    await audit(db, { actorId: req.account?.id || null, actorRole: req.adminVia === 'token' ? 'owner_token' : 'admin', action: grant ? 'role.granted' : 'role.revoked', targetType: 'account', targetId: id, metadata: { role } });
+    await authEvent(grant ? 'role_granted' : 'role_revoked', { accountId: id, ip: req.ip, metadata: { role, by: 'owner_token' } });
     res.json({ ok: true, accountId: id, role, granted: grant });
   });
 
-  app.get('/api/admin/metrics', ...adminGate, async (_req, res) => {
+  app.get('/api/admin/metrics', tokenOr('analytics.view'), async (_req, res) => {
     res.json(await aggregateMetrics(db, clock.now()));
   });
 
   // TEST-mode refund through Flitt's reversal API.
-  app.post('/api/admin/orders/:orderId/refund', json, ...adminGate, async (req, res) => {
+  app.post('/api/admin/orders/:orderId/refund', json, tokenOr('payments.refund'), async (req, res) => {
     const order = await getOrder(db, req.params.orderId);
     if (!order) return res.status(404).json({ error: 'not_found' });
     if (order.status !== 'approved') return res.status(409).json({ error: 'not_refundable', status: order.status });
@@ -349,12 +381,15 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
       const response = await flitt.reverse({ orderId: order.id, amountMinor: order.amountMinor, currency: order.currency, reverseId: `rev-${order.id}` });
       await db.query('update orders set last_status_check_at = null where id = $1', [order.id]);
       const refreshed = await refreshOrderFromFlitt({ db, config, flitt, orderId: order.id, minIntervalMs: 0, force: true, now: clock.now() });
-      await audit(db, { actorId: req.account?.id || null, actorRole: req.adminVia === 'token' ? 'owner_token' : 'admin', action: 'order.refund_requested', targetType: 'order', targetId: order.id, metadata: { reverseStatus: response.reverse_status } });
+      await audit(db, { actorId: req.account?.id || null, actorRole: req.adminVia === 'token' ? 'owner_token' : req.account?.primaryRole || 'admin', action: 'order.refund_requested', targetType: 'order', targetId: order.id, metadata: { reverseStatus: response.reverse_status, mode: 'test', reason: String(req.body?.reason || '').slice(0, 300) || null } });
       res.json({ reverse: { status: response.reverse_status }, order: publicOrder(refreshed) });
     } catch (error) {
       res.status(502).json({ error: 'refund_failed', message: error.message });
     }
   });
+
+  // Staff: who am I, step-up confirmation, two-step codes, staff management.
+  app.use('/api/admin', staffRouter(deps, { auth }));
 
   // ---------- Feature modules ----------
   for (const mount of extend) mount(app, deps);

@@ -16,7 +16,8 @@
 
 import { Server } from 'socket.io';
 
-import { findAccountByToken, isStaff } from '../auth.mjs';
+import { can } from '../admin/permissions.mjs';
+import { findAccountByToken } from '../auth.mjs';
 import { loadMessageRows, messageForViewer, reactionsFor, relationsFor } from './service.mjs';
 
 export function startRealtime({ server, deps, community }) {
@@ -38,7 +39,7 @@ export function startRealtime({ server, deps, community }) {
 
   const refreshRelations = async (socket) => {
     const rel = await relationsFor(db, socket.data.account.id);
-    socket.data.viewer = { ...rel, staff: isStaff(socket.data.account, 'moderator') || isStaff(socket.data.account, 'admin') };
+    socket.data.viewer = { ...rel, staff: can(socket.data.account, 'moderation.act') };
   };
 
   io.use(async (socket, next) => {

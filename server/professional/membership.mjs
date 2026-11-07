@@ -11,6 +11,7 @@
 //  - Expiry hides the profile from the directory and stops new bookings and
 //    new inquiries; confirmed appointments, their messages and all records stay.
 
+import { primaryRole } from '../admin/permissions.mjs';
 import { audit } from '../audit.mjs';
 import { getProfessionalCatalog } from '../catalog.mjs';
 import { ms, ts } from '../db/index.mjs';
@@ -190,7 +191,7 @@ export function createMembership({ db, config, clock = { now: () => Date.now() }
       const last = await t.query('select max(ends_at) as e from professional_memberships where professional_id = $1 and revoked_at is null', [proId]);
       const start = Math.max(now, ms(last.rows[0].e) || 0);
       await t.query("insert into professional_memberships (professional_id, kind, starts_at, ends_at) values ($1, 'grant', $2, $3)", [proId, ts(start), ts(start + n * DAY)]);
-      await audit(t, { actorId: admin.id, actorRole: 'admin', action: 'membership.granted', targetType: 'professional', targetId: proId, metadata: { days: n, reason: String(reason || '').slice(0, 200) } });
+      await audit(t, { actorId: admin.id, actorRole: primaryRole(admin.roles) || 'admin', action: 'membership.granted', targetType: 'professional', targetId: proId, metadata: { days: n, reason: String(reason || '').slice(0, 200) } });
     });
     return { ok: true };
   }

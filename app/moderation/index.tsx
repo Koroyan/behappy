@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { AppText, Badge, Banner, Button, Card, EmptyState, Screen, Segmented, space, TextField, useFeedback } from '@/design';
 import { useT } from '@/i18n';
-import { isStaffIdentity, useIdentity } from '@/lib/api/account';
+import { canStaff, useIdentity } from '@/lib/api/account';
 import { ApiError } from '@/lib/api/client';
 import * as mod from '@/lib/api/moderation';
 import type { ModAction, ModAppeal, ModReport, ResolveAction } from '@/lib/api/moderation';
@@ -120,7 +120,7 @@ export default function ModerationScreen() {
   const router = useRouter();
   const { t, tp, formatDate } = useT();
   const identity = useIdentity();
-  const staff = isStaffIdentity(identity, 'moderator') || isStaffIdentity(identity, 'admin');
+  const staff = canStaff(identity, 'moderation.act');
   const [tab, setTab] = useState<Tab>('reports');
   const [reports, setReports] = useState<ModReport[]>([]);
   const [appeals, setAppeals] = useState<ModAppeal[]>([]);

@@ -1,14 +1,19 @@
 // Grant or revoke a staff role through the running API, using the owner's
 // ADMIN_TOKEN from server/.env (the token is read here and never printed).
-//   npm run admin:grant -- someone@example.org admin
+// This is how the first owner is set up; after that, owners manage staff in
+// the admin control center (Staff and access).
+//   npm run admin:grant -- someone@example.org owner
+//   npm run admin:grant -- someone@example.org verifier
 //   npm run admin:grant -- someone@example.org moderator --revoke
-// The account must be registered (verified email) first.
+// Roles: owner, admin, verifier, moderator, finance, support, analyst.
+// The account must be registered (verified email and password) first.
+import { STAFF_ROLES } from '../admin/permissions.mjs';
 import { config } from '../config.mjs';
 
 const [email, role = 'admin'] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const revoke = process.argv.includes('--revoke');
-if (!email || !['admin', 'moderator'].includes(role)) {
-  console.error('Usage: npm run admin:grant -- <email> <admin|moderator> [--revoke]');
+if (!email || !STAFF_ROLES.includes(role)) {
+  console.error(`Usage: npm run admin:grant -- <email> <${STAFF_ROLES.join('|')}> [--revoke]`);
   process.exit(2);
 }
 if (!config.adminToken) {

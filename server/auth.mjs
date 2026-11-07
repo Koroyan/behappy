@@ -6,8 +6,10 @@
 // changes, so purchases, community membership and bookings stay attached and
 // nothing is lost. Only SHA-256 hashes of tokens and recovery codes are stored.
 //
-// Roles (moderator, admin) live on the server. Staff endpoints also require a
-// password session, so a copied device token alone can't open them.
+// Staff roles (owner, admin, verifier, moderator, finance, support, analyst)
+// live on the server; permissions per role are in admin/permissions.mjs.
+// Staff endpoints also require a password session, so a copied device token
+// alone can't open them.
 
 import crypto from 'node:crypto';
 
@@ -55,6 +57,9 @@ export function toAccount(row) {
     sessionId: row.session_id,
     sessionKind: row.session_kind,
     sessionLastUsedAt: ms(row.session_last_used_at),
+    stepUpAt: ms(row.session_step_up_at),
+    mfaAt: ms(row.session_mfa_at),
+    staffSuspendedAt: ms(row.staff_suspended_at),
   };
 }
 
@@ -79,7 +84,8 @@ export async function createAccount(db, { now = Date.now(), userAgent } = {}) {
   return { accountId: id, token, recoveryCode };
 }
 
-const SESSION_SELECT = `select a.*, s.id as session_id, s.kind as session_kind, s.last_used_at as session_last_used_at, s.expires_at as session_expires_at
+const SESSION_SELECT = `select a.*, s.id as session_id, s.kind as session_kind, s.last_used_at as session_last_used_at, s.expires_at as session_expires_at,
+    s.step_up_at as session_step_up_at, s.mfa_at as session_mfa_at
   from sessions s join accounts a on a.id = s.account_id
   where s.token_hash = $1 and s.revoked_at is null`;
 
@@ -173,13 +179,18 @@ export function requireRegistered(req, res, next) {
  * Staff roles. Requires the role AND a password session: a device token
  * copied from an unlocked phone can't open moderation or admin tools.
  */
+// Legacy role checks; staff endpoints now use admin/staff.mjs guard(permission).
+// The owner counts as every role; suspended staff count as none.
+const hasRole = (account, role) => Boolean(account?.roles?.includes(role) || account?.roles?.includes('owner'));
+
 export function requireStaff(...roles) {
   return (req, res, next) => {
     const a = req.account;
-    if (!a || !roles.some((r) => a.roles.includes(r))) return res.status(403).json({ error: 'forbidden' });
+    if (!a || !roles.some((r) => hasRole(a, r))) return res.status(403).json({ error: 'forbidden' });
     if (a.sessionKind !== 'password' || !a.registered) return res.status(403).json({ error: 'password_session_required', message: 'Sign in with your email and password to use staff tools.' });
+    if (a.staffSuspendedAt) return res.status(403).json({ error: 'staff_suspended' });
     next();
   };
 }
 
-export const isStaff = (account, role) => Boolean(account?.roles?.includes(role) && account.sessionKind === 'password' && account.registered);
+export const isStaff = (account, role) => Boolean(hasRole(account, role) && account.sessionKind === 'password' && account.registered && !account.staffSuspendedAt);

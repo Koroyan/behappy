@@ -121,7 +121,9 @@ class Window {
 
 const langOf = (req) => (typeof req.body?.lang === 'string' && /^[a-z]{2}$/.test(req.body.lang) ? req.body.lang : 'en');
 
-export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }, devFixedCode = null, limits = {}, onSessionsRevoked = () => {} }) {
+export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }, devFixedCode = null, limits = {}, onSessionsRevoked = () => {}, onAuthEvent = () => {} }) {
+  // Security events for the staff security center (never passwords or codes).
+  const event = (kind, req, accountId = null, metadata = {}) => Promise.resolve(onAuthEvent(kind, { accountId, ip: req.ip, metadata })).catch(() => {});
   // Open live connections of revoked sessions are closed right away (not only at their next check).
   const closeLive = (accountId, opts) => Promise.resolve(onSessionsRevoked(accountId, opts)).catch(() => {});
   const router = express.Router();
@@ -192,18 +194,27 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
 
   router.post('/login', json, async (req, res) => {
     const now = clock.now();
-    if (!loginByIp.allow(req.ip, now)) return fail(res, 429, 'rate_limited');
+    if (!loginByIp.allow(req.ip, now)) {
+      await event('login_rate_limited', req);
+      return fail(res, 429, 'rate_limited');
+    }
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
     const r = await db.query('select * from accounts where email = $1 and email_verified_at is not null', [email]);
     const row = r.rows[0];
-    if (row && row.locked_until && ms(row.locked_until) > now) return fail(res, 429, 'account_locked', { retryAt: ms(row.locked_until) });
+    if (row && row.locked_until && ms(row.locked_until) > now) {
+      await event('login_while_locked', req, row.id);
+      return fail(res, 429, 'account_locked', { retryAt: ms(row.locked_until) });
+    }
     // Hash even when the account doesn't exist, so timing doesn't reveal it.
     const ok = row?.password_hash ? await verifyPassword(password, row.password_hash) : (await hashPassword(password), false);
     if (!ok) {
       if (row) {
         const failures = row.failed_logins + 1;
         await db.query('update accounts set failed_logins = $2, locked_until = $3 where id = $1', [row.id, failures >= LOCK_AFTER ? 0 : failures, failures >= LOCK_AFTER ? ts(now + LOCK_FOR) : null]);
+        await event(failures >= LOCK_AFTER ? 'account_locked' : 'login_failed', req, row.id, { staff: (row.roles || []).length > 0 });
+      } else {
+        await event('login_failed', req, null, { unknownEmail: true });
       }
       return fail(res, 401, 'invalid_credentials');
     }
@@ -213,6 +224,7 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
       await t.query('update accounts set failed_logins = 0, locked_until = null, last_seen_at = $2 where id = $1', [row.id, ts(now)]);
       await insertSession(t, { accountId: row.id, token, kind: 'password', now, userAgent: req.get('user-agent') });
     });
+    await event('login_ok', req, row.id, { staff: (row.roles || []).length > 0 });
     res.json({ accountId: row.id, token });
   });
 
@@ -259,6 +271,7 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
     });
     if (!result.ok) return fail(res, 400, result.error);
     await closeLive(id, {});
+    await event('password_reset', req, id);
     res.json({ accountId: id, token });
   });
 
@@ -275,6 +288,7 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
       await t.query('update sessions set revoked_at = $3 where account_id = $1 and id <> $2 and revoked_at is null', [req.account.id, req.account.sessionId, ts(now)]);
     });
     await closeLive(req.account.id, { exceptSessionId: req.account.sessionId });
+    await event('password_changed', req, req.account.id);
     res.json({ ok: true });
   });
 

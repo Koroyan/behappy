@@ -88,6 +88,9 @@ describe('Professionals', () => {
     const raw = await t.db.query('select ciphertext from verification_documents where id = $1', [doc.id]);
     assert.ok(!Buffer.from(raw.rows[0].ciphertext).toString('latin1').includes('%PDF'), 'stored encrypted');
     assert.equal((await call(u, `/api/admin/pros/${me.json.profile.id}/documents/${doc.id}`)).status, 403);
+    // Identity documents need a fresh password confirmation, even for an admin.
+    assert.equal((await call(admin, `/api/admin/pros/${me.json.profile.id}/documents/${doc.id}`)).json.error, 'step_up_required');
+    assert.equal((await call(admin, '/api/admin/step-up', 'POST', { password: admin.password })).status, 200);
     const res = await fetch(`${t.base}/api/admin/pros/${me.json.profile.id}/documents/${doc.id}`, { headers: { Authorization: `Bearer ${admin.token}` } });
     assert.equal(res.status, 200);
     assert.ok((await res.text()).startsWith('%PDF'));

@@ -9,6 +9,7 @@
 
 import crypto from 'node:crypto';
 
+import { can, primaryRole } from '../admin/permissions.mjs';
 import { audit } from '../audit.mjs';
 import { newId } from '../auth.mjs';
 import { ms, ts } from '../db/index.mjs';
@@ -488,7 +489,7 @@ export function createProfiles({ db, config, clock = { now: () => Date.now() }, 
       await t.query(`update professional_profiles set ${sets.join(', ')} where id = $1`, params);
       const safeChecklist = Object.fromEntries(Object.entries(checklist || {}).filter(([k]) => REVIEW_CHECKLIST.includes(k)).map(([k, v]) => [k, Boolean(v)]));
       await event(t, p, { from: p.status, to: rule.to, actor: admin.id, actorKind: 'admin', message: message ? String(message).slice(0, 1500) : null, internalNote: internalNote ? String(internalNote).slice(0, 1500) : null, checklist: safeChecklist });
-      await audit(t, { actorId: admin.id, actorRole: 'admin', action: `professional.${action}`, targetType: 'professional', targetId: p.id, metadata: { from: p.status, to: rule.to } });
+      await audit(t, { actorId: admin.id, actorRole: primaryRole(admin.roles) || 'admin', action: `professional.${action}`, targetType: 'professional', targetId: p.id, metadata: { from: p.status, to: rule.to } });
       await notify(t, p.account_id, 'pro_verification', { status: rule.to, message: message ? String(message).slice(0, 300) : null }, `verification:${p.id}:${now}`);
       let trial = null;
       if (action === 'approve' && hooks.onApproved) trial = await hooks.onApproved(t, { ...p, status: 'approved' }, now);
@@ -523,7 +524,7 @@ export function createProfiles({ db, config, clock = { now: () => Date.now() }, 
     const d = r.rows[0];
     if (!d) fail(404, 'not_found');
     const bytes = fieldCrypto.decrypt('documents', { ciphertext: d.ciphertext, iv: d.iv, tag: d.tag });
-    await audit(db, { actorId: admin.id, actorRole: 'admin', action: 'verification_document.viewed', targetType: 'professional', targetId: proId, metadata: { documentId: docId, kind: d.kind } });
+    await audit(db, { actorId: admin.id, actorRole: primaryRole(admin.roles) || 'admin', action: 'verification_document.viewed', targetType: 'professional', targetId: proId, metadata: { documentId: docId, kind: d.kind } });
     return { bytes, mime: d.mime, fileName: d.file_name };
   }
 
@@ -574,7 +575,7 @@ export function createProfiles({ db, config, clock = { now: () => Date.now() }, 
       confirmed = Boolean(b.rows[0].confirmed);
     }
     const own = viewer && viewer.id === p.account_id;
-    const admin = viewer?.roles?.includes('admin');
+    const admin = can(viewer, 'professionals.view');
     if (!discoverable && !own && !admin && !relationship) fail(404, 'not_found');
     if (discoverable && viewer && !own) await bumpStat(db, p.id, 'views', now, viewer.id);
     return { ...publicDto(p, await children(db, p.id), now, { includeAddress: confirmed || own }), listed: discoverable };
@@ -595,7 +596,7 @@ export function createProfiles({ db, config, clock = { now: () => Date.now() }, 
   async function photo(viewer, proId) {
     const p = await load(db, { id: proId });
     if (!p?.photo) fail(404, 'not_found');
-    const allowed = (await isDiscoverable(db, p.id)) || (viewer && (viewer.id === p.account_id || viewer.roles?.includes('admin')));
+    const allowed = (await isDiscoverable(db, p.id)) || (viewer && (viewer.id === p.account_id || can(viewer, 'professionals.view')));
     if (!allowed) {
       const b = viewer ? await db.query('select 1 from bookings where professional_id = $1 and client_account_id = $2 limit 1', [p.id, viewer.id]) : { rowCount: 0 };
       if (!b.rowCount) fail(404, 'not_found');

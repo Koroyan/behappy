@@ -6,6 +6,7 @@ import { createCommunityAnulia } from './anulia.mjs';
 import { seedCommunity } from './constants.mjs';
 import { createModeration } from './moderation.mjs';
 import { startRealtime } from './realtime.mjs';
+import { staffFor } from '../admin/staff.mjs';
 import { communityRouter, moderationRouter } from './routes.mjs';
 import { createBus, createCommunity } from './service.mjs';
 
@@ -30,7 +31,7 @@ export function mountCommunity(app, deps) {
     next();
   });
   app.use('/api/community', communityRouter({ db: deps.db, clock: deps.clock, community: c.community }));
-  app.use('/api/moderation', moderationRouter({ db: deps.db, clock: deps.clock, moderation: c.moderation }));
+  app.use('/api/moderation', moderationRouter({ db: deps.db, clock: deps.clock, moderation: c.moderation, guard: (perm) => staffFor(deps).guard(perm) }));
   deps.meSections.push({ name: 'community', fn: (q, account) => c.community.meSection(q, account) });
 }
 

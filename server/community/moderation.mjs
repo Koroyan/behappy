@@ -15,7 +15,9 @@ export function createModeration({ db, clock = { now: () => Date.now() }, bus })
   const fail = (status, code, extra) => {
     throw new CommunityError(status, code, extra);
   };
-  const actorKind = (actor) => (actor.roles.includes('admin') ? 'admin' : 'moderator');
+  // moderation_actions.actor_kind is 'admin' or 'moderator'; the owner counts as admin.
+  const seniorStaff = (roles = []) => roles.includes('admin') || roles.includes('owner');
+  const actorKind = (actor) => (seniorStaff(actor.roles) ? 'admin' : 'moderator');
 
   async function record(t, actor, entry, now) {
     const r = await t.query(
@@ -128,7 +130,7 @@ export function createModeration({ db, clock = { now: () => Date.now() }, bus })
     }
     if (target === actor.id) fail(400, 'cannot_suspend_self');
     const staff = await db.query('select roles from accounts where id = $1', [target]);
-    if ((staff.rows[0]?.roles || []).includes('admin') && !actor.roles.includes('admin')) fail(403, 'cannot_suspend_admin');
+    if (seniorStaff(staff.rows[0]?.roles || []) && !seniorStaff(actor.roles)) fail(403, 'cannot_suspend_admin');
     const now = clock.now();
     const id = await db.tx(async (t) => {
       const r = await t.query("insert into suspensions (account_id, scope, kind, reason, starts_at, ends_at, created_by, created_at) values ($1, 'community', $2, $3, $4, $5, $6, $4) returning id", [

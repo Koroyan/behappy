@@ -22,7 +22,9 @@ export interface Identity {
   registered: boolean;
   email: string | null;
   emailVerified: boolean;
-  roles: ('moderator' | 'admin')[];
+  roles: StaffRole[];
+  /** What the staff tools allow for these roles (the server checks every request again). */
+  staffPermissions?: string[];
   sessionKind: 'device' | 'password';
   status: 'active' | 'suspended';
   emailAvailable: boolean;
@@ -51,8 +53,20 @@ export function useIdentity(): Identity {
   return (me?.identity as Identity | undefined) ?? ANONYMOUS_IDENTITY;
 }
 
-/** Staff tools need the role and a password session (enforced on the server too). */
-export const isStaffIdentity = (id: Identity, role: 'moderator' | 'admin') => id.roles.includes(role) && id.sessionKind === 'password' && id.registered;
+export type StaffRole = 'owner' | 'admin' | 'verifier' | 'moderator' | 'finance' | 'support' | 'analyst';
+export const STAFF_ROLES: StaffRole[] = ['owner', 'admin', 'verifier', 'moderator', 'finance', 'support', 'analyst'];
+
+/** Has any staff role (the staff screens then ask for a password sign-in if needed). */
+export const hasStaffRole = (id: Identity) => id.roles.some((r) => STAFF_ROLES.includes(r));
+
+/** The staff role grants this permission (whatever the session kind). */
+export const staffMay = (id: Identity, permission: string) => (id.staffPermissions || []).includes(permission);
+
+/** Staff tools need the permission and a password session (enforced on the server too). */
+export const canStaff = (id: Identity, permission: string) => staffMay(id, permission) && id.sessionKind === 'password' && id.registered;
+
+/** Older check by role; the owner counts as every role. */
+export const isStaffIdentity = (id: Identity, role: 'moderator' | 'admin') => (id.roles.includes(role) || id.roles.includes('owner')) && id.sessionKind === 'password' && id.registered;
 
 export const FREE_ENTITLEMENTS: Entitlements = {
   plus: { active: false, expiresAt: null },

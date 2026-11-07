@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Badge, BrandMark, Icon, IconButton, IconName, Press, radius, space, useLayout, useTheme } from '@/design';
 import { useT } from '@/i18n';
-import { useAccount, useIdentity } from '@/lib/api/account';
+import { hasStaffRole, staffMay, useAccount, useIdentity } from '@/lib/api/account';
 
 export interface NavItem {
   key: string;
@@ -111,12 +111,14 @@ export function usePrimaryNav() {
   });
 
   const staffItems: NavItem[] = [];
-  // Shown to anyone with the role; the screens ask for a password sign-in when needed.
-  if (identity.roles.includes('admin')) {
-    staffItems.push({ key: 'admin', label: t('shell.admin'), icon: 'stats-chart-outline', activeIcon: 'stats-chart', href: '/admin', match: (p) => p === '/admin' });
+  // Shown to anyone whose role allows it; the screens ask for a password sign-in when needed.
+  if (hasStaffRole(identity)) {
+    staffItems.push({ key: 'admin', label: t('shell.admin'), icon: 'stats-chart-outline', activeIcon: 'stats-chart', href: '/admin', match: (p) => p === '/admin' || (p.startsWith('/admin/') && !p.startsWith('/admin/applications')) });
+  }
+  if (staffMay(identity, 'professionals.view')) {
     staffItems.push({ key: 'applications', label: t('shell.applications'), icon: 'document-text-outline', activeIcon: 'document-text', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') });
   }
-  if (identity.roles.includes('moderator') || identity.roles.includes('admin')) {
+  if (staffMay(identity, 'moderation.act')) {
     staffItems.push({ key: 'moderation', label: t('shell.moderation'), icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark', href: '/moderation', match: (p) => p.startsWith('/moderation') });
   }
   if (staffItems.length) sections.push({ key: 'staff', title: t('shell.staff'), items: staffItems });

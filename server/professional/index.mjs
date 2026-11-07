@@ -1,6 +1,7 @@
 // Wires professionals, verification, bookings, messages and memberships
 // into the server.
 
+import { staffFor } from '../admin/staff.mjs';
 import { createCrypto } from '../crypto.mjs';
 import { registerAccountDeletionHook } from '../lifecycle.mjs';
 import { createSms } from '../notify/sms.mjs';
@@ -29,7 +30,7 @@ export function professionalsFor(deps) {
 
 export function mountProfessionals(app, deps) {
   const pro = professionalsFor(deps);
-  const r = professionalRouters({ db: deps.db, config: deps.config, clock: deps.clock, pro });
+  const r = professionalRouters({ db: deps.db, config: deps.config, clock: deps.clock, pro, guard: (perm) => staffFor(deps).guard(perm) });
   app.use('/api/pros', r.directory);
   app.use('/api', r.client);
   app.use('/api/pro', r.workspace);

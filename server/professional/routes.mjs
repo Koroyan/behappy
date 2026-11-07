@@ -4,7 +4,7 @@
 import express from 'express';
 
 import { buildReturnUrl, requestApiBase } from '../app.mjs';
-import { optionalAccount, requireAccount, requireStaff } from '../auth.mjs';
+import { optionalAccount, requireAccount } from '../auth.mjs';
 import { getProfessionalCatalog } from '../catalog.mjs';
 import { publicOrder } from '../payments.mjs';
 import { DOCUMENT_KINDS, PAYMENT_METHODS, REVIEW_CHECKLIST, SERVICE_LANGUAGES, SPECIALIZATIONS } from './catalogs.mjs';
@@ -21,7 +21,7 @@ const wrap = (fn) => async (req, res) => {
   }
 };
 
-export function professionalRouters({ db, config, clock, pro }) {
+export function professionalRouters({ db, config, clock, pro, guard }) {
   const { profiles, membership, booking, messaging } = pro;
   const auth = requireAccount(db, { clock });
   const maybe = optionalAccount(db, { clock });
@@ -130,13 +130,14 @@ export function professionalRouters({ db, config, clock, pro }) {
   workspace.post('/membership/resume', small, wrap((req) => membership.setCancelled(req.account, false)));
   workspace.get('/membership/receipts/:orderId', wrap(async (req) => ({ receipt: await membership.receipt(req.account, req.params.orderId) })));
 
-  // ---------- Admin: verification desk ----------
+  // ---------- Admin: verification desk (each route checks its own permission) ----------
   const admin = express.Router();
-  admin.use(small, auth, requireStaff('admin'));
-  admin.get('/pros', wrap(async (req) => ({ professionals: await profiles.adminList({ status: req.query.status ? String(req.query.status) : undefined }), checklist: REVIEW_CHECKLIST })));
-  admin.get('/pros/:id', wrap(async (req) => ({ professional: await profiles.adminGet(req.params.id), membership: await membership.state(db, await profiles.load(db, { id: req.params.id })) })));
+  const staffOnly = (perm) => [small, auth, guard(perm)];
+  admin.get('/pros', ...staffOnly('professionals.view'), wrap(async (req) => ({ professionals: await profiles.adminList({ status: req.query.status ? String(req.query.status) : undefined }), checklist: REVIEW_CHECKLIST })));
+  admin.get('/pros/:id', ...staffOnly('professionals.view'), wrap(async (req) => ({ professional: await profiles.adminGet(req.params.id), membership: await membership.state(db, await profiles.load(db, { id: req.params.id })) })));
   admin.get(
     '/pros/:id/documents/:docId',
+    ...staffOnly('professionals.documents'),
     wrap(async (req, res) => {
       const d = await profiles.adminDocument(req.account, req.params.id, req.params.docId);
       res.setHeader('Cache-Control', 'no-store');
@@ -144,8 +145,8 @@ export function professionalRouters({ db, config, clock, pro }) {
       res.type(d.mime).send(d.bytes);
     })
   );
-  admin.post('/pros/:id/review', wrap((req) => profiles.review(req.account, req.params.id, req.body || {})));
-  admin.post('/pros/:id/membership/grant', wrap((req) => membership.grant(req.account, req.params.id, req.body?.days, req.body?.reason)));
+  admin.post('/pros/:id/review', ...staffOnly('professionals.verify'), wrap((req) => profiles.review(req.account, req.params.id, req.body || {})));
+  admin.post('/pros/:id/membership/grant', ...staffOnly('memberships.manage'), wrap((req) => membership.grant(req.account, req.params.id, req.body?.days, req.body?.reason)));
 
   return { directory, client, workspace, admin };
 }

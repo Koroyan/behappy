@@ -6,7 +6,7 @@ import { AppText, Badge, Banner, Button, Card, EmptyState, Screen, SectionHeader
 import { StaffGate } from '@/features/account/StaffGate';
 import { MembershipBadge } from '@/features/pro/ProParts';
 import { useT } from '@/i18n';
-import { isStaffIdentity, useIdentity } from '@/lib/api/account';
+import { canStaff, useIdentity } from '@/lib/api/account';
 import { adminHealth, adminMemberships, adminOverview, adminPayments } from '@/lib/api/pros';
 
 type Tab = 'overview' | 'memberships' | 'payments' | 'health';
@@ -33,7 +33,7 @@ export default function AdminHome() {
   const router = useRouter();
   const identity = useIdentity();
   const { t, formatPrice, formatDate } = useT();
-  const allowed = isStaffIdentity(identity, 'admin');
+  const allowed = canStaff(identity, 'dashboard.view');
   const [tab, setTab] = useState<Tab>('overview');
   const [overview, setOverview] = useState<any | null>(null);
   const [health, setHealth] = useState<any | null>(null);
@@ -55,7 +55,7 @@ export default function AdminHome() {
   if (!allowed) {
     return (
       <Screen back title={t('admin.title')} width="reading" testID="screen-admin">
-        <StaffGate role="admin" returnTo="/admin" />
+        <StaffGate permission="dashboard.view" returnTo="/admin" />
       </Screen>
     );
   }

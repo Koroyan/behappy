@@ -7,7 +7,7 @@ import { AppText, Banner, Button, Card, Divider, Icon, Press, Screen, SectionHea
 import { StaffGate } from '@/features/account/StaffGate';
 import { InfoRow, MembershipBadge, ProAvatar, VerificationBadge } from '@/features/pro/ProParts';
 import { useT } from '@/i18n';
-import { isStaffIdentity, useIdentity } from '@/lib/api/account';
+import { canStaff, useIdentity } from '@/lib/api/account';
 import { ApiError } from '@/lib/api/client';
 import { adminApplication, adminGrant, adminReview, MembershipState, openAdminDocument, ProProfile } from '@/lib/api/pros';
 
@@ -38,7 +38,7 @@ export default function AdminApplication() {
   const identity = useIdentity();
   const { t, formatDate, formatTime, formatPrice } = useT();
   const { confirm, toast } = useFeedback();
-  const allowed = isStaffIdentity(identity, 'admin');
+  const allowed = canStaff(identity, 'professionals.view');
   const [p, setP] = useState<ProProfile | null>(null);
   const [membership, setMembership] = useState<MembershipState | null>(null);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
@@ -70,7 +70,7 @@ export default function AdminApplication() {
   if (!allowed) {
     return (
       <Screen back title={t('admin.applications.title')} width="reading" testID="screen-admin-application">
-        <StaffGate role="admin" returnTo={`/admin/applications/${id}`} />
+        <StaffGate permission="professionals.view" returnTo={`/admin/applications/${id}`} />
       </Screen>
     );
   }

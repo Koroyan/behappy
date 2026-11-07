@@ -1,26 +1,37 @@
-// Admin dashboard data. Aggregates only, computed from verified records:
-// revenue counts approved Flitt TEST orders minus reversals, never bookings
-// (BeHappy doesn't collect session fees). No journal, conversation, booking
-// note or private message content is available here.
+// The admin control center API (/api/admin). Every route names the
+// permission it needs (admin/permissions.mjs) and the staff guard checks it
+// on every request. Aggregates are computed from verified records: revenue
+// counts approved Flitt TEST orders minus reversals, never bookings (BeHappy
+// doesn't collect session fees). No journal, conversation, assessment,
+// booking note or private message content is available here.
 
 import express from 'express';
 
-import { requireAccount, requireStaff } from '../auth.mjs';
+import { requireAccount } from '../auth.mjs';
 import { ms, ts } from '../db/index.mjs';
 import { schemaVersion } from '../db/migrate.mjs';
 import { toOrder } from '../orders.mjs';
 import { publicOrder } from '../payments.mjs';
 import { professionalsFor } from '../professional/index.mjs';
+import { settingsFor } from './settings.mjs';
+import { handle, staffFor } from './staff.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
 const STARTED = Date.now();
 
 export function mountAdmin(app, deps) {
   const { db, config, clock } = deps;
+  const staff = staffFor(deps);
+  const can = staff.guard;
   const r = express.Router();
-  r.use(requireAccount(db, { clock }), requireStaff('admin'));
+  r.use(express.json({ limit: '64kb' }), requireAccount(db, { clock }));
 
-  r.get('/overview', async (_req, res) => {
+  // ---------- Platform settings and switches ----------
+  const settings = settingsFor(deps);
+  r.get('/settings', can('settings.view'), handle(async () => ({ settings: await settings.list() })));
+  r.put('/settings/:key', can('settings.manage'), handle((req) => settings.set(req.account, req.params.key, req.body?.value, req.body?.reason)));
+
+  r.get('/overview', can('dashboard.view'), async (_req, res) => {
     const now = clock.now();
     const pro = professionalsFor(deps);
     const q = (sql, params = []) => db.query(sql, params).then((x) => x.rows);
@@ -83,7 +94,7 @@ export function mountAdmin(app, deps) {
     });
   });
 
-  r.get('/memberships', async (req, res) => {
+  r.get('/memberships', can('memberships.view'), async (req, res) => {
     const pro = professionalsFor(deps);
     const rows = await db.query("select * from professional_profiles where status in ('approved', 'expired', 'suspended') order by public_name limit 500");
     const out = [];
@@ -95,13 +106,13 @@ export function mountAdmin(app, deps) {
     res.json({ memberships: out });
   });
 
-  r.get('/payments', async (req, res) => {
+  r.get('/payments', can('memberships.view'), async (req, res) => {
     const kind = ['professional', 'plus', 'art'].includes(String(req.query.kind)) ? [String(req.query.kind)] : ['professional', 'plus', 'art'];
     const rows = await db.query('select o.*, p.public_name from orders o left join professional_profiles p on p.id = o.professional_id where o.product_kind = any($1::text[]) order by o.created_at desc limit 200', [kind]);
     res.json({ payments: rows.rows.map((o) => ({ ...publicOrder(toOrder(o)), professionalName: o.public_name || null })) });
   });
 
-  r.get('/health', async (_req, res) => {
+  r.get('/health', can('system.view'), async (_req, res) => {
     let database = 'ok';
     try {
       await db.query('select 1');
@@ -125,9 +136,32 @@ export function mountAdmin(app, deps) {
     });
   });
 
-  r.get('/audit', async (req, res) => {
-    const rows = await db.query('select id, actor_role, action, target_type, target_id, metadata, created_at from audit_log order by id desc limit $1', [Math.min(Number(req.query.limit) || 100, 500)]);
-    res.json({ entries: rows.rows.map((e) => ({ id: e.id, actorRole: e.actor_role, action: e.action, targetType: e.target_type, targetId: e.target_id, metadata: e.metadata, createdAt: ms(e.created_at) })) });
+  r.get('/audit', can('audit.view'), async (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 100, 500);
+    const before = Number(req.query.before) > 0 ? Number(req.query.before) : null;
+    const action = req.query.action ? `${String(req.query.action).slice(0, 60)}%` : null;
+    const target = req.query.target ? String(req.query.target).slice(0, 80) : null;
+    const actor = req.query.actor ? String(req.query.actor).slice(0, 80) : null;
+    const rows = await db.query(
+      `select l.id, l.actor_account_id, l.actor_role, l.action, l.target_type, l.target_id, l.metadata, l.created_at, a.email as actor_email
+       from audit_log l left join accounts a on a.id = l.actor_account_id
+       where ($2::bigint is null or l.id < $2) and ($3::text is null or l.action like $3) and ($4::text is null or l.target_id = $4) and ($5::text is null or l.actor_account_id = $5)
+       order by l.id desc limit $1`,
+      [limit, before, action, target, actor]
+    );
+    res.json({
+      entries: rows.rows.map((e) => ({
+        id: Number(e.id),
+        actorId: e.actor_account_id,
+        actorEmail: e.actor_email || null,
+        actorRole: e.actor_role,
+        action: e.action,
+        targetType: e.target_type,
+        targetId: e.target_id,
+        metadata: e.metadata,
+        createdAt: ms(e.created_at),
+      })),
+    });
   });
 
   app.use('/api/admin', r);

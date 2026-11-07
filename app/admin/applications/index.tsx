@@ -6,7 +6,7 @@ import { AppText, Banner, Card, Chip, EmptyState, Screen, Skeleton, space } from
 import { StaffGate } from '@/features/account/StaffGate';
 import { VerificationBadge } from '@/features/pro/ProParts';
 import { useT } from '@/i18n';
-import { isStaffIdentity, useIdentity } from '@/lib/api/account';
+import { canStaff, useIdentity } from '@/lib/api/account';
 import { adminApplications } from '@/lib/api/pros';
 
 const FILTERS = ['queue', 'more_info_required', 'approved', 'rejected', 'suspended', 'expired'] as const;
@@ -16,7 +16,7 @@ export default function AdminApplications() {
   const router = useRouter();
   const identity = useIdentity();
   const { t, tp, formatDate } = useT();
-  const allowed = isStaffIdentity(identity, 'admin');
+  const allowed = canStaff(identity, 'professionals.view');
   const [filter, setFilter] = useState<Filter>('queue');
   const [list, setList] = useState<any[] | null>(null);
   const [error, setError] = useState(false);
@@ -38,7 +38,7 @@ export default function AdminApplications() {
   if (!allowed) {
     return (
       <Screen back title={t('admin.applications.title')} width="reading" testID="screen-admin-applications">
-        <StaffGate role="admin" returnTo="/admin/applications" />
+        <StaffGate permission="professionals.view" returnTo="/admin/applications" />
       </Screen>
     );
   }

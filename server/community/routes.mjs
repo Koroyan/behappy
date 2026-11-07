@@ -3,7 +3,7 @@
 
 import express from 'express';
 
-import { requireAccount, requireStaff } from '../auth.mjs';
+import { requireAccount } from '../auth.mjs';
 import { LANGUAGES } from './constants.mjs';
 import { CommunityError } from './service.mjs';
 
@@ -57,21 +57,22 @@ export function communityRouter({ db, clock, community }) {
   return r;
 }
 
-export function moderationRouter({ db, clock, moderation }) {
+export function moderationRouter({ db, clock, moderation, guard }) {
   const r = express.Router();
   r.use(express.json({ limit: '32kb' }));
-  r.use(requireAccount(db, { clock }), requireStaff('moderator', 'admin'));
-  r.get('/summary', wrap(() => moderation.queueCounts()));
-  r.get('/reports', wrap(async (req) => ({ reports: await moderation.listReports(req.account, { status: req.query.status, limit: req.query.limit }) })));
-  r.post('/reports/:id/claim', wrap((req) => moderation.claim(req.account, req.params.id)));
-  r.post('/reports/:id/resolve', wrap((req) => moderation.resolve(req.account, req.params.id, { action: req.body?.action, hours: req.body?.hours, note: req.body?.note, reason: req.body?.reason })));
-  r.post('/messages/:id/remove', wrap((req) => moderation.removeMessage(req.account, req.params.id, { reason: req.body?.reason, note: req.body?.note })));
-  r.post('/messages/:id/restore', wrap((req) => moderation.restoreMessage(req.account, req.params.id)));
-  r.post('/members/:ref/suspend', wrap((req) => moderation.suspend(req.account, { memberRef: req.params.ref, kind: req.body?.kind, hours: req.body?.hours, reason: req.body?.reason })));
-  r.post('/suspensions/:id/lift', wrap((req) => moderation.lift(req.account, req.params.id, req.body?.note)));
-  r.get('/appeals', wrap(async (req) => ({ appeals: await moderation.listAppeals(req.account, { status: req.query.status }) })));
-  r.post('/appeals/:id/decide', wrap((req) => moderation.decideAppeal(req.account, req.params.id, { decision: req.body?.decision, note: req.body?.note })));
-  r.get('/history', wrap((req) => moderation.history(req.account, { memberRef: req.query.member, limit: req.query.limit })));
-  r.post('/rooms/:roomId/pin', wrap((req) => moderation.pin(req.account, req.params.roomId, req.body?.messageId || null)));
+  r.use(requireAccount(db, { clock }));
+  const act = guard('moderation.act');
+  r.get('/summary', act, wrap(() => moderation.queueCounts()));
+  r.get('/reports', act, wrap(async (req) => ({ reports: await moderation.listReports(req.account, { status: req.query.status, limit: req.query.limit }) })));
+  r.post('/reports/:id/claim', act, wrap((req) => moderation.claim(req.account, req.params.id)));
+  r.post('/reports/:id/resolve', act, wrap((req) => moderation.resolve(req.account, req.params.id, { action: req.body?.action, hours: req.body?.hours, note: req.body?.note, reason: req.body?.reason })));
+  r.post('/messages/:id/remove', act, wrap((req) => moderation.removeMessage(req.account, req.params.id, { reason: req.body?.reason, note: req.body?.note })));
+  r.post('/messages/:id/restore', act, wrap((req) => moderation.restoreMessage(req.account, req.params.id)));
+  r.post('/members/:ref/suspend', act, wrap((req) => moderation.suspend(req.account, { memberRef: req.params.ref, kind: req.body?.kind, hours: req.body?.hours, reason: req.body?.reason })));
+  r.post('/suspensions/:id/lift', act, wrap((req) => moderation.lift(req.account, req.params.id, req.body?.note)));
+  r.get('/appeals', guard('moderation.appeals'), wrap(async (req) => ({ appeals: await moderation.listAppeals(req.account, { status: req.query.status }) })));
+  r.post('/appeals/:id/decide', guard('moderation.appeals'), wrap((req) => moderation.decideAppeal(req.account, req.params.id, { decision: req.body?.decision, note: req.body?.note })));
+  r.get('/history', act, wrap((req) => moderation.history(req.account, { memberRef: req.query.member, limit: req.query.limit })));
+  r.post('/rooms/:roomId/pin', act, wrap((req) => moderation.pin(req.account, req.params.roomId, req.body?.messageId || null)));
   return r;
 }

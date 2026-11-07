@@ -135,21 +135,37 @@ describe('Accounts and sign-in', () => {
     assert.equal(device.json.error, 'password_session_required');
   });
 
-  test('the owner token bootstraps the first admin; roles need a registered account', async () => {
-    const u = await t.registered('first-admin@example.org');
+  test('the owner token bootstraps the first owner; only owners manage staff, after confirming, never their own roles', async () => {
+    const u = await t.registered('first-owner@example.org');
     const anon = await t.newAccount();
-    assert.equal((await t.api('/api/admin/roles', { method: 'POST', body: { email: u.email, role: 'admin' } })).status, 403, 'no token, no session');
-    assert.equal((await t.api('/api/admin/roles', { token: anon.token, method: 'POST', body: { email: u.email, role: 'admin' } })).status, 403, 'a normal user cannot grant roles');
-    const granted = await t.api('/api/admin/roles', { method: 'POST', headers: { 'x-admin-token': 'admin-secret' }, body: { email: u.email, role: 'admin' } });
+    assert.equal((await t.api('/api/admin/roles', { method: 'POST', body: { email: u.email, role: 'owner' } })).status, 403, 'no token, no session');
+    assert.equal((await t.api('/api/admin/roles', { token: anon.token, method: 'POST', body: { email: u.email, role: 'owner' } })).status, 403, 'a normal user cannot grant roles');
+    const granted = await t.api('/api/admin/roles', { method: 'POST', headers: { 'x-admin-token': 'admin-secret' }, body: { email: u.email, role: 'owner' } });
     assert.equal(granted.status, 200);
     assert.equal((await t.api('/api/admin/roles', { method: 'POST', headers: { 'x-admin-token': 'admin-secret' }, body: { email: 'nobody@example.org', role: 'admin' } })).status, 404);
     assert.equal((await t.api('/api/admin/roles', { method: 'POST', headers: { 'x-admin-token': 'admin-secret' }, body: { email: u.email, role: 'superuser' } })).status, 400);
-    const viaAdmin = await t.api('/api/admin/roles', { token: u.token, method: 'POST', body: { email: u.email, role: 'moderator' } });
-    assert.equal(viaAdmin.status, 200, 'an admin (password session) can grant roles');
-    const roles = (await t.db.query('select roles from accounts where id = $1', [u.accountId])).rows[0].roles;
+
+    // An admin can't manage staff at all.
+    const adm = await t.registered('second-admin@example.org');
+    await t.api('/api/admin/roles', { method: 'POST', headers: { 'x-admin-token': 'admin-secret' }, body: { email: adm.email, role: 'admin' } });
+    const byAdmin = await t.api('/api/admin/roles', { token: adm.token, method: 'POST', body: { email: u.email, role: 'moderator' } });
+    assert.equal(byAdmin.status, 403);
+    assert.equal(byAdmin.json.error, 'forbidden');
+
+    // The owner can, once the password is confirmed for this session, but never for themselves.
+    const body = { email: adm.email, role: 'moderator', reason: 'covering the evening queue' };
+    assert.equal((await t.api('/api/admin/roles', { token: u.token, method: 'POST', body })).json.error, 'step_up_required');
+    assert.equal((await t.api('/api/admin/step-up', { token: u.token, method: 'POST', body: { password: 'wrong-password-123' } })).status, 401);
+    assert.equal((await t.api('/api/admin/step-up', { token: u.token, method: 'POST', body: { password: u.password } })).status, 200);
+    assert.equal((await t.api('/api/admin/roles', { token: u.token, method: 'POST', body })).status, 200);
+    const self = await t.api('/api/admin/roles', { token: u.token, method: 'POST', body: { email: u.email, role: 'admin', reason: 'more power' } });
+    assert.equal(self.json.error, 'cannot_change_own_roles');
+    const roles = (await t.db.query('select roles from accounts where id = $1', [adm.accountId])).rows[0].roles;
     assert.deepEqual([...roles].sort(), ['admin', 'moderator']);
-    const audit = await t.db.query("select count(*)::int as n from audit_log where action = 'role.granted' and target_id = $1", [u.accountId]);
+    const audit = await t.db.query("select count(*)::int as n from audit_log where action = 'staff.role_granted' and target_id = $1", [adm.accountId]);
     assert.equal(audit.rows[0].n, 2);
+    // A device token of a staff account opens nothing.
+    assert.equal((await t.api('/api/admin/me', { token: u.deviceToken })).json.error, 'password_session_required');
   });
 
   test('sessions can be listed and revoked by their owner only', async () => {
