@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
@@ -16,8 +16,11 @@ export default function AdminUsers() {
   const router = useRouter();
   const { can, act } = useAdmin();
   const { toast } = useFeedback();
-  const [q, setQ] = useState('');
-  const [search, setSearch] = useState('');
+  // The search lives in the URL, so coming back from an account keeps it.
+  const params = useLocalSearchParams<{ q?: string }>();
+  const initial = typeof params.q === 'string' ? params.q : '';
+  const [q, setQ] = useState(initial);
+  const [search, setSearch] = useState(initial);
   const [filter, setFilter] = useState<Filter>('all');
   const [more, setMore] = useState<any[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -34,7 +37,10 @@ export default function AdminUsers() {
     setCursor(data.data?.nextCursor || null);
   }, [data.data]);
   useEffect(() => {
-    const id = setTimeout(() => setSearch(q.trim()), 300);
+    const id = setTimeout(() => {
+      setSearch(q.trim());
+      if (q.trim() !== (typeof params.q === 'string' ? params.q : '')) router.setParams({ q: q.trim() || undefined } as any);
+    }, 300);
     return () => clearTimeout(id);
   }, [q]);
 
