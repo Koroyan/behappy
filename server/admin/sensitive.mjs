@@ -24,7 +24,13 @@ import { handle, StaffError, staffFor } from './staff.mjs';
 
 const HOUR = 60 * 60 * 1000;
 const CATEGORIES = ['private_messages', 'booking_notes'];
-const BASES = ['legal_obligation', 'vital_interests', 'user_request', 'legitimate_interest'];
+// Each lawful basis needs a real, open case of a matching kind about the
+// person concerned. A generic "legitimate interest" is not accepted for
+// confidential health-related messages.
+const CASE_FOR_BASIS = { legal_obligation: 'legal_case', vital_interests: 'safety_case', user_request: 'support_ticket' };
+const BASES = Object.keys(CASE_FOR_BASIS);
+const MAX_OPEN_PER_REQUESTER = 2;
+const MAX_PER_30_DAYS = 5;
 const fail = (status, code, extra) => {
   throw new StaffError(status, code, extra);
 };
@@ -38,6 +44,9 @@ const dto = (r) => ({
   purpose: r.purpose,
   lawfulBasis: r.lawful_basis,
   ticketRef: r.ticket_ref,
+  caseType: r.case_type || null,
+  caseId: r.case_id || null,
+  evidenceReference: r.evidence_reference || null,
   status: r.status,
   decidedBy: r.decided_by,
   decidedAt: ms(r.decided_at),
@@ -56,13 +65,31 @@ export function createSensitive(deps) {
     if (!(await settings.get('features.sensitiveAccess'))) fail(403, 'feature_disabled');
   }
 
+  /** The item and the two people it belongs to (client and professional). */
   async function resourceExists(category, id) {
-    if (category === 'private_messages') {
-      const r = await db.query('select client_account_id from pro_threads where id = $1', [id]);
-      return r.rows[0] ? { subject: r.rows[0].client_account_id } : null;
+    const r =
+      category === 'private_messages'
+        ? await db.query('select t.client_account_id, p.account_id as pro_account_id from pro_threads t join professional_profiles p on p.id = t.professional_id where t.id = $1', [id])
+        : await db.query('select b.client_account_id, p.account_id as pro_account_id from bookings b join professional_profiles p on p.id = b.professional_id where b.id = $1', [id]);
+    const row = r.rows[0];
+    return row ? { subject: row.client_account_id, parties: [row.client_account_id, row.pro_account_id].filter(Boolean) } : null;
+  }
+
+  /** The cited case must exist, be open, and concern one of the people the item belongs to. */
+  async function caseFor(caseType, caseId) {
+    if (caseType === 'legal_case') {
+      const r = await db.query('select id, reference, authority, evidence_reference, subject_account_id, status from legal_cases where id = $1', [Number(caseId) || 0]);
+      const c = r.rows[0];
+      return c ? { open: c.status === 'open', subject: c.subject_account_id, evidence: `${c.authority} · ${c.reference} · ${c.evidence_reference}` } : null;
     }
-    const r = await db.query('select client_account_id from bookings where id = $1', [id]);
-    return r.rows[0] ? { subject: r.rows[0].client_account_id } : null;
+    if (caseType === 'safety_case') {
+      const r = await db.query('select id, status, subject_account_id from safety_incidents where id = $1', [Number(caseId) || 0]);
+      const c = r.rows[0];
+      return c ? { open: c.status !== 'resolved', subject: c.subject_account_id, evidence: `safety case ${c.id}` } : null;
+    }
+    const r = await db.query('select id, status, account_id, category from support_tickets where id = $1', [String(caseId || '')]);
+    const c = r.rows[0];
+    return c ? { open: !['resolved', 'closed'].includes(c.status), subject: c.account_id, evidence: `support request ${c.id} (${c.category})` } : null;
   }
 
   async function request(actor, body) {
@@ -72,16 +99,32 @@ export function createSensitive(deps) {
     if (!BASES.includes(body.lawfulBasis)) fail(400, 'bad_basis');
     const purpose = String(body.purpose || '').trim();
     if (purpose.length < 30) fail(400, 'purpose_required');
-    const ticket = String(body.ticketRef || '').trim();
-    if (ticket.length < 3) fail(400, 'ticket_required');
+    const caseType = CASE_FOR_BASIS[body.lawfulBasis];
+    const caseId = String(body.caseId || body.ticketRef || '').trim().slice(0, 80);
+    if (!caseId) fail(400, 'case_required');
     const resourceId = String(body.resourceId || '').trim().slice(0, 80);
     const found = await resourceExists(category, resourceId);
     if (!found) fail(404, 'not_found');
-    const r = await db.query(
-      'insert into sensitive_access_requests (requester_id, subject_account_id, category, resource_id, purpose, lawful_basis, ticket_ref, created_at) values ($1, $2, $3, $4, $5, $6, $7, $8) returning *',
-      [actor.id, found.subject, category, resourceId, purpose.slice(0, 2000), body.lawfulBasis, ticket.slice(0, 120), ts(clock.now())]
+    const kase = await caseFor(caseType, caseId);
+    if (!kase) fail(400, 'case_not_found', { caseType });
+    if (!kase.open) fail(409, 'case_closed');
+    // The case must be about someone this item belongs to (a legal case may name no account).
+    if (caseType !== 'legal_case' || kase.subject) {
+      if (!kase.subject || !found.parties.includes(kase.subject)) fail(409, 'case_scope_mismatch');
+    }
+    // No bulk browsing: few open requests per person, and one per item at a time.
+    const now = clock.now();
+    const mine = await db.query(
+      "select count(*) filter (where status in ('requested', 'approved') and (expires_at is null or expires_at > $2))::int as open, count(*) filter (where created_at > $3)::int as recent, count(*) filter (where status in ('requested', 'approved') and resource_id = $4 and (expires_at is null or expires_at > $2))::int as same from sensitive_access_requests where requester_id = $1",
+      [actor.id, ts(now), ts(now - 30 * 24 * HOUR), resourceId]
     );
-    await audit(db, { actorId: actor.id, actorRole: role(actor), action: 'sensitive.requested', targetType: 'sensitive_request', targetId: r.rows[0].id, metadata: { category, lawfulBasis: body.lawfulBasis, ticketRef: ticket } });
+    if (mine.rows[0].same) fail(409, 'already_requested');
+    if (mine.rows[0].open >= MAX_OPEN_PER_REQUESTER || mine.rows[0].recent >= MAX_PER_30_DAYS) fail(429, 'too_many_requests');
+    const r = await db.query(
+      'insert into sensitive_access_requests (requester_id, subject_account_id, category, resource_id, purpose, lawful_basis, ticket_ref, case_type, case_id, evidence_reference, created_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning *',
+      [actor.id, found.subject, category, resourceId, purpose.slice(0, 2000), body.lawfulBasis, caseId, caseType, caseId, kase.evidence.slice(0, 300), ts(now)]
+    );
+    await audit(db, { actorId: actor.id, actorRole: role(actor), action: 'sensitive.requested', targetType: 'sensitive_request', targetId: r.rows[0].id, metadata: { category, lawfulBasis: body.lawfulBasis, caseType, caseId } });
     return { request: dto(r.rows[0]) };
   }
 
@@ -133,6 +176,15 @@ export function createSensitive(deps) {
     if (!q) fail(404, 'not_found');
     if (q.requester_id !== actor.id) fail(403, 'not_your_request');
     if (q.status !== 'approved' || !q.expires_at || ms(q.expires_at) <= clock.now()) fail(403, 'not_approved');
+    // Access ends when the reason ends: a closed case closes the request.
+    if (q.case_type) {
+      const kase = await caseFor(q.case_type, q.case_id);
+      if (!kase || !kase.open) {
+        await db.query("update sensitive_access_requests set status = 'revoked', decision_note = coalesce(decision_note, '') || ' | revoked: the case was closed' where id = $1", [q.id]);
+        await audit(db, { actorId: actor.id, actorRole: role(actor), action: 'sensitive.revoked_case_closed', targetType: 'sensitive_request', targetId: q.id });
+        fail(403, 'case_closed');
+      }
+    }
     let data;
     if (q.category === 'private_messages') {
       const m = await db.query('select id, sender_kind, ciphertext, iv, tag, created_at from pro_messages where thread_id = $1 order by id', [q.resource_id]);
@@ -147,7 +199,38 @@ export function createSensitive(deps) {
     return { request: dto(q), data, expiresAt: ms(q.expires_at) };
   }
 
-  return { request, list, decide, revoke, view };
+  // ---------- Legal cases (recorded by an owner, with evidence) ----------
+  async function addLegalCase(actor, body) {
+    await enabled();
+    const reference = String(body.reference || '').trim();
+    const authority = String(body.authority || '').trim();
+    const evidence = String(body.evidenceReference || '').trim();
+    const received = Number(body.receivedAt) || Date.parse(String(body.receivedAt || ''));
+    if (reference.length < 3 || authority.length < 3 || evidence.length < 5 || !Number.isFinite(received)) fail(400, 'case_details_required');
+    let subject = null;
+    if (body.subjectAccountId) {
+      const a = await db.query('select id from accounts where id = $1', [String(body.subjectAccountId)]);
+      if (!a.rows[0]) fail(404, 'account_not_found');
+      subject = a.rows[0].id;
+    }
+    const r = await db.query('insert into legal_cases (reference, authority, received_at, subject_account_id, evidence_reference, recorded_by) values ($1, $2, $3, $4, $5, $6) returning id', [reference.slice(0, 120), authority.slice(0, 120), ts(received), subject, evidence.slice(0, 300), actor.id]);
+    await audit(db, { actorId: actor.id, actorRole: role(actor), action: 'legal_case.recorded', targetType: 'legal_case', targetId: r.rows[0].id, metadata: { authority: authority.slice(0, 120) } });
+    return { id: Number(r.rows[0].id) };
+  }
+
+  async function legalCases() {
+    const r = await db.query('select * from legal_cases order by id desc limit 100');
+    return { cases: r.rows.map((c) => ({ id: Number(c.id), reference: c.reference, authority: c.authority, receivedAt: ms(c.received_at), subjectAccountId: c.subject_account_id, evidenceReference: c.evidence_reference, status: c.status, createdAt: ms(c.created_at), closedAt: ms(c.closed_at) })) };
+  }
+
+  async function closeLegalCase(actor, id) {
+    const r = await db.query("update legal_cases set status = 'closed', closed_at = $2 where id = $1 and status = 'open' returning id", [Number(id), ts(clock.now())]);
+    if (!r.rowCount) fail(404, 'not_found');
+    await audit(db, { actorId: actor.id, actorRole: role(actor), action: 'legal_case.closed', targetType: 'legal_case', targetId: Number(id) });
+    return { ok: true };
+  }
+
+  return { request, list, decide, revoke, view, addLegalCase, legalCases, closeLegalCase };
 }
 
 export function mountSensitive(app, deps) {
@@ -162,5 +245,8 @@ export function mountSensitive(app, deps) {
   r.post('/sensitive/requests/:id/decide', ...can('sensitive.approve'), handle((req) => s.decide(req.account, req.params.id, req.body || {})));
   r.post('/sensitive/requests/:id/revoke', ...can('sensitive.request'), handle((req) => s.revoke(req.account, req.params.id, req.body?.note)));
   r.get('/sensitive/requests/:id/view', ...can('sensitive.request'), handle((req) => s.view(req.account, req.params.id)));
+  r.get('/sensitive/legal-cases', ...can('sensitive.request'), handle(() => s.legalCases()));
+  r.post('/sensitive/legal-cases', ...can('sensitive.approve'), handle((req) => s.addLegalCase(req.account, req.body || {})));
+  r.post('/sensitive/legal-cases/:id/close', ...can('sensitive.approve'), handle((req) => s.closeLegalCase(req.account, req.params.id)));
   app.use('/api/admin', r);
 }

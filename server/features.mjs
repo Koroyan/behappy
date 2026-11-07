@@ -4,6 +4,7 @@
 import { mountAppointmentsAdmin } from './admin/appointments.mjs';
 import { mountCommunityAdmin } from './admin/community.mjs';
 import { mountInsights } from './admin/insights.mjs';
+import { mountModerationCenter } from './admin/moderation-center.mjs';
 import { mountProsAdmin } from './admin/professionals.mjs';
 import { mountAdmin } from './admin/routes.mjs';
 import { mountSafety } from './admin/safety.mjs';
@@ -26,6 +27,7 @@ export const FEATURE_MODULES = [
   mountProsAdmin,
   mountAppointmentsAdmin,
   mountCommunityAdmin,
+  mountModerationCenter,
   mountSafety,
   mountSensitive,
   mountInsights,

@@ -14,7 +14,6 @@ import express from 'express';
 import { audit } from '../audit.mjs';
 import { requireAccount } from '../auth.mjs';
 import { communityFor } from '../community/index.mjs';
-import { loadMessageRows, messageForViewer } from '../community/service.mjs';
 import { ms, ts } from '../db/index.mjs';
 import { parseRange } from '../analytics/index.mjs';
 import { primaryRole } from './permissions.mjs';
@@ -258,26 +257,7 @@ export function createCommunityAdmin(deps) {
     };
   }
 
-  /** A few messages around one reported message, for moderators deciding a report. Logged every time. */
-  async function reportContext(actor, reportId) {
-    const r = await db.query('select id, target_type, target_id, room_id, status from reports where id = $1', [Number(reportId)]);
-    const rep = r.rows[0];
-    if (!rep) fail(404, 'not_found');
-    if (rep.target_type !== 'message' || !rep.room_id) fail(409, 'no_context');
-    const mid = Number(rep.target_id);
-    const ids = await db.query(
-      `(select id from community_messages where room_id = $1 and id < $2 and status in ('visible', 'removed', 'held') order by id desc limit 5)
-       union all (select id from community_messages where room_id = $1 and id >= $2 and status in ('visible', 'removed', 'held', 'deleted') order by id asc limit 6)`,
-      [rep.room_id, mid]
-    );
-    const rows = await loadMessageRows(db, ids.rows.map((x) => x.id));
-    rows.sort((a, b) => Number(a.id) - Number(b.id));
-    const viewer = { id: actor.id, blocked: new Set(), muted: new Set(), staff: true };
-    await audit(db, { actorId: actor.id, actorRole: role(actor), action: 'moderation.context_viewed', targetType: 'report', targetId: rep.id, metadata: { roomId: rep.room_id, messages: rows.length } });
-    return { reportId: Number(rep.id), roomId: rep.room_id, focusMessageId: mid, messages: rows.map((m) => messageForViewer(m, viewer, new Map())).filter(Boolean) };
-  }
-
-  return { rooms, setRoomState, setDescription, postNotice, topics, orderTopics, moderatorLanguages, setModeratorLanguages, stats, moderationStats, reportContext };
+  return { rooms, setRoomState, setDescription, postNotice, topics, orderTopics, moderatorLanguages, setModeratorLanguages, stats, moderationStats };
 }
 
 export function mountCommunityAdmin(app, deps) {
@@ -297,6 +277,6 @@ export function mountCommunityAdmin(app, deps) {
   r.put('/community/moderators/:id/languages', ...can('community.manage'), handle((req) => a.setModeratorLanguages(req.account, req.params.id, req.body?.languages)));
   r.get('/community/stats', ...can('community.view'), handle((req) => a.stats(req.query)));
   r.get('/moderation/stats', ...can('moderation.act'), handle((req) => a.moderationStats(req.query)));
-  r.get('/moderation/reports/:id/context', ...can('moderation.context'), handle((req) => a.reportContext(req.account, req.params.id)));
+
   app.use('/api/admin', r);
 }

@@ -143,11 +143,22 @@ describe('Professionals', () => {
     // Protected data: off by default; one item, a purpose and lawful basis, approved by someone else, time-limited, logged.
     const owner = await t.registered(`owner-${Date.now()}@example.org`);
     await t.grantRole(owner.accountId, 'owner');
-    const request = { category: 'booking_notes', resourceId: bookingId, purpose: 'Police request about a threat written in this booking note.', lawfulBasis: 'legal_obligation', ticketRef: 'LEG-2026-14' };
+    let request = { category: 'booking_notes', resourceId: bookingId, purpose: 'Police request about a threat written in this booking note.', lawfulBasis: 'legal_obligation', caseId: '0' };
     assert.equal((await call(admin, '/api/admin/sensitive/requests', 'POST', request)).json.error, 'feature_disabled');
     await call(owner, '/api/admin/step-up', 'POST', { password: owner.password });
     assert.equal((await call(owner, '/api/admin/settings/features.sensitiveAccess', 'PUT', { value: true, reason: 'formal request received' })).status, 200);
     t.clock.advance(6000);
+    // A request must cite a real, open case of the matching kind, about someone the item belongs to.
+    assert.equal((await call(admin, '/api/admin/sensitive/requests', 'POST', { ...request, lawfulBasis: 'legitimate_interest' })).json.error, 'bad_basis');
+    assert.equal((await call(admin, '/api/admin/sensitive/requests', 'POST', request)).json.error, 'case_not_found');
+    assert.equal((await call(admin, '/api/admin/legal-cases', 'POST', {})).status, 404, 'legal cases live under /sensitive');
+    assert.equal((await call(admin, '/api/admin/sensitive/legal-cases', 'POST', { reference: 'X-1', authority: 'Court', receivedAt: Date.now(), evidenceReference: 'order scan' })).json.error, 'forbidden', 'only owners record legal cases');
+    const elsewhere = await t.registered(`other-${Date.now()}@example.org`);
+    const wrongCase = await call(owner, '/api/admin/sensitive/legal-cases', 'POST', { reference: 'TB-2026-0099', authority: 'Tbilisi City Court', receivedAt: Date.now(), subjectAccountId: elsewhere.accountId, evidenceReference: 'Court order scan, filed 2026-11-07' });
+    assert.equal((await call(admin, '/api/admin/sensitive/requests', 'POST', { ...request, caseId: String(wrongCase.json.id) })).json.error, 'case_scope_mismatch');
+    const legal = await call(owner, '/api/admin/sensitive/legal-cases', 'POST', { reference: 'TB-2026-0100', authority: 'Tbilisi City Court', receivedAt: Date.now(), subjectAccountId: client.accountId, evidenceReference: 'Court order scan, filed 2026-11-07' });
+    assert.equal(legal.status, 200, JSON.stringify(legal.json));
+    request = { ...request, caseId: String(legal.json.id) };
     assert.equal((await call(admin, '/api/admin/sensitive/requests', 'POST', { ...request, purpose: 'too short' })).json.error, 'purpose_required');
     const asked = await call(admin, '/api/admin/sensitive/requests', 'POST', request);
     assert.equal(asked.status, 200, JSON.stringify(asked.json));
@@ -159,12 +170,21 @@ describe('Professionals', () => {
     assert.equal((await call(owner, `/api/admin/sensitive/requests/${rid}/decide`, 'POST', { approve: true, note: 'Formal police request LEG-2026-14 checked.', hours: 2 })).status, 200);
     const opened = await call(admin, `/api/admin/sensitive/requests/${rid}/view`);
     assert.equal(opened.json.data.note, 'Private note for the specialist');
+    assert.equal((await call(admin, '/api/admin/sensitive/requests', 'POST', request)).json.error, 'already_requested', 'one request per item at a time');
     assert.equal((await call(owner, `/api/admin/sensitive/requests/${rid}/view`)).json.error, 'not_your_request');
     assert.equal((await t.db.query("select count(*)::int as n from audit_log where action = 'sensitive.viewed'")).rows[0].n, 1);
     t.clock.advance(3 * 60 * 60 * 1000);
     assert.equal((await call(admin, `/api/admin/sensitive/requests/${rid}/view`)).json.error, 'step_up_required', 'the confirmation expired too');
     await call(admin, '/api/admin/step-up', 'POST', { password: admin.password });
     assert.equal((await call(admin, `/api/admin/sensitive/requests/${rid}/view`)).json.error, 'not_approved', 'the approval expires');
+    // A closed case closes its requests, even inside the approval window.
+    await call(owner, '/api/admin/step-up', 'POST', { password: owner.password });
+    const legal2 = await call(owner, '/api/admin/sensitive/legal-cases', 'POST', { reference: 'TB-2026-0101', authority: 'Tbilisi City Court', receivedAt: Date.now(), subjectAccountId: client.accountId, evidenceReference: 'Second order scan' });
+    const asked2 = await call(admin, '/api/admin/sensitive/requests', 'POST', { ...request, caseId: String(legal2.json.id) });
+    assert.equal(asked2.status, 200, JSON.stringify(asked2.json));
+    await call(owner, `/api/admin/sensitive/requests/${asked2.json.request.id}/decide`, 'POST', { approve: true, note: 'Second formal order checked.', hours: 2 });
+    await call(owner, `/api/admin/sensitive/legal-cases/${legal2.json.id}/close`, 'POST', {});
+    assert.equal((await call(admin, `/api/admin/sensitive/requests/${asked2.json.request.id}/view`)).json.error, 'case_closed');
 
     // Ending a verification takes the profile out of the directory.
     assert.equal((await call(admin, `/api/admin/professionals/${me.id}/verification/expire`, 'POST', { reason: 'licence lapsed per registry' })).status, 200);

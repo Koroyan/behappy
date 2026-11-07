@@ -454,3 +454,204 @@ describe('Admin operations', () => {
     assert.ok(s.json.results.every((r) => r.type !== 'user'));
   });
 });
+
+describe('Moderation 2.0 and the account 360° view', () => {
+  let t;
+  const call = (u, path, method = 'GET', body) => t.api(path, { token: u?.token, method, body });
+  const people = {};
+  const SECOND = 1000;
+  const member = async (name, room = 'stress:en') => {
+    const u = await t.registered(`${name}-${Math.random().toString(36).slice(2, 7)}@example.org`);
+    const p = await call(u, '/api/community/profile', 'PUT', { pseudonym: `${name} ${Math.random().toString(36).slice(2, 5)}`, acceptGuidelines: true });
+    await call(u, `/api/community/rooms/${room}/join`, 'POST');
+    return { ...u, ref: p.json.profile.ref, pseudonym: p.json.profile.pseudonym };
+  };
+  const say = async (u, body, room = 'stress:en') => {
+    t.clock.advance(31 * SECOND);
+    const r = await call(u, `/api/community/rooms/${room}/messages`, 'POST', { body });
+    return r.json.message;
+  };
+
+  before(async () => {
+    const { FEATURE_MODULES } = await import('../features.mjs');
+    t = await startTestServer({ extend: FEATURE_MODULES });
+    for (const role of ['owner', 'admin', 'moderator', 'support', 'finance', 'analyst']) {
+      people[role] = await t.registered(`${role}-${Math.random().toString(36).slice(2, 7)}@example.org`);
+      await t.grantRole(people[role].accountId, role);
+    }
+    people.moderator2 = await t.registered(`mod2-${Math.random().toString(36).slice(2, 7)}@example.org`);
+    await t.grantRole(people.moderator2.accountId, 'moderator');
+  });
+  after(() => t.stop());
+
+  test('report detail, exact message in context (highlighted, bounded), scoped member profile without identity', async () => {
+    const { moderator, admin, support } = people;
+    const a = await member('Tamta');
+    const b = await member('Irakli');
+    const before = [];
+    for (let i = 0; i < 7; i += 1) before.push(await say(i % 2 ? a : b, `Earlier message number ${i + 1} about work stress.`));
+    const bad = await say(b, 'You are all pathetic and weak.');
+    for (let i = 0; i < 7; i += 1) await say(i % 2 ? a : b, `Later message number ${i + 1}, trying to stay calm.`);
+    const rep = await call(a, `/api/community/messages/${bad.id}/report`, 'POST', { reason: 'harassment', details: 'insulting everyone' });
+    assert.equal(rep.status, 200);
+    const reportId = rep.json.reportId;
+
+    // Queue views and counts.
+    const q = await call(moderator, '/api/admin/moderation/queue?view=unassigned');
+    assert.ok(q.json.reports.some((r) => r.id === reportId));
+    assert.ok(q.json.counts.open >= 1);
+    assert.equal((await call(support, '/api/admin/moderation/queue')).json.error, 'forbidden');
+    assert.equal((await t.api('/api/admin/moderation/queue')).status, 401);
+
+    // Detail: evidence and current state, member by community name only.
+    const d = await call(moderator, `/api/admin/moderation/reports/${reportId}`);
+    assert.equal(d.status, 200);
+    assert.equal(d.json.evidence.body, 'You are all pathetic and weak.');
+    assert.equal(d.json.current.messageId, bad.id);
+    assert.equal(d.json.current.status, 'visible');
+    assert.equal(d.json.current.room.language, 'en');
+    assert.equal(d.json.member.ref, b.ref);
+    const text = JSON.stringify(d.json);
+    assert.ok(!text.includes(b.accountId) && !text.includes(b.email), 'no account id or email in the report');
+
+    // Context: the exact message, highlighted, 5 before and 5 after by default, at most 10 each.
+    const ctx = await call(moderator, `/api/admin/moderation/reports/${reportId}/context`);
+    assert.equal(ctx.json.focusMessageId, bad.id);
+    assert.equal(ctx.json.messages.length, 11);
+    assert.equal(ctx.json.messages.filter((m) => m.isFocus).length, 1);
+    assert.equal(ctx.json.messages[5].id, bad.id);
+    const wide = await call(moderator, `/api/admin/moderation/reports/${reportId}/context?before=50&after=50`);
+    assert.ok(wide.json.messages.length <= 21, 'bounded window');
+    assert.ok(!wide.json.messages.some((m) => m.roomId !== 'stress:en'), 'only that room');
+    assert.equal((await call(moderator, '/api/admin/moderation/reports/999999/context')).status, 404, 'a report is required');
+    assert.equal((await call(a, `/api/admin/moderation/reports/${reportId}/context`)).status, 403, 'members cannot');
+    const views = await t.db.query("select count(*)::int as n from audit_log where action = 'moderation.context_viewed' and target_id = $1", [String(reportId)]);
+    assert.equal(views.rows[0].n, 2);
+
+    // Member profile: standing and history, no identity for moderators; admins may link to the account.
+    const prof = await call(moderator, `/api/admin/moderation/members/${b.ref}`);
+    assert.equal(prof.status, 200);
+    assert.equal(prof.json.member.pseudonym, b.pseudonym);
+    assert.equal(prof.json.member.reportsAgainst, 1);
+    assert.equal(prof.json.accountId, undefined);
+    assert.ok(!JSON.stringify(prof.json).includes(b.email));
+    assert.equal((await call(admin, `/api/admin/moderation/members/${b.ref}`)).json.accountId, b.accountId);
+    assert.equal((await call(support, `/api/admin/moderation/members/${b.ref}`)).json.error, 'forbidden');
+    // A moderator can't open the account profile.
+    assert.equal((await call(moderator, `/api/admin/users/${b.accountId}`)).json.error, 'forbidden');
+
+    // Removed and deleted messages: the evidence stays, the current state says what happened.
+    await call(b, `/api/community/messages/${before[0].id}`, 'DELETE');
+    const rep2 = await call(a, `/api/community/messages/${before[1].id}/report`, 'POST', { reason: 'spam' });
+    assert.equal(rep2.json.error, 'cannot_report_self');
+    const rep3 = await call(b, `/api/community/messages/${before[1].id}/report`, 'POST', { reason: 'spam' });
+    await call(a, `/api/community/messages/${before[1].id}`, 'DELETE');
+    const d3 = await call(moderator, `/api/admin/moderation/reports/${rep3.json.reportId}`);
+    assert.equal(d3.json.current.status, 'deleted');
+    assert.equal(d3.json.current.body, '');
+    assert.ok(d3.json.evidence.body.includes('Earlier message number 2'));
+  });
+
+  test('actions: claim, reassign, encrypted notes, second review by someone else, restriction with notification, escalation, audit', async () => {
+    const { moderator, moderator2, admin } = people;
+    const a = await member('Nana', 'grief:en');
+    const b = await member('Gela', 'grief:en');
+    const bad = await say(b, 'Nobody cares about your loss, stop whining.', 'grief:en');
+    const rep = await call(a, `/api/community/messages/${bad.id}/report`, 'POST', { reason: 'harassment' });
+    const id = rep.json.reportId;
+    assert.equal((await call(moderator, `/api/admin/moderation/reports/${id}/assign`, 'POST', {})).status, 200);
+    assert.equal((await call(moderator, `/api/admin/moderation/reports/${id}/assign`, 'POST', { assigneeId: a.accountId })).json.error, 'bad_assignee', 'only moderators');
+    assert.equal((await call(moderator, `/api/admin/moderation/reports/${id}/notes`, 'POST', { body: 'Second message in this tone today.' })).status, 200);
+    const raw = await t.db.query('select body_ciphertext from moderation_report_notes where report_id = $1', [id]);
+    assert.ok(!Buffer.from(raw.rows[0].body_ciphertext).toString('latin1').includes('tone today'), 'notes encrypted');
+    assert.equal((await call(moderator, `/api/admin/moderation/reports/${id}/second-review`, 'POST', { reason: 'Unsure whether this is harassment or venting.' })).status, 200);
+    assert.equal((await call(moderator, `/api/admin/moderation/reports/${id}/decide`, 'POST', { action: 'restrict_24h', reason: 'harassment' })).json.error, 'second_reviewer_required');
+    assert.equal((await call(moderator2, `/api/admin/moderation/reports/${id}/decide`, 'POST', { action: 'restrict_24h' })).json.error, 'reason_required');
+    const done = await call(moderator2, `/api/admin/moderation/reports/${id}/decide`, 'POST', { action: 'restrict_24h', reason: 'Harassment of a grieving member.' });
+    assert.equal(done.json.status, 'resolved');
+    const kinds = (await call(b, '/api/notifications')).json.notifications.map((n) => n.kind);
+    assert.ok(kinds.includes('moderation_suspended'), 'the member is told');
+    t.clock.advance(31 * SECOND);
+    assert.equal((await call(b, '/api/community/rooms/grief:en/messages', 'POST', { body: 'Can I still post?' })).json.error, 'suspended');
+    const settled = await t.db.query("select metadata from audit_log where action = 'moderation.report_settled' and target_id = $1", [String(id)]);
+    assert.equal(settled.rows[0].metadata.from, 'in_review');
+    assert.equal(settled.rows[0].metadata.to, 'resolved');
+    assert.equal(settled.rows[0].metadata.reason, 'Harassment of a grieving member.');
+    const detail = await call(moderator, `/api/admin/moderation/reports/${id}`);
+    assert.ok(detail.json.history.some((h) => h.action === 'suspend'));
+    assert.equal(detail.json.notes.length, 1);
+    // Lift needs a reason; the member profile shows the restriction history.
+    const prof = await call(moderator, `/api/admin/moderation/members/${b.ref}`);
+    assert.equal(prof.json.member.standing, 'restricted');
+    assert.equal((await call(moderator, `/api/admin/moderation/restrictions/${prof.json.member.activeRestriction.id}/lift`, 'POST', {})).json.error, 'reason_required');
+    assert.equal((await call(moderator, `/api/admin/moderation/restrictions/${prof.json.member.activeRestriction.id}/lift`, 'POST', { note: 'Apologised in an appeal.' })).status, 200);
+    // Escalation to the safety team opens (or escalates) a case.
+    const worry = await say(a, 'I am thinking about ending it all tonight.', 'grief:en');
+    const reps = (await call(moderator, '/api/admin/moderation/queue?view=urgent')).json.reports;
+    const urgent = reps.find((r) => r.messageId === worry.id);
+    const esc = await call(moderator, `/api/admin/moderation/reports/${urgent.id}/escalate`, 'POST', { note: 'Member may be at risk tonight; resources sent.' });
+    assert.equal(esc.status, 200);
+    const inc = await call(admin, `/api/admin/safety/incidents/${esc.json.incidentId}`);
+    assert.equal(inc.json.incident.status, 'escalated');
+  });
+
+  test('account 360°: tabs by permission, transactions belong to the account, TEST labels, opt-out respected', async () => {
+    const { admin, support, finance, analyst } = people;
+    const person = await member('Lika');
+    const other = await t.registered(`other-${Date.now()}@example.org`);
+    const now = t.clock.now();
+    const order = (id, accountId, status = 'approved') =>
+      t.db.query("insert into orders (id, account_id, product_id, product_kind, duration_days, amount_minor, currency, status, created_at, updated_at, approved_at, payment_id, masked_card) values ($1, $2, 'plus-30', 'plus', 30, 1900, 'GEL', $3, $4, $4, $4, '88001', '444455XXXXXX6666')", [id, accountId, status, new Date(now)]);
+    await order('ord_qa_person', person.accountId);
+    await order('ord_qa_other', other.accountId);
+    await t.db.query("update orders set history = '[{\"status\":\"created\"},{\"status\":\"approved\",\"via\":\"callback\"}]'::jsonb where id = 'ord_qa_person'");
+
+    // Overview tabs follow permissions.
+    const asAdmin = await call(admin, `/api/admin/users/${person.accountId}`);
+    assert.deepEqual(Object.entries(asAdmin.json.tabs).filter(([, v]) => !v).map(([k]) => k), []);
+    const asSupport = await call(support, `/api/admin/users/${person.accountId}`);
+    assert.equal(asSupport.json.tabs.activity, false);
+    assert.equal(asSupport.json.tabs.community, false);
+    assert.equal(asSupport.json.usage30d, null);
+    assert.equal(asSupport.json.restrictions.community, undefined);
+    assert.equal((await call(support, `/api/admin/users/${person.accountId}/activity`)).json.error, 'forbidden', 'support: no usage analytics');
+    assert.equal((await call(support, `/api/admin/users/${person.accountId}/community`)).json.error, 'forbidden', 'support: no community link');
+    assert.equal((await call(analyst, `/api/admin/users/${person.accountId}`)).json.error, 'forbidden', 'analyst: no individual accounts');
+
+    // Transactions: belong to the account; TEST; masked card; detail with history and entitlement.
+    const tx = await call(support, `/api/admin/users/${person.accountId}/transactions`);
+    assert.equal(tx.json.mode, 'test');
+    assert.deepEqual(tx.json.orders.map((o) => o.id), ['ord_qa_person']);
+    assert.equal(tx.json.subscription.periods[0].kind, 'paid');
+    assert.equal((await call(support, `/api/admin/users/${person.accountId}/transactions/ord_qa_other`)).status, 404, 'another account’s order');
+    const one = await call(finance, '/api/admin/transactions/ord_qa_person');
+    assert.equal(one.status, 200);
+    assert.equal(one.json.order.mode, 'test');
+    assert.match(one.json.note, /TEST/);
+    assert.equal(one.json.order.card, '444455XXXXXX6666');
+    assert.ok(one.json.entitlement && one.json.entitlement.kind === 'paid');
+    assert.equal(one.json.history.length, 2);
+    assert.equal(one.json.order.accountId, undefined, 'finance without users.view: no account link');
+    assert.equal((await call(finance, `/api/admin/users/${person.accountId}`)).json.error, 'forbidden');
+
+    // Complimentary days appear as complimentary, never as revenue.
+    await call(admin, '/api/admin/step-up', 'POST', { password: admin.password });
+    await call(admin, `/api/admin/users/${person.accountId}/grants`, 'POST', { days: 10, reason: 'goodwill for an outage' });
+    const tx2 = await call(admin, `/api/admin/users/${person.accountId}/transactions`);
+    assert.ok(tx2.json.subscription.periods.some((p) => p.kind === 'complimentary'));
+    assert.equal(tx2.json.orders.length, 1, 'no order for complimentary days');
+
+    // Activity: server records; usage only when the person allows it.
+    const act = await call(admin, `/api/admin/users/${person.accountId}/activity`);
+    assert.ok(act.json.events.some((e) => e.type === 'payment_completed' && e.ref.id === 'ord_qa_person'));
+    assert.ok(act.json.events.some((e) => e.type === 'community_room_joined'));
+    assert.ok(!JSON.stringify(act.json).includes('stress:en'), 'which room is not shown');
+    await call(person, '/api/account/privacy', 'PUT', { analytics: false });
+    assert.equal((await call(admin, `/api/admin/users/${person.accountId}/activity`)).json.usage.optedOut, true);
+    assert.equal((await call(admin, `/api/admin/users/${person.accountId}`)).json.usage30d, null);
+    // Community tab (admin): the community name and reports; security tab (support).
+    assert.equal((await call(admin, `/api/admin/users/${person.accountId}/community`)).json.profile.ref, person.ref);
+    assert.ok(Array.isArray((await call(support, `/api/admin/users/${person.accountId}/security`)).json.events));
+    assert.ok(Array.isArray((await call(support, `/api/admin/users/${person.accountId}/appointments`)).json.appointments));
+  });
+});

@@ -20,6 +20,11 @@ export const PERMISSIONS = {
   // Accounts.
   'users.view': 'Find accounts and see account basics (contact details masked)',
   'users.contact': 'See full email addresses',
+  'users.activity.view': 'See an account’s activity timeline and usage totals (never content)',
+  'users.transactions.view': 'See an account’s payments, refunds and entitlement history',
+  'users.appointments.view': 'See an account’s appointments (never notes or messages)',
+  'users.security.view': 'See an account’s sign-in and security events',
+  'users.community.view': 'See which community name belongs to an account',
   'users.manage': 'Suspend, reinstate and restrict accounts',
   'users.sessions': 'Sign an account out everywhere; send a password-reset email',
   'users.entitlements': 'Give complimentary Plus days and correct entitlements',
@@ -45,6 +50,7 @@ export const PERMISSIONS = {
   'moderation.act': 'Handle reports, remove messages, suspend members',
   'moderation.appeals': 'Decide review requests',
   'moderation.context': 'Open the few messages around a report (logged)',
+  'moderation.members.view': 'See a member’s community standing and moderation history (no real identity)',
   'safety.view': 'See the safety queue',
   'safety.manage': 'Take, escalate and close safety cases',
   // AI.
@@ -74,9 +80,11 @@ export const ROLE_PERMISSIONS = {
   owner: ALL,
   admin: ALL.filter((p) => !['staff.manage', 'sensitive.approve'].includes(p)),
   verifier: ['dashboard.view', 'professionals.view', 'professionals.verify', 'professionals.documents', 'policies.edit'],
-  moderator: ['dashboard.view', 'community.view', 'moderation.act', 'moderation.appeals', 'moderation.context', 'safety.view', 'safety.manage'],
-  finance: ['dashboard.view', 'analytics.view', 'finance.view', 'memberships.view', 'memberships.manage', 'payments.refund'],
-  support: ['dashboard.view', 'users.view', 'users.sessions', 'users.deletion', 'support.view', 'support.respond', 'appointments.view', 'memberships.view'],
+  moderator: ['dashboard.view', 'community.view', 'moderation.act', 'moderation.appeals', 'moderation.context', 'moderation.members.view', 'safety.view', 'safety.manage'],
+  finance: ['dashboard.view', 'analytics.view', 'finance.view', 'memberships.view', 'memberships.manage', 'payments.refund', 'users.transactions.view'],
+  // Support helps with accounts, payments, bookings and sign-in, but doesn't see
+  // usage analytics or which community name belongs to an account.
+  support: ['dashboard.view', 'users.view', 'users.sessions', 'users.deletion', 'users.transactions.view', 'users.appointments.view', 'users.security.view', 'support.view', 'support.respond', 'appointments.view', 'memberships.view'],
   analyst: ['dashboard.view', 'analytics.view', 'analytics.export', 'community.view', 'ai.view', 'finance.view', 'system.view'],
 };
 
