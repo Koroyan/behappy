@@ -403,6 +403,18 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
       const m = mail.lastTo(String(req.query.to || ''));
       res.json({ message: m });
     });
+    // Clears one registered account's AI allowances (daily/monthly counters and
+    // conversation counts) so a tester can go through several sessions in a day.
+    // Started art sessions stay started.
+    app.post('/api/dev/usage/reset', json, async (req, res) => {
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      const r = email ? await db.query('select id from accounts where email = $1 and email_verified_at is not null', [email]) : { rows: [] };
+      const id = r.rows[0]?.id;
+      if (!id) return res.status(404).json({ error: 'not_found' });
+      const counters = await db.query('delete from usage_counters where account_id = $1', [id]);
+      const conversations = await db.query('delete from ai_conversations where account_id = $1', [id]);
+      res.json({ ok: true, counters: counters.affectedRows ?? counters.rowCount ?? null, conversations: conversations.affectedRows ?? conversations.rowCount ?? null });
+    });
     app.post('/api/dev/clock', json, (req, res) => {
       try {
         clock.setOffset(Number(req.body?.offsetMs) || 0);

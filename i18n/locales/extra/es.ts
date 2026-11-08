@@ -316,6 +316,7 @@ export const es: PartialMessages = {
       lockedTitle: 'Todavía no disponible',
       lockedBody: 'Completa la sesión anterior para desbloquear esta.',
       dailyLimit: 'Hoy ya empezaste una sesión nueva. Las nuevas se abren mañana; las empezadas puedes continuarlas.',
+      sessionLimit: 'Esta sesión llegó a su límite de mensajes. Todo lo que escribiste está guardado.',
       needAccess: 'Esta sesión forma parte del programa de arteterapia.',
       notArtwork: 'Sube una foto de tu dibujo o pintura en papel.',
     },

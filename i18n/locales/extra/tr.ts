@@ -316,6 +316,7 @@ export const tr: PartialMessages = {
       lockedTitle: 'Henüz açılmadı',
       lockedBody: 'Bunu açmak için bir önceki seansı tamamla.',
       dailyLimit: 'Bugünkü yeni seansına zaten başladın. Yeni seanslar yarın açılır; başladıklarına devam edebilirsin.',
+      sessionLimit: 'Bu seans mesaj sınırına ulaştı. Yazdığın her şey kaydedildi.',
       needAccess: 'Bu seans sanat terapisi programının bir parçası.',
       notArtwork: 'Kâğıt üzerindeki çiziminin ya da resminin fotoğrafını yükle.',
     },

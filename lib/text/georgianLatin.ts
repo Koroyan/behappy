@@ -13,6 +13,8 @@ const MARKERS = new Set([
   'dges', 'dgea', 'gushin', 'xval', 'axla', 'kvela', 'yvela', 'yvelaferi', 'aranairi', 'aravin', 'cota', 'dzalian', 'dzlier', 'ase', 'isev', 'agar', 'kidev', 'mere',
   'minda', 'mindoda', 'vgrdznob', 'vfiqrob', 'mgonia', 'vcdilob', 'shemidzlia', 'ver', 'kargad', 'cudad', 'tsudad', 'gabrazebuli', 'nervebi', 'stresi', 'dagliloba', 'daglili',
   'megobari', 'megobrebi', 'deda', 'mama', 'saxli', 'samsaxuri', 'skola', 'gamarjoba', 'madloba', 'nu', 'unda', 'iyo', 'iqneba', 'vqeni', 'gavakete',
+  // "gh" spellings and words seen in real art/Anulia conversations
+  'dghes', 'daghlili', 'mqonda', 'maqvs', 'mshvidad', 'sasiamovno', 'usiamovno', 'gtxov', 'samsaxurshi', 'vgrdznobdi', 'tavs',
 ]);
 
 const DIGRAPHS: [string, string][] = [

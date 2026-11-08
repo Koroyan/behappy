@@ -15,7 +15,9 @@ import { CHAT_PREAMBLE, LEGACY_PROMPT_IDS, SERVER_PROMPTS } from './prompts/inde
 import { checkAndRecord } from './quota.mjs';
 
 const DEFAULT_MODELS = { anulia: 'gpt-5.4-mini', art: 'gpt-6.1-sol', cards: 'gpt-5.4-mini' };
-const CHAT_MODELS = new Set(['gpt-4o', 'gpt-4o-mini', 'gpt-4.1-mini']);
+const CHAT_MODELS = new Set(['gpt-4o', 'gpt-4o-mini', 'gpt-4.1-mini', 'gpt-5.4-mini']);
+// Reasoning models: the server sets their output budget and effort (the client can't).
+const REASONING_CHAT_MODELS = new Set(['gpt-5.4-mini']);
 // `prompt` is still accepted from app builds before 3.0, then replaced (see below).
 const RESPONSES_FIELDS = new Set(['input', 'prompt', 'model', 'max_output_tokens', 'stream', 'store', 'previous_response_id', 'text', 'temperature']);
 const CHAT_FIELDS = new Set(['model', 'messages', 'max_tokens', 'temperature', 'response_format']);
@@ -336,11 +338,15 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
       return bad(res, 400, 'bad_messages', 'messages must be a non-empty array of at most 60 items.');
     }
     // The server's preamble always comes first, whatever the client wrote.
+    const reasoning = REASONING_CHAT_MODELS.has(body.model);
+    const outputCap = Math.min(Number(body.max_tokens) || 800, MAX_CHAT_TOKENS);
     const clean = {
       model: body.model,
       messages: [{ role: 'system', content: CHAT_PREAMBLE }, ...body.messages.filter(isChatMessage)],
-      max_tokens: Math.min(Number(body.max_tokens) || 800, MAX_CHAT_TOKENS),
-      ...(body.temperature !== undefined ? { temperature: Math.max(0, Math.min(1.2, Number(body.temperature) || 0.7)) } : {}),
+      // GPT-5 models take max_completion_tokens (reasoning counts toward it) and no temperature.
+      ...(reasoning
+        ? { max_completion_tokens: outputCap + 1500, reasoning_effort: 'low' }
+        : { max_tokens: outputCap, ...(body.temperature !== undefined ? { temperature: Math.max(0, Math.min(1.2, Number(body.temperature) || 0.7)) } : {}) }),
       ...(body.response_format ? { response_format: body.response_format } : {}),
     };
 

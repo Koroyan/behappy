@@ -316,6 +316,7 @@ export const ko: PartialMessages = {
       lockedTitle: '아직 열리지 않았어요',
       lockedBody: '이전 회기를 마치면 이 회기가 열려요.',
       dailyLimit: '오늘은 이미 새 회기를 시작했어요. 새 회기는 내일 열려요. 시작한 회기는 계속할 수 있어요.',
+      sessionLimit: '이 회기의 메시지 한도에 도달했어요. 쓴 내용은 모두 저장되어 있어요.',
       needAccess: '이 회기는 미술 치료 프로그램의 일부예요.',
       notArtwork: '종이에 그린 그림의 사진을 올려 주세요.',
     },

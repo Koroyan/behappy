@@ -233,10 +233,13 @@ class ArtTherapyProgramManager {
    * Save session progress
    */
   async saveProgress(sessionId: number, progress: SessionProgress): Promise<void> {
-    try {
-      const currentProgress = await this.getProgress();
-      currentProgress.set(sessionId, progress);
+    const currentProgress = await this.getProgress();
+    currentProgress.set(sessionId, progress);
+    await this.writeProgress(currentProgress);
+  }
 
+  private async writeProgress(currentProgress: Map<number, SessionProgress>): Promise<void> {
+    try {
       const obj: Record<number, any> = {};
       currentProgress.forEach((value, key) => {
         const sanitized: any = {
@@ -287,6 +290,13 @@ class ArtTherapyProgramManager {
     
     await this.saveProgress(sessionId, newProgress);
     return newProgress;
+  }
+
+  /** Forgets one session's progress (a first turn the server refused never started it). */
+  async discardSession(sessionId: number): Promise<void> {
+    const progress = await this.getProgress();
+    if (!progress.delete(sessionId)) return;
+    await this.writeProgress(progress);
   }
 
   /**

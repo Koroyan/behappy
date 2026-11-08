@@ -296,6 +296,14 @@ describe('Art: checked turns through the server', () => {
     const second = await toSecondDrawing(me2, FIRST);
     const honest = await second.upload([reply({ response_text: 'Я не вижу изменений между изображениями. Возможно, это тот же рисунок? Можем продолжить с ним.', session_phase: 1, action: 'analyze_second_drawing', comparison_claim: 'no_change' })]);
     assert.match(honest.out.response_text, /не вижу изменений/);
+    // Later turns: a short reminder, not the instruction to say it again (seen on
+    // a phone: "I don't see a change" repeated on every following turn).
+    script = [reply({ response_text: 'Что вы хотели изменить в нём?', session_phase: 1, action: 'continue_exploration' })];
+    await turn(me2, { phase: 1, text: 'da, prodoljim', prev: honest.id });
+    const later = noteOf(lastCall());
+    assert.match(later, /already discussed; don't repeat it/);
+    assert.match(later, /same image was sent twice/);
+    assert.doesNotMatch(later, /In response_text say/);
   });
 
   test('E/F — a re-encoded copy or the same drawing in different light: no confident change', async () => {
@@ -321,6 +329,7 @@ describe('Art: checked turns through the server', () => {
     script = [reply({ response_text: 'Справа внизу появился тёмный круг. Что он значит для вас?', session_phase: 1, action: 'compare_drawings', comparison_claim: 'change_described' })];
     const c = await turn(me, { phase: 1, text: 'da', prev: r.id });
     assert.match(c.out.response_text, /тёмный круг/);
+    assert.match(noteOf(lastCall()), /already discussed.*the drawing changed in the .* area \(more was drawn\)/, 'later turns keep where it changed');
   });
 
   test('H — facts and the comparison persist between turns (and a fresh run starts clean)', async () => {

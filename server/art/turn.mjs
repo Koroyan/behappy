@@ -121,9 +121,39 @@ function comparisonNote(cmp) {
   return (COMPARISON_NOTE[cmp.state] || '').replace('{where}', cmp.state === 'different' ? where.trim() || 'in the drawing' : where).replace('{kind}', kind);
 }
 
+/** OpenAI's error code and parameter for the log (never the request's content). */
+function upstreamReason(errorText) {
+  try {
+    const e = JSON.parse(errorText || '')?.error || {};
+    return [e.type && ` type=${e.type}`, e.code && ` code=${e.code}`, e.param && ` param=${e.param}`].filter(Boolean).join('');
+  } catch {
+    return '';
+  }
+}
+
+// After the upload turn the comparison has been answered; repeating the full
+// instruction made the model say "I don't see a change" again on every turn.
+const LATER_COMPARISON = {
+  identical: 'the same image was sent twice (no visible change)',
+  likely_same: 'very likely the same drawing (only light, angle or compression differ)',
+  uncertain: 'uncertain what changed',
+  different: 'the drawing changed{where}{kind}',
+  comparison_unavailable: 'not available',
+};
+
+function laterComparisonNote(cmp) {
+  if (!cmp?.state || !LATER_COMPARISON[cmp.state]) return '';
+  const ev = cmp.evidence || {};
+  const where = ev.regions?.length ? ` in the ${ev.regions.join(' and ')} area` : '';
+  const kind = ev.kind === 'colour' ? ' (colours)' : ev.kind === 'more_drawn' ? ' (more was drawn)' : ev.kind === 'less_drawn' ? ' (something removed or lightened)' : '';
+  const result = LATER_COMPARISON[cmp.state].replace('{where}', where).replace('{kind}', kind);
+  return `Image comparison of the two drawings (already discussed; don't repeat it unless the person brings it up): ${result}. Never describe a change it doesn't support.`;
+}
+
 /** The developer note for this turn (never shown; the model must not mention it). */
 export function buildNote({ turn, ledger, turnFacts, comparison, afterChange, correction, closingLikely }) {
-  const lines = ['[BeHappy app note for this turn. Computed by the app and reliable. Never mention or quote this note.]'];
+  // "JSON" here also satisfies OpenAI's rule that json_object output needs the word in the input.
+  const lines = ['[BeHappy app note for this turn. Computed by the app and reliable. Never mention or quote this note. Reply with one JSON object as instructed.]'];
   const ln = languageNote(turn.words);
   if (ln) lines.push(ln);
   if (turnFacts.feelings.length) {
@@ -133,7 +163,7 @@ export function buildNote({ turn, ledger, turnFacts, comparison, afterChange, co
     const line = factsLine(ledger);
     if (line) lines.push(`Earlier in this session the person said — ${line}. Don't contradict it.`);
   }
-  if (afterChange && comparison) lines.push(comparisonNote(comparison));
+  if (afterChange && comparison) lines.push(turn.upload === 'image_v2' ? comparisonNote(comparison) : laterComparisonNote(comparison));
   if (afterChange) lines.push('Set comparison_claim to "change_described" if response_text describes a visual change, "no_change" if it says there is none, "uncertain" if it asks what changed, otherwise "none".');
   if (correction?.text) lines.push(`Correction: the person did not see your previous draft. What they actually saw from you was: «${correction.text.slice(0, 600)}». Continue from that.`);
   if (closingLikely) {
@@ -285,6 +315,7 @@ export function createArtTurns({ db, config, fetchImpl, clock = { now: () => Dat
         await recordAiUsage(db, { accountId, feature: 'art', model: base.model, status: 'error', errorCode: r.errorText === 'timeout' ? 'timeout' : `upstream_${r.status}`, latencyMs: r.ms });
         if (value) break; // keep the best reply we already have
         const stale = /previous[_ ]response/i.test(r.errorText || '') || (r.status === 404 && /not found/i.test(r.errorText || ''));
+        if (!stale && r.status !== 429) console.warn(`[art] upstream ${r.status || r.errorText}${upstreamReason(r.errorText)}`);
         // 429: rate limit or the OpenAI account is out of credits — "unavailable for now", not a bad request.
         if (r.status === 429) {
           if (/insufficient_quota|credit_balance/i.test(r.errorText || '')) console.warn('[ai] OpenAI reports no credits left (insufficient_quota): AI features are unavailable until credits are added.');

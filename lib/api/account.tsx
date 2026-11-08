@@ -15,7 +15,7 @@ export interface UsageSummary {
   anulia: { used: number; limit: number; period: 'day' | 'month'; resetAt: number | null };
   journal: { used: number; limit: number; period: string };
   cards: { started: number; limit: number; period: string };
-  art: { startedToday: number; newSessionsPerDay: number; freeSessionIds: number[] };
+  art: { startedToday: number; newSessionsPerDay: number; freeSessionIds: number[]; startedIds?: number[]; resetAt?: number | null };
 }
 
 export interface Identity {

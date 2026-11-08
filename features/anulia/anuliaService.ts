@@ -12,6 +12,7 @@ import type { AppLanguage } from '@/contexts/LanguageContext';
 import { aiChat, aiResponsesStream, createResponseStreamParser, parseJsonLoose, partialJsonField, StaleChainError } from '@/lib/api/ai';
 import { canPersonalize } from '@/lib/privacy/consent';
 import { publish, readJson, uid, writeJson } from '@/lib/storage/json';
+import { latinToGeorgian, looksLikeGeorgianLatin } from '@/lib/text/georgianLatin';
 import { buildProfileContextBlock, getUserProfile } from '@/services/userProfileService';
 
 const SESSIONS_KEY = 'therapy_sessions';
@@ -241,17 +242,22 @@ export async function sendToAnulia({ conversation, history, text, imageDataUrl, 
  * scores, ratings or clinical labels.
  */
 export async function summarizeConversation(conv: Conversation, language: AppLanguage): Promise<ConversationSummary> {
+  // Georgian typed in Latin letters ("dghes bevri stresi mqonda") is given in
+  // Georgian script too: without it the summary missed what the person said and
+  // filled the gap with things they never mentioned.
+  const personLine = (text: string) => (looksLikeGeorgianLatin(text) ? `${text} [in Georgian script: ${latinToGeorgian(text)}]` : text);
   const transcript = conv.messages
     .filter((m) => m.content && !m.failed)
     .slice(-40)
-    .map((m) => `${m.type === 'user' ? 'Person' : 'Anulia'}: ${m.content}`)
+    .map((m) => (m.type === 'user' ? `Person: ${personLine(m.content)}${m.imageUri ? ' [shared an image]' : ''}` : `Anulia: ${m.content}`))
     .join('\n');
   const lang = LANGUAGE_NAMES[language] || 'English';
   const data = await aiChat(
     {
-      model: 'gpt-4o-mini',
+      // Same model as Anulia: in a side-by-side test it was the only one that kept
+      // every point the person made in Georgian without adding anything.
+      model: 'gpt-5.4-mini',
       max_tokens: 500,
-      temperature: 0.5,
       response_format: { type: 'json_object' },
       messages: [
         {
@@ -260,6 +266,8 @@ export async function summarizeConversation(conv: Conversation, language: AppLan
             `You write a short, warm reflection of a conversation between a person and Anulia, an AI well-being companion (not a therapist). ` +
             `Write in ${lang}, addressing the person as "you". Return JSON: {"themes": [2-4 short phrases about what they explored], ` +
             `"insights": [1-3 gentle observations in their own terms], "practice": [1-2 small, optional, concrete things to try]}. ` +
+            `Base themes and insights only on what the PERSON said — start with what they came with. Never add wishes, plans, topics or feelings they didn't express, and never present Anulia's words as theirs. ` +
+            `The person may write Georgian or Russian in Latin letters; read it as such. Keep negations ("not pleasant" stays unpleasant). ` +
             `No scores, no ratings, no diagnoses, no clinical labels, no progress judgments.`,
         },
         { role: 'user', content: transcript || '(empty)' },

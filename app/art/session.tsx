@@ -16,7 +16,7 @@ import { useEnsureConsent } from '@/features/common/Consent';
 import { LimitNotice } from '@/features/common/LimitNotice';
 import { useT } from '@/i18n';
 import { useAccount } from '@/lib/api/account';
-import { QuotaError } from '@/lib/api/client';
+import { ApiError, NetworkError, QuotaError } from '@/lib/api/client';
 import { Artwork, listArtworks, saveArtwork } from '@/lib/media/artworkStore';
 import { MicPermissionError, speakText, stopSpeaking, transcribeRecording, useVoiceRecorder } from '@/lib/media/audio';
 import { ImageTooLargeError, pickImage } from '@/lib/media/images';
@@ -56,7 +56,7 @@ export default function ArtSessionScreen() {
   const insets = useSafeAreaInsets();
   const { confirm, toast } = useFeedback();
   const ensureConsent = useEnsureConsent();
-  const { entitlements } = useAccount();
+  const { entitlements, me, refresh: refreshAccount } = useAccount();
   const recorder = useVoiceRecorder();
 
   const [session, setSession] = useState<ArtTherapySession | null>(null);
@@ -81,6 +81,24 @@ export default function ArtSessionScreen() {
 
   const hasProgram = entitlements.artProgram.active;
   const accessBlocked = needsAccess(id, hasProgram);
+
+  // Fresh allowance numbers for the check below.
+  useEffect(() => {
+    refreshAccount();
+  }, [refreshAccount]);
+
+  // Today's new session is used and the server hasn't started this one: say so
+  // before a drawing is uploaded, not as a refusal after it.
+  const artUsage = me?.usage?.art;
+  const dailyFull = Boolean(
+    !completed &&
+      !accessBlocked &&
+      artUsage?.startedIds &&
+      !artUsage.startedIds.includes(id) &&
+      artUsage.startedToday >= artUsage.newSessionsPerDay &&
+      (!artUsage.resetAt || Date.now() < artUsage.resetAt)
+  );
+  const limit = quota && quota.reason !== 'need_art_access' ? { reason: quota.reason, resetAt: quota.resetAt } : dailyFull ? { reason: 'daily_new_session_limit', resetAt: artUsage?.resetAt ?? null } : null;
   const summaryLabel = pickLocalized(ART_SESSION_TEXT.sessionSummaryLabel, language);
 
   const refreshArtworks = useCallback(async () => {
@@ -247,7 +265,20 @@ export default function ArtSessionScreen() {
         await persist(finalMessages, finalPhase, response, userMessage.id);
       }
     } catch (e) {
-      if (e instanceof QuotaError) setQuota(e);
+      if (e instanceof QuotaError) {
+        // Refused before anything was sent: put the conversation back as it was
+        // (a first turn leaves the session unstarted) and keep the typed words.
+        setMessages(prior);
+        if (outgoing) setInput(outgoing);
+        if (prior.some((m) => m.role === 'user')) await persist(prior, phase);
+        else {
+          await ArtTherapyProgramManager.discardSession(id);
+          setProgress(null);
+        }
+        setQuota(e);
+        refreshAccount();
+      } else if (e instanceof NetworkError) setError(t('errors.network'));
+      else if (e instanceof ApiError && e.status === 503) setError(t('errors.ai'));
       else setError(t('art.workspace.errorSend'));
     } finally {
       setStreaming(false);
@@ -380,7 +411,7 @@ export default function ArtSessionScreen() {
                 {session?.title ?? ''}
               </AppText>
             </View>
-            {!completed && !blocking ? <Button label={t('art.workspace.endSession')} variant="quiet" size="sm" onPress={endEarly} testID="art-end" /> : null}
+            {!completed && !blocking && !limit ? <Button label={t('art.workspace.endSession')} variant="quiet" size="sm" onPress={endEarly} testID="art-end" /> : null}
           </View>
 
           {!blocking ? (
@@ -457,12 +488,19 @@ export default function ArtSessionScreen() {
 
               <View style={{ paddingTop: space[2], paddingBottom: hasSideNav ? space[4] : Math.max(insets.bottom, space[3]), gap: 8 }}>
                 {error ? <Banner tone="warning" body={error} /> : null}
-                {quota && quota.reason !== 'need_art_access' ? <LimitNotice title={t('anulia.limitDailyTitle')} body={t('art.workspace.dailyLimit')} resetAt={quota.resetAt} /> : null}
+                {limit ? (
+                  <LimitNotice
+                    title={t('anulia.limitDailyTitle')}
+                    body={t(limit.reason === 'session_message_limit' ? 'art.workspace.sessionLimit' : 'art.workspace.dailyLimit')}
+                    resetAt={limit.resetAt}
+                    showUpgrade={!entitlements.plus.active}
+                  />
+                ) : null}
                 {completed ? (
                   <AppText variant="caption" color="textTertiary" align="center">
                     {t('art.workspace.readOnly')}
                   </AppText>
-                ) : quota ? null : (
+                ) : limit || quota ? null : (
                   <Composer
                     value={input}
                     onChangeText={setInput}

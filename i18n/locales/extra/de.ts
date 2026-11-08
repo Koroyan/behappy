@@ -316,6 +316,7 @@ export const de: PartialMessages = {
       lockedTitle: 'Noch nicht freigeschaltet',
       lockedBody: 'Schließe die vorige Sitzung ab, um diese freizuschalten.',
       dailyLimit: 'Du hast heute schon eine neue Sitzung begonnen. Neue Sitzungen öffnen sich morgen; begonnene kannst du fortsetzen.',
+      sessionLimit: 'Diese Sitzung hat ihr Nachrichtenlimit erreicht. Alles, was du geschrieben hast, ist gespeichert.',
       needAccess: 'Diese Sitzung gehört zum Kunsttherapie-Programm.',
       notArtwork: 'Lade ein Foto deines Bildes oder Gemäldes auf Papier hoch.',
     },

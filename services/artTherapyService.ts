@@ -1,5 +1,6 @@
 import type { AppLanguage } from '@/contexts/LanguageContext';
 import { aiResponses, aiResponsesStream, aiTranscribe, StaleChainError } from '@/lib/api/ai';
+import { ApiError, NetworkError } from '@/lib/api/client';
 import { canPersonalize } from '@/lib/privacy/consent';
 import { speakText } from '@/lib/media/audio';
 // Use standard expo-file-system (legacy path breaks web export and Metro resolution)
@@ -9,6 +10,9 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 import { buildProfileContextBlock, getUserProfile } from './userProfileService';
+
+/** An answer the server gave on purpose (allowance, consent, AI unavailable) or no network. */
+export const isExpectedAiError = (e: unknown): boolean => e instanceof NetworkError || (e instanceof ApiError && (e.status < 500 || e.status === 503));
 
 // Advanced AI Art Therapy Response Interface
 export interface ArtTherapyResponse {
@@ -467,7 +471,7 @@ class ArtTherapyService {
       return normalized;
 
     } catch (error: any) {
-      console.error('Art Therapy API Error:', error.response?.data || error.message);
+      if (!isExpectedAiError(error)) console.warn('Art reflection request failed:', error.response?.data || error.message);
       
       // Handle specific error cases
       if (error.message?.includes('AI_REFUSAL:')) {
@@ -692,14 +696,17 @@ class ArtTherapyService {
           // anything else (network, content, safety refusal) should surface normally.
           const looksLikeStaleChain = e instanceof StaleChainError || msg.includes('previous_response') || (msg.includes('response') && msg.includes('not found'));
           if (!looksLikeStaleChain) throw e;
-          console.warn('⚠️ previous_response_id stale/invalid — resending full session context once:', e.message);
+          // Expected recovery (the stored chain expired): no warning box on the phone.
+          if (__DEV__) console.log('previous_response_id stale — resending the full session once');
         }
       }
       const fullInput = await buildFullInput();
       return await runRequest(fullInput, undefined);
     } catch (error: any) {
-      // Map to same error handling as non-streaming
-      console.error('Art Therapy Streaming Error:', error?.message || error);
+      // Allowance reached, offline, AI unavailable: expected outcomes the screen
+      // explains itself. Logging them as errors put a red error box on the phone
+      // in development ("Art Therapy Streaming Error: Allowance reached").
+      if (!isExpectedAiError(error)) console.warn('Art reflection request failed:', error?.message || error);
       if (error?.message?.includes('maximum context length') || error?.message?.includes('too large')) {
         throw new Error('სურათი ძალიან დიდია. გთხოვთ გამოიყენოთ უფრო პატარა სურათი ან დაიწყოთ ფოტო უფრო დაბალი რეზოლუციით.\n\n(Image is too large. Please use a smaller image or take a photo with lower resolution.)');
       }

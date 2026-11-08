@@ -316,6 +316,7 @@ export const id: PartialMessages = {
       lockedTitle: 'Belum terbuka',
       lockedBody: 'Selesaikan sesi sebelumnya untuk membuka yang ini.',
       dailyLimit: 'Kamu sudah memulai sesi baru hari ini. Sesi baru terbuka besok; sesi yang sudah dimulai bisa kamu lanjutkan.',
+      sessionLimit: 'Sesi ini sudah mencapai batas pesan. Semua yang kamu tulis tersimpan.',
       needAccess: 'Sesi ini bagian dari program terapi seni.',
       notArtwork: 'Unggah foto gambar atau lukisanmu di kertas.',
     },

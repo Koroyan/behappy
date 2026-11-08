@@ -358,6 +358,7 @@ export const en = {
       lockedTitle: 'Not open yet',
       lockedBody: 'Complete the previous session to open this one.',
       dailyLimit: 'You’ve started today’s new session. New sessions open again tomorrow, and you can keep working on started ones.',
+      sessionLimit: 'This session has reached its message limit. Everything you wrote is saved.',
       needAccess: 'This session is part of the Art therapy program.',
       notArtwork: 'Please upload a photo of your own drawing or painting on paper.',
     },

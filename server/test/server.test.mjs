@@ -430,6 +430,21 @@ describe('API', () => {
     sent = JSON.parse(openai.calls.at(-1).body);
     assert.equal(sent.messages[0].role, 'system');
     assert.match(sent.messages[0].content, /You are Anulia.*not a therapist, psychologist/);
+    // GPT-5 mini (conversation summaries): the server sets its token budget and
+    // effort; a client temperature is dropped (the model rejects it).
+    const five = await api('/api/ai/chat', {
+      token: acct.token,
+      method: 'POST',
+      headers: { 'x-behappy-feature': 'summary' },
+      body: { model: 'gpt-5.4-mini', max_tokens: 500, temperature: 0.9, messages: [{ role: 'user', content: 'hi' }] },
+    });
+    assert.equal(five.status, 200);
+    sent = JSON.parse(openai.calls.at(-1).body);
+    assert.equal(sent.model, 'gpt-5.4-mini');
+    assert.equal(sent.max_completion_tokens, 2000);
+    assert.equal(sent.reasoning_effort, 'low');
+    assert.equal(sent.temperature, undefined);
+    assert.equal(sent.max_tokens, undefined);
   });
 
   test('conversation chains are bound to the account that created them', async () => {
@@ -493,6 +508,13 @@ describe('API', () => {
     assert.equal(capped.status, 402, 'session 1 already used today’s new-session allowance');
     assert.equal(capped.json.reason, 'daily_new_session_limit');
     assert.equal((await art(1)).status, 200, 'an already-started session can continue');
+
+    // The app reads this to show "tomorrow" before a drawing is uploaded.
+    const me = await api('/api/account/me', { token: acct.token });
+    assert.deepEqual(me.json.usage.art.startedIds, [1], 'only the session the server started; the refused one is not counted');
+    assert.equal(me.json.usage.art.startedToday, 1);
+    assert.equal(me.json.usage.art.newSessionsPerDay, 1);
+    assert.ok(me.json.usage.art.resetAt > Date.now(), 'next UTC midnight');
   });
 
   test('unknown AI features are rejected', async () => {

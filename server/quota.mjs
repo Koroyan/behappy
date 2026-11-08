@@ -213,6 +213,10 @@ export async function usageSummary({ db, accountId, entitlements, now = Date.now
       startedToday: await read('art_started', 'day'),
       newSessionsPerDay: (tier === 'plus' ? LIMITS.plus.art : entitlements.artProgram.active ? LIMITS.art : LIMITS.free.art).newSessions,
       freeSessionIds: LIMITS.free.art.freeSessionIds,
+      // Sessions already counted (continuing them never needs a new-session allowance),
+      // so the app can say "tomorrow" before a drawing is uploaded, not after.
+      startedIds: (await db.query('select session_id from art_session_usage where account_id = $1 order by session_id', [accountId])).rows.map((r) => Number(r.session_id)),
+      resetAt: nextReset('day', now),
     },
     community: {
       used: await read('community', limits.community.period),

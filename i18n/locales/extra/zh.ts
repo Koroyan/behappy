@@ -316,6 +316,7 @@ export const zh: PartialMessages = {
       lockedTitle: '尚未解锁',
       lockedBody: '完成上一节即可解锁这一节。',
       dailyLimit: '你今天已经开始了一节新课。新的课程明天开放；已经开始的可以继续。',
+      sessionLimit: '本节的消息数量已达上限。你写的内容都已保存。',
       needAccess: '这一节属于艺术疗愈课程。',
       notArtwork: '请上传你在纸上画的作品照片。',
     },
