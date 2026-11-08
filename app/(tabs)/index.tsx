@@ -11,6 +11,7 @@ import { MoodPicker } from '@/features/mood/MoodPicker';
 import { ProfileButton } from '@/features/shell/ProfileButton';
 import { TODAY_TOOLS, TONE_BG, TONE_FG, TOOLS } from '@/features/tools/catalog';
 import { markToolUsed } from '@/lib/storage/recentTools';
+import { TodayRecap, TodaySound, TodaySteps } from '@/features/wellbeing/TodayCards';
 import { useT } from '@/i18n';
 import { useAccount } from '@/lib/api/account';
 import { loadActivity, summarize } from '@/lib/storage/activity';
@@ -470,8 +471,11 @@ export default function TodayScreen() {
         ) : null}
         {firstTime}
         {checkInCard}
+        <TodaySteps />
+        <TodaySound />
         {toolsStrip}
         {suggestionCard}
+        <TodayRecap />
         <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: space[5] }}>
           <View style={{ flex: 1 }}>{anuliaCard}</View>
           <View style={{ flex: 1 }}>{quickCard}</View>

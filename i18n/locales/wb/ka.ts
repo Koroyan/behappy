@@ -340,6 +340,16 @@ export const wbKa = {
     openReflection: 'რეფლექსიის გახსნა',
     calm: 'დამშვიდდი ახლა',
   },
+  insights: {
+    title: 'რუტინები, სიმშვიდე და ძილი',
+    stepsPlanned: 'შესრულდა {done} / {planned} დაგეგმილი ნაბიჯი',
+    calmMinutes: 'დამამშვიდებელი პრაქტიკა (წთ)',
+    soundMinutes: 'ხმების ლაბორატორია (წთ)',
+    focus: 'ფოკუსის სესიები',
+    stepsDone: 'შესრულებული ნაბიჯები',
+    sleepAvg: 'შენი ძილის შეფასება: საშუალოდ {value}/5, {n} ღამე',
+    noData: 'ამ პერიოდში ჯერ არაფერი ჩაწერილა.',
+  },
   reminders: {
     stepTitle: 'დროა: {name}',
     stepBody: 'მხოლოდ თუ დღეს ეს სწორად გეჩვენება.',

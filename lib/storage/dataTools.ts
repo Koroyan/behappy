@@ -9,7 +9,9 @@ import { Platform } from 'react-native';
 
 import { resetAnalytics } from '@/lib/analytics';
 import { deleteServerAccount, forgetAccountOnThisDevice } from '@/lib/api/account';
+import { clearSoundCache } from '@/lib/audio/engine';
 import { clearArtworks } from '@/lib/media/artworkStore';
+import { resetEventCache } from '@/lib/wellbeing/eventStore';
 
 // Never exported: credentials and caches that are not the user's content.
 const EXCLUDE = new Set(['@behappy_account_v1', '@behappy_me_cache_v1']);
@@ -61,5 +63,8 @@ export async function deleteAllData({ localOnly = false }: { localOnly?: boolean
   // Unsent usage events live in memory too; drop them before clearing storage.
   await resetAnalytics();
   await clearArtworks();
+  // Generated Sound Lab files and the cached event log go too.
+  await clearSoundCache();
+  resetEventCache();
   await AsyncStorage.clear();
 }

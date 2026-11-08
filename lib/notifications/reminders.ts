@@ -17,7 +17,13 @@ import { Platform } from 'react-native';
 
 import { loadActivity } from '@/lib/storage/activity';
 
-import { ActivitySnapshot, DEFAULT_REMINDER_PREFS, planReminders, PlannedReminder, ReminderPrefs } from './planner';
+import { loadSound } from '@/lib/audio/soundStore';
+import { dayKey } from '@/lib/wellbeing/dates';
+import { loadEvents } from '@/lib/wellbeing/eventStore';
+import { loadReflection } from '@/lib/wellbeing/reflectionStore';
+import { loadStepData } from '@/lib/wellbeing/stepStore';
+
+import { ActivitySnapshot, DEFAULT_REMINDER_PREFS, planReflectionReminders, planReminders, PlannedReminder, planSleepCheckIn, planStepReminders, ReminderPrefs } from './planner';
 
 const KEY = '@behappy_reminders_v1';
 const PLAN_KEY = '@behappy_reminders_plan_v1';
@@ -68,6 +74,19 @@ async function snapshot(): Promise<ActivitySnapshot> {
   };
 }
 
+async function requestedPlans(prefs: ReminderPrefs, now: number): Promise<PlannedReminder[]> {
+  const [steps, reflection, events, sound] = await Promise.all([loadStepData(), loadReflection(), loadEvents(), loadSound()]);
+  const marked = new Set(steps.marks.map((m) => `${m.stepId}:${m.day}`));
+  const today = dayKey(now);
+  const bedtimes = events.filter((e) => e.type === 'sleep.bedtime').map((e) => e.at);
+  const checked = new Set(events.filter((e) => e.type === 'sleep.checkin').map((e) => e.day));
+  return [
+    ...planStepReminders(steps.steps, marked, prefs, now),
+    ...planReflectionReminders(reflection.settings, reflection.history.some((h) => h.day === today), prefs, now),
+    ...planSleepCheckIn(bedtimes.length ? Math.max(...bedtimes) : null, checked, sound.morningCheckIn, prefs, now),
+  ];
+}
+
 let queue: Promise<unknown> = Promise.resolve();
 
 /** Replaces the scheduled reminders with a fresh plan. Calls are serialized. */
@@ -77,12 +96,15 @@ export function rescheduleReminders(copy: ReminderCopy): Promise<PlannedReminder
     const prefs = await loadReminderPrefs();
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
     const ours = scheduled.filter((n) => n.identifier.startsWith(PREFIX));
-    if (!prefs.enabled || !(await notificationsAllowed())) {
+    if (!(await notificationsAllowed())) {
       await Promise.all(ours.map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
       await AsyncStorage.removeItem(PLAN_KEY).catch(() => {});
       return [];
     }
-    const plan = planReminders(await snapshot(), prefs, Date.now());
+    const now = Date.now();
+    // Gentle reminders only when switched on; Step, reflection and sleep
+    // reminders were asked for one by one and follow their own switches.
+    const plan = [...(prefs.enabled ? planReminders(await snapshot(), prefs, now) : []), ...(await requestedPlans(prefs, now))];
     const keep = new Set(plan.map((r) => PREFIX + r.id));
     await Promise.all(ours.filter((n) => !keep.has(n.identifier)).map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
     for (const r of plan) {

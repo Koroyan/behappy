@@ -344,6 +344,16 @@ export const wbEn = {
     openReflection: 'Open reflection',
     calm: 'Calm now',
   },
+  insights: {
+    title: 'Routines, calm and sleep',
+    stepsPlanned: '{done} of {planned} planned steps done',
+    calmMinutes: 'Calm practice (min)',
+    soundMinutes: 'Sound Lab (min)',
+    focus: 'Focus sessions',
+    stepsDone: 'Steps done',
+    sleepAvg: 'Your sleep rating: {value}/5 on average over {n} nights',
+    noData: 'Nothing recorded in this period yet.',
+  },
   reminders: {
     stepTitle: 'Time for: {name}',
     stepBody: 'Only if it feels right today.',

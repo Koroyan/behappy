@@ -27,14 +27,20 @@ export const TOOLS: Tool[] = [
   { key: 'breathing', icon: 'leaf-outline', tone: 'sage', route: '/breathing', section: 'calm', ...explore('breathing') },
   { key: 'meditation', icon: 'flower-outline', tone: 'lavender', route: '/meditation', section: 'calm', ...explore('meditation') },
   { key: 'grounding', icon: 'hand-left-outline', tone: 'primary', route: '/grounding', section: 'calm', ...explore('grounding') },
+  { key: 'calm', icon: 'water-outline', tone: 'sage', route: '/calm', section: 'calm', ...wb('calm') },
   { key: 'sound', icon: 'musical-notes-outline', tone: 'lavender', route: '/sound', section: 'calm', ...wb('sound') },
+  { key: 'sleep', icon: 'moon-outline', tone: 'lavender', route: '/sleep', section: 'calm', ...wb('sleep') },
+  { key: 'steps', icon: 'footsteps-outline', tone: 'primary', route: '/steps', section: 'grow', ...wb('steps') },
+  { key: 'badges', icon: 'ribbon-outline', tone: 'gold', route: '/badges', section: 'grow', ...wb('badges') },
+  { key: 'reflection', icon: 'sparkles-outline', tone: 'peach', route: '/reflection', section: 'grow', ...wb('reflection') },
   { key: 'cards', icon: 'albums-outline', tone: 'gold', route: '/cards', section: 'create', ...explore('cards') },
   { key: 'art', icon: 'color-palette-outline', tone: 'peach', route: '/art', section: 'create', ...explore('art') },
   { key: 'journal', icon: 'book-outline', tone: 'lavender', route: '/journal', section: 'create', ...explore('journal') },
   { key: 'anulia', icon: 'chatbubble-ellipses-outline', tone: 'primary', route: '/anulia', section: 'create', ...explore('anulia') },
   { key: 'assessments', icon: 'clipboard-outline', tone: 'primary', route: '/assessments', section: 'understand', ...explore('assessments') },
   { key: 'insights', icon: 'analytics-outline', tone: 'sage', route: '/insights', section: 'understand', ...explore('insights') },
-  { key: 'goals', icon: 'flag-outline', tone: 'gold', route: '/goals', section: 'understand', ...explore('goals') },
+  { key: 'goals', icon: 'flag-outline', tone: 'gold', route: '/goals', section: 'grow', ...explore('goals') },
+  { key: 'memory', icon: 'bookmark-outline', tone: 'primary', route: '/anulia/memory', section: 'understand', ...wb('memory') },
   { key: 'summary', icon: 'document-text-outline', tone: 'lavender', route: '/wellbeing-summary', section: 'understand', title: 'tools.summaryTitle', subtitle: 'tools.summarySub', flag: 'wellbeingSummary' },
   { key: 'specialists', icon: 'medkit-outline', tone: 'primary', route: '/specialists', section: 'professional', title: 'tools.specialistsTitle', subtitle: 'tools.specialistsSub' },
   { key: 'appointments', icon: 'calendar-outline', tone: 'sage', route: '/appointments', section: 'professional', title: 'tools.appointmentsTitle', subtitle: 'tools.appointmentsSub' },
@@ -45,6 +51,7 @@ export const TOOLS: Tool[] = [
 
 /** Quick ways in, for the moment someone opens the tab. */
 export const QUICK: { key: string; icon: IconName; route: string; label: string; tool: string }[] = [
+  { key: 'calm', icon: 'water-outline', route: '/calm', label: 'wb.today.calm', tool: 'calm' },
   { key: 'breathe', icon: 'leaf-outline', route: '/breathing', label: 'tools.quickBreathe', tool: 'breathing' },
   { key: 'card', icon: 'albums-outline', route: '/cards', label: 'tools.quickCard', tool: 'cards' },
   { key: 'ground', icon: 'hand-left-outline', route: '/grounding', label: 'tools.quickGround', tool: 'grounding' },
@@ -53,7 +60,7 @@ export const QUICK: { key: string; icon: IconName; route: string; label: string;
 ];
 
 /** The strip on Today: the tools people look for most. */
-export const TODAY_TOOLS = ['cards', 'art', 'breathing', 'journal', 'meditation', 'grounding'];
+export const TODAY_TOOLS = ['cards', 'art', 'sound', 'breathing', 'journal', 'steps', 'meditation', 'grounding'];
 
 export const TONE_BG: Record<ToolTone, 'primarySoft' | 'peachSoft' | 'lavenderSoft' | 'goldSoft' | 'sageSoft' | 'dangerSoft' | 'surfaceMuted'> = {
   primary: 'primarySoft',

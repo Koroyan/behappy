@@ -28,6 +28,11 @@ import { subscribe } from '@/lib/storage/json';
 
 import { onNotificationOpened, setAppBadge, setupNotificationHandling } from './native';
 import { refreshThisPhone } from './push';
+import { SOUND_TOPIC } from '@/lib/audio/soundStore';
+import { EVENTS_TOPIC } from '@/lib/wellbeing/eventStore';
+import { REFLECTION_TOPIC } from '@/lib/wellbeing/reflectionStore';
+import { STEPS_TOPIC } from '@/lib/wellbeing/stepStore';
+
 import { remindersSupported, rescheduleReminders } from './reminders';
 import { useReminderCopy } from './useReminderCopy';
 import { showWebNotification } from './web';
@@ -70,7 +75,7 @@ export function NotificationsBridge() {
     if (!remindersSupported) return;
     plan(true);
     const later = () => setTimeout(() => plan(true), 500);
-    const offs = [JOURNAL_TOPIC, CARDS_TOPIC, ART_TOPIC, CHECKIN_TOPIC].map((topic) => subscribe(topic, later));
+    const offs = [JOURNAL_TOPIC, CARDS_TOPIC, ART_TOPIC, CHECKIN_TOPIC, STEPS_TOPIC, REFLECTION_TOPIC, EVENTS_TOPIC, SOUND_TOPIC].map((topic) => subscribe(topic, later));
     const app = AppState.addEventListener('change', (s) => s === 'active' && plan());
     return () => {
       offs.forEach((off) => off());

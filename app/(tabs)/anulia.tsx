@@ -252,6 +252,7 @@ export default function AnuliaScreen() {
         </AppText>
       </View>
       {!isDesktop ? <IconButton icon="time-outline" label={t('anulia.history')} onPress={() => router.push('/anulia/history')} variant="soft" size={headerBtn} testID="anulia-history" /> : null}
+      <IconButton icon="bookmark-outline" label={t('wb.memory.title')} onPress={() => router.push('/anulia/memory' as any)} variant="soft" size={headerBtn} testID="anulia-memory" />
       <IconButton icon="add" label={t('anulia.newConversation')} onPress={startNew} variant="soft" size={headerBtn} testID="anulia-new" />
       <IconButton icon="checkmark-done-outline" label={t('anulia.endConversation')} onPress={finish} variant="soft" size={headerBtn} disabled={summarizing || !conv.messages.some((m) => m.type === 'ai')} testID="anulia-finish" />
     </View>

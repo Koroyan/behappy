@@ -9,7 +9,7 @@ import { MoreMenu } from '@/features/shell/MoreMenu';
 import { useT } from '@/i18n';
 import { AccountDeletionError, useAccount, useIdentity } from '@/lib/api/account';
 import { saveAnalyticsChoice } from '@/lib/analytics';
-import { setAiConsent, setPersonalize, useConsent } from '@/lib/privacy/consent';
+import { MEMORY_CATEGORIES, setAiConsent, useConsent, useMemoryConsent } from '@/lib/privacy/consent';
 import { deleteAllData, exportAllData } from '@/lib/storage/dataTools';
 import { getUserProfile } from '@/services/userProfileService';
 
@@ -22,6 +22,7 @@ export default function ProfileScreen() {
   const { me, entitlements, refresh, offline } = useAccount();
   const identity = useIdentity();
   const consent = useConsent();
+  const memory = useMemoryConsent();
   const { confirm, toast } = useFeedback();
   const [name, setName] = useState('');
   const [langOpen, setLangOpen] = useState(false);
@@ -118,6 +119,10 @@ export default function ProfileScreen() {
       <Divider />
       <ListRow icon="notifications-outline" iconTone="peach" title={t('alerts.settings.entry')} subtitle={t('alerts.settings.entryHint')} onPress={() => router.push('/settings/notifications' as never)} testID="profile-notifications" />
       <Divider />
+      <ListRow icon="ribbon-outline" iconTone="gold" title={t('wb.tools.badges.title')} subtitle={t('wb.tools.badges.subtitle')} onPress={() => router.push('/badges' as never)} testID="profile-badges" />
+      <Divider />
+      <ListRow icon="footsteps-outline" iconTone="primary" title={t('wb.tools.steps.title')} subtitle={t('wb.tools.steps.subtitle')} onPress={() => router.push('/steps' as never)} testID="profile-steps" />
+      <Divider />
       <View style={{ paddingVertical: 14, gap: 10 }}>
         <AppText variant="callout">{t('profile.theme')}</AppText>
         <Segmented
@@ -184,13 +189,8 @@ export default function ProfileScreen() {
         right={<Toggle value={consent.ai} onValueChange={(v) => setAiConsent(v)} label={t('profile.aiConsent')} testID="toggle-ai" />}
       />
       <Divider />
-      <ListRow
-        icon="person-outline"
-        iconTone="sage"
-        title={t('profile.personalization')}
-        subtitle={t('profile.personalizationHint')}
-        right={<Toggle value={consent.personalize} onValueChange={(v) => setPersonalize(v)} label={t('profile.personalization')} />}
-      />
+      {/* Profile details are now one of the "What Anulia can remember" switches (all off by default). */}
+      <ListRow icon="bookmark-outline" iconTone="sage" title={t('wb.memory.title')} subtitle={t('wb.memory.sources', { n: MEMORY_CATEGORIES.filter((c) => memory.categories[c]).length })} onPress={() => router.push('/anulia/memory' as never)} testID="profile-memory" />
       <Divider />
       <ListRow
         icon="analytics-outline"

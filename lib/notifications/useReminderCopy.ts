@@ -9,6 +9,12 @@ export function useReminderCopy() {
   const { t, tl } = useT();
   return useCallback(
     (r: PlannedReminder) => {
+      if (r.kind === 'step') {
+        const name = r.stepTitle || t(`wb.steps.templates.${r.stepTemplate || 'custom'}`);
+        return { title: t('wb.reminders.stepTitle', { name }), body: t('wb.reminders.stepBody') };
+      }
+      if (r.kind === 'reflection') return { title: t('wb.reminders.reflectionTitle'), body: t('wb.reminders.reflectionBody') };
+      if (r.kind === 'sleep') return { title: t('wb.reminders.sleepTitle'), body: t('wb.reminders.sleepBody') };
       const base =
         r.kind === 'journal'
           ? r.variant === 'soft'

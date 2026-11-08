@@ -19,7 +19,7 @@
  *    (which never mention the mood: lock screens are visible to others).
  */
 
-export type ReminderKind = 'journal' | 'art' | 'cards';
+export type ReminderKind = 'journal' | 'art' | 'cards' | 'step' | 'reflection' | 'sleep';
 export type ReminderVariant = 'default' | 'soft' | 'continue';
 
 export interface ReminderPrefs {
@@ -67,6 +67,9 @@ export interface PlannedReminder {
   /** Rotates the wording day by day. */
   copyIndex: number;
   url: string;
+  /** Step reminders: which step (the wording uses its name). */
+  stepTemplate?: string;
+  stepTitle?: string;
 }
 
 const MINUTE = 60 * 1000;
@@ -198,7 +201,7 @@ export function planReminders(activity: ActivitySnapshot, prefs: ReminderPrefs, 
   }
 
   // At most two a day, three hours apart; the journal keeps its place.
-  const rank: Record<ReminderKind, number> = { journal: 0, art: 1, cards: 2 };
+  const rank: Record<ReminderKind, number> = { journal: 0, art: 1, cards: 2, step: 3, reflection: 4, sleep: 5 };
   const kept: PlannedReminder[] = [];
   for (const r of [...plan].sort((a, b) => rank[a.kind] - rank[b.kind] || a.at - b.at)) {
     const sameDay = kept.filter((k) => dayKey(k.at) === dayKey(r.at));
@@ -213,4 +216,74 @@ export function planReminders(activity: ActivitySnapshot, prefs: ReminderPrefs, 
     kept.push({ ...r, at });
   }
   return kept.sort((a, b) => a.at - b.at);
+}
+
+// ---------- My Steps, daily reflection, morning sleep question ----------
+// Asked for by the person (a Step's "remind me", the reflection time, "ask how
+// I slept"), so not part of the two-a-day gentle limit, but still: never in
+// quiet hours, never for what is already done, at most three Step reminders a day.
+
+export interface StepForReminder {
+  id: string;
+  template: string;
+  title?: string;
+  days: number[];
+  time: string | null;
+  reminder: boolean;
+  paused: boolean;
+  archived?: boolean;
+  createdAt: number;
+}
+
+const parseHm = (hm: string | null) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hm || ''));
+  return m && Number(m[1]) < 24 && Number(m[2]) < 60 ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+export const MAX_STEP_REMINDERS_PER_DAY = 3;
+
+/** `marked`: "stepId:YYYY-MM-DD" for steps already done or skipped that day. */
+export function planStepReminders(steps: StepForReminder[], marked: Set<string>, prefs: Pick<ReminderPrefs, 'quietFrom' | 'quietTo'>, now: number, { days = 7 }: { days?: number } = {}): PlannedReminder[] {
+  const today = startOfDay(now);
+  const out: PlannedReminder[] = [];
+  for (let d = 0; d < days; d += 1) {
+    const dayStart = addDays(today, d);
+    const key = dayKey(dayStart);
+    const weekday = new Date(dayStart).getDay();
+    const todays: PlannedReminder[] = [];
+    for (const s of steps) {
+      const minute = parseHm(s.time);
+      if (!s.reminder || s.paused || s.archived || minute === null || !s.days.includes(weekday)) continue;
+      if (dayKey(s.createdAt) > key || marked.has(`${s.id}:${key}`)) continue;
+      const at = atMinute(dayStart, outOfQuiet(minute, prefs));
+      if (at <= now + 5 * MINUTE) continue;
+      todays.push({ id: `step-${s.id}-${key}`, kind: 'step', at, variant: 'default', copyIndex: Math.floor(dayStart / DAY), url: '/steps', stepTemplate: s.template, stepTitle: s.title });
+    }
+    out.push(...todays.sort((a, b) => a.at - b.at).slice(0, MAX_STEP_REMINDERS_PER_DAY));
+  }
+  return out;
+}
+
+/** The daily reflection reminder for today (if not made yet) and tomorrow. */
+export function planReflectionReminders(settings: { enabled: boolean; time: string }, doneToday: boolean, prefs: Pick<ReminderPrefs, 'quietFrom' | 'quietTo'>, now: number): PlannedReminder[] {
+  const minute = parseHm(settings.time);
+  if (!settings.enabled || minute === null) return [];
+  const out: PlannedReminder[] = [];
+  for (let d = 0; d < 2; d += 1) {
+    if (d === 0 && doneToday) continue;
+    const dayStart = addDays(startOfDay(now), d);
+    const at = atMinute(dayStart, outOfQuiet(minute, prefs));
+    if (at > now + 5 * MINUTE) out.push({ id: `reflection-${dayKey(dayStart)}`, kind: 'reflection', at, variant: 'default', copyIndex: Math.floor(dayStart / DAY), url: '/reflection?auto=1' });
+  }
+  return out;
+}
+
+/** After a sleep sound session: one question the next morning, after quiet hours (and not before 08:30). */
+export function planSleepCheckIn(lastBedtime: number | null, checkedInDays: Set<string>, enabled: boolean, prefs: Pick<ReminderPrefs, 'quietFrom' | 'quietTo'>, now: number): PlannedReminder[] {
+  if (!enabled || !lastBedtime || now - lastBedtime > 20 * HOUR) return [];
+  // The morning after: bedtime before 06:00 belongs to that same morning.
+  const morning = new Date(lastBedtime).getHours() < 6 ? startOfDay(lastBedtime) : addDays(startOfDay(lastBedtime), 1);
+  if (checkedInDays.has(dayKey(morning))) return [];
+  const minute = Math.max(prefs.quietTo + 30, 8 * 60 + 30) % (24 * 60);
+  const at = atMinute(morning, minute);
+  return at > now + 5 * MINUTE ? [{ id: `sleep-${dayKey(morning)}`, kind: 'sleep', at, variant: 'default', copyIndex: Math.floor(morning / DAY), url: '/sleep?morning=1' }] : [];
 }

@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { AppText, Button, Card, EmptyState, Icon, IconName, Screen, Segmented, space, useLayout } from '@/design';
 import { BarList, MoodChart } from '@/features/charts/Charts';
+import { InsightsWellbeing } from '@/features/wellbeing/InsightsWellbeing';
 import { useT } from '@/i18n';
 import { ActivityData, feelingCounts, loadActivity, moodSeries, summarize } from '@/lib/storage/activity';
 
@@ -109,6 +110,7 @@ export default function InsightsScreen() {
               )}
             </Card>
           </View>
+          <InsightsWellbeing days={days} />
         </View>
       )}
     </Screen>
