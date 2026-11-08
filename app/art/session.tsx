@@ -82,9 +82,10 @@ export default function ArtSessionScreen() {
   const hasProgram = entitlements.artProgram.active;
   const accessBlocked = needsAccess(id, hasProgram);
 
-  // Fresh allowance numbers for the check below.
+  // Fresh allowance numbers for the check below (and the time they were read: render stays pure).
+  const [usageReadAt, setUsageReadAt] = useState(() => Date.now());
   useEffect(() => {
-    refreshAccount();
+    refreshAccount().finally(() => setUsageReadAt(Date.now()));
   }, [refreshAccount]);
 
   // Today's new session is used and the server hasn't started this one: say so
@@ -96,7 +97,7 @@ export default function ArtSessionScreen() {
       artUsage?.startedIds &&
       !artUsage.startedIds.includes(id) &&
       artUsage.startedToday >= artUsage.newSessionsPerDay &&
-      (!artUsage.resetAt || Date.now() < artUsage.resetAt)
+      (!artUsage.resetAt || usageReadAt < artUsage.resetAt)
   );
   const limit = quota && quota.reason !== 'need_art_access' ? { reason: quota.reason, resetAt: quota.resetAt } : dailyFull ? { reason: 'daily_new_session_limit', resetAt: artUsage?.resetAt ?? null } : null;
   const summaryLabel = pickLocalized(ART_SESSION_TEXT.sessionSummaryLabel, language);

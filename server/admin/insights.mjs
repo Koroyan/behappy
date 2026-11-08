@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 
 import express from 'express';
 
+import { costOf, MODEL_PRICES, overridePrice, priceFor } from '../aiPricing.mjs';
 import { analyticsFor, parseRange } from '../analytics/index.mjs';
 import { audit } from '../audit.mjs';
 import { requireAccount } from '../auth.mjs';
@@ -46,13 +47,8 @@ export function createInsights(deps) {
   const { db, clock, config } = deps;
   const settings = settingsFor(deps);
 
-  async function pricing() {
-    const p = (await settings.get('ai.pricing')) || {};
-    const input = p.inputPerMillion ?? (Number(process.env.AI_PRICE_INPUT_PER_MTOK || 0) || null);
-    const output = p.outputPerMillion ?? (Number(process.env.AI_PRICE_OUTPUT_PER_MTOK || 0) || null);
-    return input || output ? { inputPerMillion: input || 0, outputPerMillion: output || 0, currency: 'USD' } : null;
-  }
-  const cost = (price, input, output) => (price ? Math.round(((input * price.inputPerMillion + output * price.outputPerMillion) / 1e6) * 100) / 100 : null);
+  /** Staff/env price for all models, or null (then each model's list price is used). */
+  const pricing = async () => overridePrice(await settings.get('ai.pricing'));
 
   // ---------- Finance (TEST) ----------
   async function revenueBetween(from, to) {
@@ -132,11 +128,12 @@ export function createInsights(deps) {
     const range = parseRange(query, clock.now());
     const from = ts(dayMs(range.from));
     const to = ts(dayMs(range.to) + DAY);
-    const [daily, byFeature, byModel, today] = await Promise.all([
+    const [dailyByModel, byFeature, featureModels, byModel, today] = await Promise.all([
+      // Per day and model: each model has its own price.
       db.query(
-        `select (created_at at time zone 'UTC')::date::text as day, count(*)::int as calls, count(*) filter (where status = 'error')::int as errors,
+        `select (created_at at time zone 'UTC')::date::text as day, model, count(*)::int as calls, count(*) filter (where status = 'error')::int as errors,
                 coalesce(sum(input_tokens), 0)::bigint as input, coalesce(sum(output_tokens), 0)::bigint as output
-         from ai_usage where created_at >= $1 and created_at < $2 group by 1`,
+         from ai_usage where created_at >= $1 and created_at < $2 group by 1, 2`,
         [from, to]
       ),
       db.query(
@@ -145,19 +142,32 @@ export function createInsights(deps) {
          from ai_usage where created_at >= $1 and created_at < $2 group by feature order by calls desc`,
         [from, to]
       ),
+      db.query('select feature, model, coalesce(sum(input_tokens), 0)::bigint as input, coalesce(sum(output_tokens), 0)::bigint as output from ai_usage where created_at >= $1 and created_at < $2 group by feature, model', [from, to]),
       db.query('select model, count(*)::int as calls, coalesce(sum(input_tokens), 0)::bigint as input, coalesce(sum(output_tokens), 0)::bigint as output from ai_usage where created_at >= $1 and created_at < $2 group by model', [from, to]),
-      db.query('select coalesce(sum(input_tokens), 0)::bigint as input, coalesce(sum(output_tokens), 0)::bigint as output, count(*)::int as calls from ai_usage where created_at >= $1', [ts(dayMs(isoDay(clock.now())))]),
+      db.query('select model, coalesce(sum(input_tokens), 0)::bigint as input, coalesce(sum(output_tokens), 0)::bigint as output, count(*)::int as calls from ai_usage where created_at >= $1 group by model', [ts(dayMs(isoDay(clock.now())))]),
     ]);
     const price = await pricing();
-    const series = fillDays(range, daily.rows, (r) => ({ calls: r?.calls || 0, errors: r?.errors || 0, tokens: r ? Number(r.input) + Number(r.output) : 0, costUsd: r ? cost(price, Number(r.input), Number(r.output)) : price ? 0 : null }));
-    const t = today.rows[0];
+    const days = new Map();
+    for (const r of dailyByModel.rows) {
+      const d = days.get(r.day) || { day: r.day, calls: 0, errors: 0, input: 0, output: 0, models: [] };
+      d.calls += r.calls;
+      d.errors += r.errors;
+      d.input += Number(r.input);
+      d.output += Number(r.output);
+      d.models.push(r);
+      days.set(r.day, d);
+    }
+    const anyPrice = Boolean(price) || byModel.rows.some((m) => priceFor(m.model, price));
+    const series = fillDays(range, [...days.values()], (r) => ({ calls: r?.calls || 0, errors: r?.errors || 0, tokens: r ? r.input + r.output : 0, costUsd: r ? costOf(r.models, price) : anyPrice ? 0 : null }));
     return {
       range,
-      pricing: price,
+      // null: each model's list price (server/aiPricing.mjs); otherwise one staff-set price for all.
+      pricing: price ? { ...price, currency: 'USD' } : null,
+      modelPrices: MODEL_PRICES,
       daily: series,
-      byFeature: byFeature.rows.map((f) => ({ feature: f.feature, calls: f.calls, errors: f.errors, errorRate: pct(f.errors, f.calls), inputTokens: Number(f.input), outputTokens: Number(f.output), costUsd: cost(price, Number(f.input), Number(f.output)), avgLatencyMs: f.avg_ms, p95LatencyMs: f.p95_ms === null ? null : Math.round(Number(f.p95_ms)) })),
-      byModel: byModel.rows.map((m) => ({ model: m.model, calls: m.calls, costUsd: cost(price, Number(m.input), Number(m.output)) })),
-      today: { calls: t.calls, costUsd: cost(price, Number(t.input), Number(t.output)), budgetUsd: await settings.get('ai.dailyBudgetUsd') },
+      byFeature: byFeature.rows.map((f) => ({ feature: f.feature, calls: f.calls, errors: f.errors, errorRate: pct(f.errors, f.calls), inputTokens: Number(f.input), outputTokens: Number(f.output), costUsd: costOf(featureModels.rows.filter((m) => m.feature === f.feature), price), avgLatencyMs: f.avg_ms, p95LatencyMs: f.p95_ms === null ? null : Math.round(Number(f.p95_ms)) })),
+      byModel: byModel.rows.map((m) => ({ model: m.model, calls: m.calls, costUsd: costOf([m], price) })),
+      today: { calls: today.rows.reduce((s, r) => s + r.calls, 0), costUsd: costOf(today.rows, price), budgetUsd: await settings.get('ai.dailyBudgetUsd') },
       switches: await settings.get('ai.features'),
       serverModelNote: 'The server chooses the model; apps cannot change it.',
     };

@@ -60,7 +60,7 @@ export default function MeditationScreen() {
               <AppText variant="body" color="textSecondary" align="center">
                 {t('meditation.completeBody')}
               </AppText>
-              <Button label={t('common.done')} onPress={() => setActive(null)} />
+              <Button label={t('common.done')} onPress={() => setActive(null)} style={{ alignSelf: 'center' }} />
             </>
           ) : (
             <>
@@ -85,7 +85,7 @@ export default function MeditationScreen() {
   }
 
   const columns = isCompact ? 1 : width - sidebarWidth > 1000 ? 3 : 2;
-  const tileWidth = (Math.min(width - sidebarWidth - gutter * 2, 1080) - space[4] * (columns - 1)) / columns;
+  const tileWidth = Math.floor((Math.min(width - sidebarWidth - gutter * 2, 1080) - space[4] * (columns - 1)) / columns); // whole dp: fractional sizes rounded to pixels overflowed the row and wrapped a column
 
   return (
     <Screen back title={t('meditation.title')} subtitle={t('meditation.subtitle')} testID="screen-meditation">

@@ -30,7 +30,7 @@ export default function DeckScreen() {
 
   const columns = isCompact ? 3 : width - sidebarWidth > 1100 ? 6 : 5;
   const available = Math.min(width - sidebarWidth - gutter * 2, 1080);
-  const size = (available - space[3] * (columns - 1)) / columns;
+  const size = Math.floor((available - space[3] * (columns - 1)) / columns); // whole dp: fractional sizes rounded to pixels overflowed the row and wrapped a column
   const portrait = deck.id === 'moments';
   const ready = deck.mode === 'single' ? single !== null : light !== null && heavy !== null;
 

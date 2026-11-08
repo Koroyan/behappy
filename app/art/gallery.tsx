@@ -22,7 +22,7 @@ export default function ArtGallery() {
 
   const columns = isCompact ? 2 : width - sidebarWidth > 1100 ? 4 : 3;
   const available = Math.min(width - sidebarWidth - gutter * 2, 1080);
-  const size = (available - space[3] * (columns - 1)) / columns;
+  const size = Math.floor((available - space[3] * (columns - 1)) / columns); // whole dp: fractional sizes rounded to pixels overflowed the row and wrapped a column
 
   const remove = async (a: Artwork) => {
     if (!(await confirm({ title: t('common.delete'), confirmLabel: t('common.delete'), destructive: true }))) return;

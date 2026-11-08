@@ -59,6 +59,8 @@ export default function TodayScreen() {
   const [program, setProgram] = useState<ProgramState | null>(null);
   const [week, setWeek] = useState({ checkIns: 0, journal: 0, practices: 0 });
   const [loaded, setLoaded] = useState(false);
+  // When the screen last loaded (render stays pure; refreshed on every focus).
+  const [loadedAt, setLoadedAt] = useState(() => Date.now());
 
   const [mood, setMood] = useState<MoodLevel | undefined>();
   const [feelings, setFeelings] = useState<Feeling[]>([]);
@@ -76,6 +78,7 @@ export default function TodayScreen() {
     const s = summarize(activity, 7 * 86400000);
     setWeek({ checkIns: s.checkIns, journal: s.journal, practices: s.breathing + s.meditation + s.art + s.cards });
     setLoaded(true);
+    setLoadedAt(Date.now());
     loadProgram(language).then(setProgram).catch(() => setProgram(null));
   }, [language]);
 
@@ -87,7 +90,12 @@ export default function TodayScreen() {
 
   const todayCheckIn = latestToday(checkIns);
   const showPicker = !todayCheckIn || editingCheckIn;
-  const suggestion = suggestionFor(todayCheckIn?.mood ?? mood);
+  // No art invitation when today's new art session is used and none is in progress:
+  // the person would only meet "new sessions open tomorrow".
+  const artUsage = me?.usage?.art;
+  const artNewUsed = Boolean(artUsage && artUsage.startedToday >= artUsage.newSessionsPerDay && (!artUsage.resetAt || loadedAt < artUsage.resetAt));
+  const suggested = suggestionFor(todayCheckIn?.mood ?? mood);
+  const suggestion: SuggestionKey = suggested === 'create' && artNewUsed && !program?.inProgressId ? 'savor' : suggested;
   const meta = SUGGESTION_META[suggestion];
   const levels = tl('mood.levels');
   const isNew = loaded && !checkIns.length && !entries.length && !conversation;
@@ -159,16 +167,20 @@ export default function TodayScreen() {
               {t('mood.savedAt', { time: formatTime(todayCheckIn.at) })}
               {todayCheckIn.feelings.length ? ` · ${todayCheckIn.feelings.map((f) => t(`mood.feelings.${f}`)).join(', ')}` : ''}
             </AppText>
+            {/* On phones the button goes under the text: beside it, the text column was so narrow that words broke mid-word. */}
+            {isCompact ? <Button label={t('mood.again')} variant="ghost" size="sm" onPress={() => { setMood(undefined); setEditingCheckIn(true); }} style={{ alignSelf: 'flex-start', marginTop: 4, marginStart: -10 }} /> : null}
           </View>
-          <Button
-            label={t('mood.again')}
-            variant="ghost"
-            size="sm"
-            onPress={() => {
-              setMood(undefined);
-              setEditingCheckIn(true);
-            }}
-          />
+          {!isCompact ? (
+            <Button
+              label={t('mood.again')}
+              variant="ghost"
+              size="sm"
+              onPress={() => {
+                setMood(undefined);
+                setEditingCheckIn(true);
+              }}
+            />
+          ) : null}
         </View>
       ) : null}
     </Card>
@@ -388,7 +400,8 @@ export default function TodayScreen() {
             accessibilityRole="button"
             accessibilityLabel={t(tool.title)}
             testID={`today-tool-${tool.key}`}
-            style={{ width: 96, alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 6, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+            // 112: at 96 a long word ("რეფლექსიის", "Reflexionskarten") was split mid-word on phones.
+            style={{ width: 112, alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 6, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
           >
             <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: colors[TONE_BG[tool.tone]], alignItems: 'center', justifyContent: 'center' }}>
               <Icon name={tool.icon} size={24} color={TONE_FG[tool.tone]} />

@@ -48,7 +48,7 @@ export default function ToolsScreen() {
 
   const columns = isCompact ? (width < 340 ? 1 : 2) : width - sidebarWidth > 1100 ? 4 : 3;
   const available = Math.min(width - sidebarWidth - gutter * 2, 1080);
-  const tileWidth = (available - space[3] * (columns - 1)) / columns;
+  const tileWidth = Math.floor((available - space[3] * (columns - 1)) / columns); // whole dp: fractional sizes rounded to pixels overflowed the row and wrapped a column
 
   const query = q.trim().toLocaleLowerCase();
   const results = query ? tools.filter((x) => `${t(x.title)} ${t(x.subtitle)}`.toLocaleLowerCase().includes(query)) : null;

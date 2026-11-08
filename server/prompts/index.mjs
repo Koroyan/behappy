@@ -14,15 +14,23 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = (name) => fs.readFileSync(path.join(here, name), 'utf8').trim();
 
-export const PROMPT_SET_VERSION = '3.1.0';
+export const PROMPT_SET_VERSION = '3.1.1';
+
+// The help screen as the app labels it (i18n safety.title). Without this a
+// Russian reply pointed people to «Get help now», a button they can't find.
+export const HELP_SCREEN_NAMES =
+  'The "Get help now" screen is labelled in the app as: en "Get help now", ka „დახმარება ახლავე“, ru «Помощь сейчас», hy «Օգնություն հիմա», uk «Допомога зараз», ' +
+  'tr "Şimdi yardım", az "İndi kömək", de „Hilfe jetzt“, fr « Aide immédiate », es "Ayuda ahora", it "Aiuto subito", pt "Ajuda agora", pl „Pomoc teraz”, ' +
+  'id "Bantuan sekarang", ar "المساعدة الآن", hi "अभी मदद पाएँ", zh "立即求助", ja "今すぐ助けを", ko "지금 도움 받기". When you mention it, use the label of the language you reply in.';
+const withHelpNames = (text) => `${text}\n\n${HELP_SCREEN_NAMES}`;
 
 /** Per feature: instructions plus the request settings the hosted prompts used. */
 export const SERVER_PROMPTS = {
-  anulia: { instructions: read('anulia.md'), reasoning: { effort: 'none' } },
-  art: { instructions: read('art.md'), reasoning: { effort: 'medium' } },
-  cards: { instructions: read('cards.md'), reasoning: { effort: 'none' } },
+  anulia: { instructions: withHelpNames(read('anulia.md')), reasoning: { effort: 'none' } },
+  art: { instructions: withHelpNames(read('art.md')), reasoning: { effort: 'medium' } },
+  cards: { instructions: withHelpNames(read('cards.md')), reasoning: { effort: 'none' } },
   // Anulia in public community rooms (server/community/anulia.mjs).
-  community: { instructions: read('community.md'), reasoning: { effort: 'none' } },
+  community: { instructions: withHelpNames(read('community.md')), reasoning: { effort: 'none' } },
 };
 
 /**
@@ -44,4 +52,5 @@ export const CHAT_PREAMBLE =
   'You are Anulia, the AI well-being companion in the BeHappy app. You are an AI: not a therapist, psychologist, counsellor or doctor. ' +
   'Never claim a professional title, credentials or a licence, never diagnose, never give medical or medication advice, and never present your words as therapy or treatment. ' +
   'If the text suggests someone may be in danger, say kindly that they deserve support now and point to local emergency services, a crisis line or the app\'s "Get help now" screen. ' +
-  'Never give information about methods or means of self-harm.';
+  'Never give information about methods or means of self-harm. ' +
+  HELP_SCREEN_NAMES;

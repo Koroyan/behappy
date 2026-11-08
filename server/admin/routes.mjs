@@ -7,6 +7,7 @@
 
 import express from 'express';
 
+import { costOf, overridePrice } from '../aiPricing.mjs';
 import { requireAccount } from '../auth.mjs';
 import { ms, ts } from '../db/index.mjs';
 import { schemaVersion } from '../db/migrate.mjs';
@@ -69,8 +70,7 @@ export function mountAdmin(app, deps) {
       [ts(now - 7 * DAY)]
     );
     const ai = await q('select feature, model, count(*)::int as calls, coalesce(sum(input_tokens), 0)::int as input, coalesce(sum(output_tokens), 0)::int as output from ai_usage where created_at > $1 group by feature, model order by feature', [ts(now - 30 * DAY)]);
-    const inPrice = Number(process.env.AI_PRICE_INPUT_PER_MTOK || 0);
-    const outPrice = Number(process.env.AI_PRICE_OUTPUT_PER_MTOK || 0);
+    const override = overridePrice(null);
     res.json({
       generatedAt: now,
       mode: 'test',
@@ -88,8 +88,9 @@ export function mountAdmin(app, deps) {
       community,
       ai: {
         last30d: ai,
-        pricing: inPrice || outPrice ? { inputPerMillion: inPrice, outputPerMillion: outPrice, currency: 'USD' } : null,
-        estimatedCostUsd: inPrice || outPrice ? Math.round(ai.reduce((sum, x) => sum + (x.input * inPrice + x.output * outPrice) / 1e6, 0) * 100) / 100 : null,
+        pricing: override ? { ...override, currency: 'USD' } : null,
+        // Each model at its list price (server/aiPricing.mjs) unless one price is set for all.
+        estimatedCostUsd: costOf(ai, override),
       },
     });
   });

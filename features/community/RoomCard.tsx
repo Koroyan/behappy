@@ -1,13 +1,14 @@
 import React from 'react';
 import { View } from 'react-native';
 
+import { type AppLanguage, LANGUAGE_NAMES } from '@/contexts/LanguageContext';
 import { AppText, Badge, Icon, IconName, Press, radius, useTheme } from '@/design';
 import { useT } from '@/i18n';
 import type { Room } from '@/lib/api/community';
 
 /** A topic room: icon, name, short description, members and unread count. */
 export function RoomCard({ room, onPress }: { room: Room; onPress: () => void }) {
-  const { t, tp } = useT();
+  const { t, tp, language } = useT();
   const { colors } = useTheme();
   return (
     <Press
@@ -28,6 +29,8 @@ export function RoomCard({ room, onPress }: { room: Room; onPress: () => void })
           </AppText>
           <AppText variant="caption" color="textTertiary">
             {tp('community.members', room.members)}
+            {/* Rooms of the same topic in two languages looked identical in "Your rooms". */}
+            {room.language !== language && LANGUAGE_NAMES[room.language as AppLanguage] ? ` · ${LANGUAGE_NAMES[room.language as AppLanguage]}` : ''}
           </AppText>
         </View>
         {room.unread ? <Badge label={tp('community.unread', room.unread)} tone="primary" /> : room.joined ? <Badge label={t('community.joined')} tone="muted" /> : null}

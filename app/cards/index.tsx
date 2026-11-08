@@ -26,7 +26,7 @@ export default function CardsScreen() {
 
   const columns = isCompact ? (width < 380 ? 1 : 2) : width - sidebarWidth > 1100 ? 3 : 2;
   const available = Math.min(width - sidebarWidth - gutter * 2, 1080);
-  const tile = (available - space[4] * (columns - 1)) / columns;
+  const tile = Math.floor((available - space[4] * (columns - 1)) / columns); // whole dp: fractional sizes rounded to pixels overflowed the row and wrapped a column
 
   return (
     <Screen

@@ -441,6 +441,23 @@ describe('Admin operations', () => {
     const ai = await call(analyst, '/api/admin/ai');
     assert.equal(ai.status, 200);
     assert.ok(Array.isArray(ai.json.byFeature));
+    // Costs use each model's list price when staff set none (before: "—", and the budget never applied).
+    const now = new Date(t.clock.now()).toISOString();
+    await t.db.query("insert into ai_usage (feature, model, input_tokens, output_tokens, status, created_at) values ('art', 'gpt-6.1-sol', 1000000, 100000, 'ok', $1), ('anulia', 'gpt-5.4-mini', 1000000, 0, 'ok', $1), ('speech', 'tts-1', 500, 0, 'ok', $1)", [now]);
+    const priced = (await call(analyst, '/api/admin/ai')).json;
+    assert.equal(priced.pricing, null, 'no staff price: list prices per model');
+    assert.equal(priced.byModel.find((m) => m.model === 'gpt-6.1-sol').costUsd, 3, '1M in × $2 + 0.1M out × $10');
+    assert.equal(priced.byModel.find((m) => m.model === 'gpt-5.4-mini').costUsd, 0.75);
+    assert.equal(priced.byModel.find((m) => m.model === 'tts-1').costUsd, null, 'unknown model: no guess');
+    assert.ok(priced.today.costUsd >= 3.75);
+    // The daily budget now pauses AI on these estimates.
+    await call(owner, '/api/admin/settings/ai.dailyBudgetUsd', 'PUT', { value: 3, reason: 'budget test' });
+    t.clock.advance(61000);
+    const capped = await ask();
+    assert.equal(capped.status, 503);
+    assert.equal(capped.json.error, 'ai_budget_reached');
+    await call(owner, '/api/admin/settings/ai.dailyBudgetUsd', 'PUT', { value: null, reason: 'budget test done' });
+    t.clock.advance(61000);
     const fin = await call(finance, '/api/admin/finance');
     assert.equal(fin.json.mode, 'test');
     assert.match(fin.json.label, /TEST/);

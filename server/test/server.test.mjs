@@ -529,6 +529,23 @@ describe('API', () => {
   });
 });
 
+describe('Streamed AI replies: token counts', () => {
+  test('usage comes from response.completed, not from tool_usage before it (Anulia was recorded with 0 tokens)', async () => {
+    const { streamUsage } = await import('../ai.mjs');
+    // The shape OpenAI streams (Nov 2026): tool_usage.image_gen.input_tokens: 0 comes before usage.
+    const done = { type: 'response.completed', response: { id: 'resp_1', instructions: 'x'.repeat(9000), tool_usage: { image_gen: { input_tokens: 0, output_tokens: 0 } }, usage: { input_tokens: 1650, output_tokens: 67 } } };
+    const created = { type: 'response.created', response: { id: 'resp_1', usage: null } };
+    const text = [created, { type: 'response.output_text.delta', delta: 'hi' }, done].map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join('');
+    const u = streamUsage();
+    for (let i = 0; i < text.length; i += 700) u.push(text.slice(i, i + 700)); // network-sized pieces
+    assert.deepEqual(u.result(), { input_tokens: 1650, output_tokens: 67 });
+    // A stream cut off before the end: no counts rather than wrong ones.
+    const cut = streamUsage();
+    cut.push(text.slice(0, 200));
+    assert.equal(cut.result(), null);
+  });
+});
+
 describe('Test-mode lock', () => {
   test('live mode is refused', async () => {
     const { assertTestModeOnly, config } = await import('../config.mjs');

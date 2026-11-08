@@ -8,6 +8,7 @@
 // conversation.
 
 import express from 'express';
+import { overridePrice, spendOf } from './aiPricing.mjs';
 import { createArtTurns } from './art/turn.mjs';
 import { requireAccount } from './auth.mjs';
 import { entitlementsForAccount } from './entitlements.mjs';
@@ -82,6 +83,49 @@ export function readUsage(usage) {
   return input || output ? { input, output } : null;
 }
 
+/**
+ * Token counts from a Responses stream: `usage` of the final response.completed
+ * (or .incomplete) event. Reading the first "input_tokens" in the text picked up
+ * OpenAI's `tool_usage.image_gen.input_tokens: 0`, so every streamed Anulia
+ * reply was recorded with 0 tokens (no cost, invisible to the daily budget).
+ */
+export function streamUsage() {
+  let pending = '';
+  let usage = null;
+  const frame = (raw) => {
+    if (!raw.includes('"response.completed"') && !raw.includes('"response.incomplete"')) return;
+    const data = raw
+      .split('\n')
+      .filter((l) => l.startsWith('data:'))
+      .map((l) => l.slice(5).trim())
+      .join('\n');
+    try {
+      const evt = JSON.parse(data);
+      if (evt?.response?.usage) usage = evt.response.usage;
+    } catch {
+      // not JSON: ignore
+    }
+  };
+  return {
+    push(text) {
+      pending += text.replace(/\r\n/g, '\n');
+      let i = pending.indexOf('\n\n');
+      while (i >= 0) {
+        frame(pending.slice(0, i));
+        pending = pending.slice(i + 2);
+        i = pending.indexOf('\n\n');
+      }
+      // A frame without an end yet: keep it, but never more than 2 MB.
+      if (pending.length > 2_000_000) pending = '';
+    },
+    result() {
+      if (pending.trim()) frame(pending);
+      pending = '';
+      return usage;
+    },
+  };
+}
+
 /** Records token counts, outcome and latency only (never content) for the admin AI report. */
 export async function recordAiUsage(db, { accountId, feature, model, usage, latencyMs = null, status = 'ok', errorCode = null }) {
   const u = readUsage(usage) || { input: 0, output: 0 };
@@ -114,12 +158,10 @@ export function createAiControls({ db, settings, clock = { now: () => Date.now()
   async function spentTodayUsd() {
     const now = clock.now();
     if (now - cache.at < 60 * 1000) return cache.usd;
-    const p = (await settings.get('ai.pricing')) || {};
-    const inPrice = p.inputPerMillion ?? Number(process.env.AI_PRICE_INPUT_PER_MTOK || 0);
-    const outPrice = p.outputPerMillion ?? Number(process.env.AI_PRICE_OUTPUT_PER_MTOK || 0);
+    const override = overridePrice(await settings.get('ai.pricing'));
     const start = new Date(new Date(now).toISOString().slice(0, 10) + 'T00:00:00Z');
-    const r = await db.query('select coalesce(sum(input_tokens), 0)::bigint as i, coalesce(sum(output_tokens), 0)::bigint as o from ai_usage where created_at >= $1', [start]);
-    cache = { at: now, usd: (Number(r.rows[0].i) * (inPrice || 0) + Number(r.rows[0].o) * (outPrice || 0)) / 1e6 };
+    const r = await db.query('select model, coalesce(sum(input_tokens), 0)::bigint as input, coalesce(sum(output_tokens), 0)::bigint as output from ai_usage where created_at >= $1 group by model', [start]);
+    cache = { at: now, usd: spendOf(r.rows, override) };
     return cache.usd;
   }
   /** null when allowed, otherwise the refusal code. */
@@ -297,8 +339,8 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     res.flushHeaders?.();
 
     let head = '';
-    let tail = '';
     let captured = false;
+    const usage = streamUsage();
     try {
       for await (const chunk of upstream.body) {
         const text = Buffer.from(chunk).toString('utf8');
@@ -314,17 +356,14 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
             head = '';
           }
         }
-        // The final "response.completed" event carries the token counts.
-        tail = (tail + text).slice(-8192);
+        usage.push(text);
         res.write(chunk);
       }
     } catch {
       // Client or upstream disconnected; nothing else to do.
     }
     res.end();
-    const inTok = tail.match(/"input_tokens"\s*:\s*(\d+)/);
-    const outTok = tail.match(/"output_tokens"\s*:\s*(\d+)/);
-    await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: { input_tokens: Number(inTok?.[1] || 0), output_tokens: Number(outTok?.[1] || 0) }, latencyMs: Date.now() - req.aiStartedAt });
+    await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: usage.result(), latencyMs: Date.now() - req.aiStartedAt });
   });
 
   // ---------- Chat Completions (vision turns, summaries, journal, motivation) ----------

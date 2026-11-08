@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Linking, View } from 'react-native';
 
+import { COUNTRY_NAMES } from '@/content/countryNames';
 import { COUNTRIES, defaultCountryFor, HELPLINE_DIRECTORY } from '@/content/safety';
 import { AppText, Badge, Button, Card, Icon, Press, Screen, Sheet, space, useTheme } from '@/design';
 import { useT } from '@/i18n';
@@ -28,6 +29,9 @@ export default function SafetyScreen() {
 
   const country = COUNTRIES.find((c) => c.code === code);
   const regionName = (cc: string, fallback: string) => {
+    // Shipped names first: phones (Hermes) have no Intl.DisplayNames, so they showed "Georgia" in Georgian.
+    const shipped = COUNTRY_NAMES[language]?.[cc];
+    if (shipped) return shipped;
     try {
       return new (Intl as any).DisplayNames([locale], { type: 'region' }).of(cc) || fallback;
     } catch {
