@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsTr } from '../alerts/tr';
 
 /** Türkçe — BeHappy 3.0. Sıcak ve yakın («sen»). */
 export const tr3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsTr,
   shell: {
     personal: 'Kişisel',
     community: 'Topluluk',
@@ -366,6 +369,7 @@ export const tr3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym} sana yanıt verdi',
       community_mention: '{pseudonym} senden bahsetti',
+      community_activity: '{room} odasında yeni mesajlar',
       moderation_removed: 'Bir moderatör mesajlarından birini kaldırdı',
       moderation_warning: 'Bir moderatör sana kurallarla ilgili bir uyarı gönderdi',
       moderation_suspended: 'Topluluktaki paylaşımların durduruldu',

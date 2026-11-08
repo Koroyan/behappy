@@ -50,6 +50,13 @@ export const config = {
     from: env.MAIL_FROM || '',
     resendApiKey: env.RESEND_API_KEY || '',
   },
+  // Phone notifications through Expo's push service (free; an access token is
+  // optional and only needed if "enhanced push security" is on for the project).
+  // PUSH_DRIVER=log keeps them on this machine (printed, never sent); off disables.
+  push: {
+    driver: (env.PUSH_DRIVER || 'expo').toLowerCase(),
+    accessToken: env.EXPO_ACCESS_TOKEN || '',
+  },
   sms: {
     driver: (env.SMS_DRIVER || (IS_PRODUCTION ? 'none' : 'log')).toLowerCase(),
     twilioAccountSid: env.TWILIO_ACCOUNT_SID || '',
@@ -179,6 +186,7 @@ export function describeConfig() {
     database: config.databaseUrl ? 'postgresql (DATABASE_URL)' : `embedded PGlite in ${config.dataDir} (development only)`,
     email: config.mail.driver,
     sms: config.sms.driver,
+    push: config.push.driver,
     devTools: config.devTools,
     professional: `${config.professional.amountMinor / 100} ${config.professional.currency} / ${config.professional.durationDays} days, trial ${config.professional.trialDays} days, 0% commission`,
   };

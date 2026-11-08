@@ -4,6 +4,8 @@ import { canPersonalize } from '@/lib/privacy/consent';
 import { speakText } from '@/lib/media/audio';
 // Use standard expo-file-system (legacy path breaks web export and Metro resolution)
 import * as FileSystem from 'expo-file-system/legacy';
+// Static: a dynamic import() of a native module crashes Expo Go (see lib/media/images.ts).
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 import { buildProfileContextBlock, getUserProfile } from './userProfileService';
@@ -173,8 +175,6 @@ class ArtTherapyService {
       // Always produce a safe JPEG for API using expo-image-manipulator (avoids HEIC issues),
       // then progressively reduce size if needed.
       const ensureCompressedJPEG = async (targetWidth?: number, compress?: number) => {
-        // Dynamic namespace import to be compatible across platforms
-        const ImageManipulator = await import('expo-image-manipulator');
         const actions: any[] = [];
         if (targetWidth && targetWidth > 0) actions.push({ resize: { width: targetWidth } });
         const manipulated = await ImageManipulator.manipulateAsync(

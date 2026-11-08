@@ -40,7 +40,7 @@ const USER_ROUTES = [
   '/', '/tools', '/anulia', '/anulia/history', '/community', '/community/topics', '/community/guidelines', '/community/settings', '/specialists',
   '/profile', '/profile/personal', '/journal', '/journal/editor', '/cards', '/cards/history', '/art', '/art/gallery', '/breathing', '/meditation',
   '/grounding', '/assessments', '/assessments/phq9', '/insights', '/goals', '/safety', '/safety-plan', '/about', '/pricing', '/purchases',
-  '/notifications', '/appointments', '/messages', '/support', '/pro', '/pro/apply', '/pro/membership', '/account', '/account/create', '/account/sign-in',
+  '/notifications', '/settings/notifications', '/appointments', '/messages', '/support', '/pro', '/pro/apply', '/pro/membership', '/account', '/account/create', '/account/sign-in',
   '/quiz', '/onboarding', '/explore', '/moderation',
 ];
 const ADMIN_ROUTES = [

@@ -6,6 +6,9 @@ import { CheckIn, loadCheckIns } from './checkins';
 import { JournalEntry, loadEntries } from './journal';
 import { dayKey, readJson, writeJson } from './json';
 
+/** Published when art therapy progress changes (services/artTherapyProgramNew.ts). */
+export const ART_TOPIC = 'art';
+
 const BREATHING_KEY = '@behappy_breathing_progress'; // pre-2.0 key, same shape
 const MEDITATION_KEY = '@behappy_meditation_log_v1';
 const ART_KEY = '@behappy_art_therapy_progress';

@@ -58,6 +58,8 @@ module.exports = {
       'expo-asset',
       ['expo-image-picker', { photosPermission: PHOTOS, cameraPermission: CAMERA }],
       ['expo-audio', { microphonePermission: MIC }],
+      // Reminders (local) and chat notifications (Expo push). Icon colour = brand.
+      ['expo-notifications', { color: '#4B9388' }],
       [
         'expo-splash-screen',
         {
@@ -75,6 +77,10 @@ module.exports = {
     // AI and payment credentials live only on the BeHappy server (server/.env).
     extra: {
       EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+      // Phone notifications need the EAS project id (public, not a secret):
+      // `npx eas init` prints it; put EAS_PROJECT_ID=<id> in the root .env.
+      // Without it, reminders and in-app notifications still work.
+      ...(process.env.EAS_PROJECT_ID ? { eas: { projectId: process.env.EAS_PROJECT_ID } } : {}),
     },
   },
 };

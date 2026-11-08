@@ -10,6 +10,7 @@ import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
 import { ConsentProvider } from '@/features/common/Consent';
 import { AppShell, FontGate } from '@/features/shell/AppShell';
 import { AccountProvider } from '@/lib/api/account';
+import { NotificationsBridge } from '@/lib/notifications/NotificationsBridge';
 
 function Navigator() {
   const { colors, isDark, reduceMotion } = useTheme();
@@ -25,6 +26,7 @@ function Navigator() {
     <NavigationThemeProvider value={navTheme}>
       <AppShell>
         <AnalyticsTracker />
+        <NotificationsBridge />
         <Stack
           screenOptions={{
             headerShown: false,

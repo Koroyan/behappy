@@ -80,12 +80,21 @@ export const FREE_ENTITLEMENTS: Entitlements = {
 // again on the server.
 const CACHE_KEY = '@behappy_me_cache_v1';
 
+/** GET /api/unread: just the badge numbers, cheap enough to ask often. */
+export interface UnreadCounts {
+  notifications: number;
+  community: { rooms: number; messages: number; byRoom: Record<string, number> };
+  messages: number;
+}
+
 interface AccountContextValue {
   me: Me | null;
   entitlements: Entitlements;
   loading: boolean;
   offline: boolean;
   refresh: () => Promise<Me | null>;
+  /** Updates only the unread badges (notifications, community, private messages). */
+  refreshUnread: () => Promise<void>;
   account: StoredAccount | null;
 }
 
@@ -113,6 +122,24 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const refreshUnread = useCallback(async () => {
+    try {
+      const u = await apiJson<UnreadCounts>('/api/unread');
+      setMe((m) =>
+        m
+          ? {
+              ...m,
+              notifications: { unread: u.notifications },
+              community: m.community ? { ...(m.community as object), unreadRooms: u.community.rooms, unreadMessages: u.community.messages, unreadByRoom: u.community.byRoom } : m.community,
+              client: m.client ? { ...(m.client as object), unreadMessages: u.messages } : m.client,
+            }
+          : m
+      );
+    } catch {
+      // offline: the badges keep their last value
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -131,8 +158,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const value = useMemo<AccountContextValue>(
-    () => ({ me, entitlements: me?.entitlements ?? FREE_ENTITLEMENTS, loading, offline, refresh, account }),
-    [me, loading, offline, refresh, account]
+    () => ({ me, entitlements: me?.entitlements ?? FREE_ENTITLEMENTS, loading, offline, refresh, refreshUnread, account }),
+    [me, loading, offline, refresh, refreshUnread, account]
   );
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }
@@ -142,6 +169,29 @@ export function useAccount(): AccountContextValue {
   if (!ctx) throw new Error('useAccount must be used inside AccountProvider');
   return ctx;
 }
+
+/** Unread numbers for badges, from the last server answer. */
+export function useUnread() {
+  const { me } = useAccount();
+  const community = me?.community as { unreadRooms?: number; unreadMessages?: number; unreadByRoom?: Record<string, number> } | null | undefined;
+  const client = me?.client as { unreadMessages?: number } | null | undefined;
+  const notifications = me?.notifications?.unread || 0;
+  const messages = client?.unreadMessages || 0;
+  // Older servers sent only the number of rooms; fall back to it.
+  const communityMessages = community?.unreadMessages ?? community?.unreadRooms ?? 0;
+  return {
+    notifications,
+    messages,
+    communityMessages,
+    communityRooms: community?.unreadRooms || 0,
+    byRoom: community?.unreadByRoom || {},
+    /** The app icon number: notifications and private messages (as on the server). */
+    badge: notifications + messages,
+  };
+}
+
+/** "99+" for big numbers. */
+export const badgeText = (n: number) => (n > 99 ? '99+' : String(n));
 
 export async function restoreWithCode(recoveryCode: string): Promise<boolean> {
   const res = await apiJson<{ accountId: string; token: string }>('/api/account/restore', {

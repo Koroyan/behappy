@@ -1,6 +1,10 @@
 import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 
+// Static: in Expo Go a dynamic import() loads a separate bundle that restarts
+// the module system and crashes the app (see lib/media/images.ts).
+import { ALL_SESSIONS } from './sessionsData';
+
 const DB_NAME = 'behappy_art_therapy.db';
 const DB_VERSION = 1;
 const IS_WEB = Platform.OS === 'web';
@@ -40,7 +44,6 @@ class ArtTherapyDatabase {
         this.webCache = new Map();
         await this.populateWebCache();
         this.initialized = true;
-        console.log('✅ Art Therapy Database initialized (Web mode - in-memory cache)');
         return;
       }
 
@@ -56,7 +59,6 @@ class ArtTherapyDatabase {
       }
 
       this.initialized = true;
-      console.log('✅ Art Therapy Database initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize database:', error);
       throw error;
@@ -67,7 +69,7 @@ class ArtTherapyDatabase {
    * Populate web cache with session data (web platform only)
    */
   private async populateWebCache(): Promise<void> {
-    const { ALL_SESSIONS } = await import('./sessionsData');
+
     this.webCache!.set('sessions', ALL_SESSIONS);
     console.log(`📦 Web cache populated with ${ALL_SESSIONS.length} sessions`);
   }
@@ -370,7 +372,7 @@ class ArtTherapyDatabase {
     console.log('📦 Populating database with art therapy sessions...');
 
     // Import sessions data
-    const { ALL_SESSIONS } = await import('./sessionsData');
+
 
     let successCount = 0;
     let errorCount = 0;

@@ -4,6 +4,7 @@ import { Keyboard, Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Icon, Press, useTheme, useLayout } from '@/design';
+import { badgeText } from '@/lib/api/account';
 
 import { usePrimaryNav } from './Sidebar';
 
@@ -96,7 +97,7 @@ export function MobileTabBar({ state, emitter, navigateToTab }: BottomTabBarProp
             key={route.key}
             accessibilityRole="tab"
             accessibilityState={{ selected: focused }}
-            accessibilityLabel={item.label}
+            accessibilityLabel={item.badge ? `${item.label} (${item.badge})` : item.label}
             testID={`tab-${key}`}
             feedback="opacity"
             haptic
@@ -105,6 +106,29 @@ export function MobileTabBar({ state, emitter, navigateToTab }: BottomTabBarProp
           >
             <View style={{ paddingHorizontal: 16, paddingVertical: 4, borderRadius: 999, backgroundColor: focused ? colors.primarySoft : 'transparent' }}>
               <Icon name={focused ? item.activeIcon : item.icon} size={22} color={focused ? 'onPrimarySoft' : 'textTertiary'} />
+              {item.badge ? (
+                <View
+                  testID={`tab-${key}-badge`}
+                  style={{
+                    position: 'absolute',
+                    top: -2,
+                    right: 6,
+                    minWidth: 18,
+                    height: 18,
+                    paddingHorizontal: 4,
+                    borderRadius: 9,
+                    backgroundColor: colors.danger,
+                    borderWidth: 2,
+                    borderColor: colors.surface,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <AppText variant="caption" style={{ color: '#FFFFFF', fontSize: 10, lineHeight: 12, fontWeight: '700' }}>
+                    {badgeText(item.badge)}
+                  </AppText>
+                </View>
+              ) : null}
             </View>
             <AppText variant="caption" color={focused ? 'text' : 'textTertiary'} numberOfLines={1} style={{ fontSize: labelSize }}>
               {item.label}

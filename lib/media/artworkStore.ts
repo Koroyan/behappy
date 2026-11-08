@@ -4,6 +4,8 @@
  * The web implementation lives in artworkStore.web.ts (IndexedDB).
  */
 import * as FileSystem from 'expo-file-system/legacy';
+// Static: a dynamic import() of a native module crashes Expo Go (see lib/media/images.ts).
+import * as Sharing from 'expo-sharing';
 
 import { publish, readJson, uid, writeJson } from '@/lib/storage/json';
 
@@ -65,6 +67,5 @@ export async function clearArtworks(): Promise<void> {
 
 /** Native export: share sheet. */
 export async function exportArtwork(item: Artwork): Promise<void> {
-  const Sharing = await import('expo-sharing');
   if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(item.uri, { mimeType: 'image/jpeg' });
 }

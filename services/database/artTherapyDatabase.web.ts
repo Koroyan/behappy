@@ -31,7 +31,6 @@ class ArtTherapyDatabase {
     try {
       await this.populateWebCache();
       this.initialized = true;
-      console.log('✅ Art Therapy Database initialized (Web mode - in-memory cache)');
     } catch (error) {
       console.error('❌ Failed to initialize web cache:', error);
       throw error;

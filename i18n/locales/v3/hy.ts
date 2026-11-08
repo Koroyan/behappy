@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsHy } from '../alerts/hy';
 
 /** Հայերեն — BeHappy 3.0 (համայնք, մասնագետներ, մասնագետի աշխատատարածք)։ Ջերմ տոն («դուք»)։ */
 export const hy3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsHy,
   shell: {
     personal: 'Անձնական',
     community: 'Համայնք',
@@ -366,6 +369,7 @@ export const hy3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym}-ը պատասխանեց ձեզ',
       community_mention: '{pseudonym}-ը հիշատակեց ձեզ',
+      community_activity: 'Նոր հաղորդագրություններ «{room}» սենյակում',
       moderation_removed: 'Մոդերատորը հեռացրեց ձեր հաղորդագրություններից մեկը',
       moderation_warning: 'Մոդերատորը ձեզ զգուշացում ուղարկեց կանոնների վերաբերյալ',
       moderation_suspended: 'Համայնքում ձեր գրելու հնարավորությունը կասեցված է',

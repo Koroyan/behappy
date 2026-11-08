@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsUk } from '../alerts/uk';
 
 /** Українська — BeHappy 3.0. Тепло й шанобливо («ви»). */
 export const uk3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsUk,
   shell: {
     personal: 'Особисте',
     community: 'Спільнота',
@@ -366,6 +369,7 @@ export const uk3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym} відповідає вам',
       community_mention: '{pseudonym} згадує вас',
+      community_activity: 'Нові повідомлення в кімнаті «{room}»',
       moderation_removed: 'Модератор видалив одне з ваших повідомлень',
       moderation_warning: 'Модератор надіслав вам попередження щодо правил',
       moderation_suspended: 'Вашу публікацію в спільноті призупинено',

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Badge, BrandMark, Icon, IconButton, IconName, Press, radius, space, useLayout, useTheme } from '@/design';
 import { useT } from '@/i18n';
-import { hasStaffRole, staffMay, useAccount, useIdentity } from '@/lib/api/account';
+import { hasStaffRole, staffMay, useAccount, useIdentity, useUnread } from '@/lib/api/account';
 
 export interface NavItem {
   key: string;
@@ -32,10 +32,11 @@ export function usePrimaryNav() {
   const { t } = useT();
   const { me } = useAccount();
   const identity = useIdentity();
-  const unreadRooms = (me?.community as { unreadRooms?: number } | undefined)?.unreadRooms || 0;
+  // Unread community messages (not just rooms), the same number on phones and desktop.
+  const { communityMessages } = useUnread();
 
   const today: NavItem = { key: 'today', label: t('nav.today'), icon: 'sunny-outline', activeIcon: 'sunny', href: '/', match: (p) => p === '/' || p === '/index' };
-  const community: NavItem = { key: 'community', label: t('shell.community_tab'), icon: 'people-outline', activeIcon: 'people', href: '/community', match: (p) => p.startsWith('/community'), badge: unreadRooms };
+  const community: NavItem = { key: 'community', label: t('shell.community_tab'), icon: 'people-outline', activeIcon: 'people', href: '/community', match: (p) => p.startsWith('/community'), badge: communityMessages };
   const anulia: NavItem = { key: 'anulia', label: t('nav.anulia'), icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses', href: '/anulia', match: (p) => p.startsWith('/anulia') };
   const journal: NavItem = { key: 'journal', label: t('nav.journal'), icon: 'book-outline', activeIcon: 'book', href: '/journal', match: (p) => p.startsWith('/journal') };
   const profile: NavItem = { key: 'profile', label: t('nav.profile'), icon: 'person-circle-outline', activeIcon: 'person-circle', href: '/profile', match: (p) => p.startsWith('/profile') || p.startsWith('/settings') || p.startsWith('/account') };

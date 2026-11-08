@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsRu } from '../alerts/ru';
 
 /** Русский — BeHappy 3.0 (сообщество, специалисты, кабинет специалиста). Тёплый тон на «вы». */
 export const ru3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsRu,
   shell: {
     personal: 'Личное',
     community: 'Сообщество',
@@ -366,6 +369,7 @@ export const ru3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym} ответил(а) вам',
       community_mention: '{pseudonym} упомянул(а) вас',
+      community_activity: 'Новые сообщения в комнате «{room}»',
       moderation_removed: 'Модератор удалил одно из ваших сообщений',
       moderation_warning: 'Модератор отправил вам предупреждение о правилах',
       moderation_suspended: 'Ваша публикация в сообществе приостановлена',

@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsId } from '../alerts/id';
 
 /** Bahasa Indonesia — BeHappy 3.0. Hangat dan akrab («kamu»). */
 export const id3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsId,
   shell: {
     personal: 'Pribadi',
     community: 'Komunitas',
@@ -366,6 +369,7 @@ export const id3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym} membalasmu',
       community_mention: '{pseudonym} menyebutmu',
+      community_activity: 'Pesan baru di {room}',
       moderation_removed: 'Moderator menghapus salah satu pesanmu',
       moderation_warning: 'Moderator mengirimimu peringatan tentang pedoman',
       moderation_suspended: 'Postinganmu di komunitas sedang dihentikan',

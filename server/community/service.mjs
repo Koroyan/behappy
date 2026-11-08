@@ -453,6 +453,22 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
           const nid = await notify(t, recipient, kind, { roomId, messageId: id, pseudonym: profile.pseudonym }, `${kind}:${id}`);
           if (nid) notified.push(recipient);
         }
+        // Members who follow every message of this room ("Every message" in the
+        // room's settings): one notification per unread burst, not one per
+        // message. The key holds their read position, so after they read the
+        // room the next message starts a new one.
+        const following = await t.query(
+          `insert into notifications (account_id, kind, data, ref_key)
+           select m.account_id, 'community_activity', jsonb_build_object('roomId', $1::text, 'messageId', $3::bigint, 'pseudonym', $4::text), 'activity:' || $1 || ':' || m.last_read_message_id
+           from room_memberships m
+           where m.room_id = $1 and m.notify = 'all' and m.account_id <> $2 and not (m.account_id = any($5::text[]))
+             and not exists (select 1 from user_blocks b where b.blocker_id = m.account_id and b.blocked_id = $2)
+             and not exists (select 1 from user_mutes u where u.muter_id = m.account_id and u.muted_id = $2)
+           on conflict (account_id, kind, ref_key) do nothing
+           returning account_id`,
+          [roomId, account.id, id, profile.pseudonym, [...recipients.keys()]]
+        );
+        for (const row of following.rows) notified.push(row.account_id);
       }
       return { id, duplicate: false, hold: analysis.hold, risk: analysis.risk, asks, notified };
     });
@@ -495,7 +511,16 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
   }
 
   async function markRead(account, roomId, messageId) {
-    await db.query('update room_memberships set last_read_message_id = greatest(last_read_message_id, $3) where room_id = $1 and account_id = $2', [roomId, account.id, Number(messageId) || 0]);
+    const upTo = Number(messageId) || 0;
+    await db.query('update room_memberships set last_read_message_id = greatest(last_read_message_id, $3) where room_id = $1 and account_id = $2', [roomId, account.id, upTo]);
+    // Reading the room also settles its notifications (replies, mentions,
+    // "new messages"), so the bell and the app icon don't keep counting them.
+    const settled = await db.query(
+      `update notifications set read_at = $4 where account_id = $1 and read_at is null and kind like 'community\\_%'
+         and data->>'roomId' = $2 and coalesce((data->>'messageId')::bigint, 0) <= $3`,
+      [account.id, roomId, upTo, ts(clock.now())]
+    );
+    if (settled.rowCount) bus.emit('unread', { accountId: account.id });
     return { ok: true };
   }
 
@@ -596,19 +621,32 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
 
   /** For GET /api/account/me. */
   async function meSection(q, account) {
-    if (!account.registered) return { profile: null, suspension: null, unreadRooms: 0 };
+    if (!account.registered) return { profile: null, suspension: null, unreadRooms: 0, unreadMessages: 0, unreadByRoom: {} };
     const p = await loadProfile(q, account.id);
     const suspension = await activeSuspension(q, account.id, clock.now());
-    let unreadRooms = 0;
+    let unreadByRoom = {};
     if (p) {
+      // Unread messages per joined room (at most 100 counted per room), the
+      // same rule as the room list: not your own, not from people you blocked.
       const r = await q.query(
-        `select count(*)::int as n from room_memberships m where m.account_id = $1 and exists (
-           select 1 from community_messages cm where cm.room_id = m.room_id and cm.id > m.last_read_message_id and cm.status = 'visible' and coalesce(cm.author_account_id, '') <> $1)`,
+        `select m.room_id, (select count(*)::int from (select 1 from community_messages cm
+             where cm.room_id = m.room_id and cm.id > m.last_read_message_id and cm.status = 'visible'
+               and coalesce(cm.author_account_id, '') <> $1
+               and (cm.author_account_id is null or cm.author_account_id not in (select blocked_id from user_blocks where blocker_id = $1))
+             limit 100) x) as n
+         from room_memberships m where m.account_id = $1`,
         [account.id]
       );
-      unreadRooms = r.rows[0].n;
+      unreadByRoom = Object.fromEntries(r.rows.filter((x) => x.n > 0).map((x) => [x.room_id, x.n]));
     }
-    return { profile: p ? { pseudonym: p.pseudonym, ref: p.ref, avatarSeed: p.avatarSeed } : null, suspension, unreadRooms };
+    const counts = Object.values(unreadByRoom);
+    return {
+      profile: p ? { pseudonym: p.pseudonym, ref: p.ref, avatarSeed: p.avatarSeed } : null,
+      suspension,
+      unreadRooms: counts.length,
+      unreadMessages: counts.reduce((a, b) => a + b, 0),
+      unreadByRoom,
+    };
   }
 
   return {

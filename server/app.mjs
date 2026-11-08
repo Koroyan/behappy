@@ -247,6 +247,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
     const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isFinite).slice(0, 200) : null;
     if (ids) await db.query('update notifications set read_at = $3 where account_id = $1 and id = any($2::bigint[]) and read_at is null', [req.account.id, ids, ts(clock.now())]);
     else await db.query('update notifications set read_at = $2 where account_id = $1 and read_at is null', [req.account.id, ts(clock.now())]);
+    deps.realtime?.toUser(req.account.id, 'unread:changed', {});
     res.json({ ok: true, unread: await unreadCount(db, req.account.id) });
   });
 

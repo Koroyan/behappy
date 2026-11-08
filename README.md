@@ -4,6 +4,7 @@ A well-being platform with three parts:
 
 - **Personal well-being** — a private journal, Anulia (an AI well-being companion), art therapy on paper, reflection cards, breathing, meditation, grounding, self-check questionnaires and a safety plan.
 - **Community** — real-time peer-support rooms on 13 topics in 19 languages, with Anulia on request and human moderation.
+- **Notifications** — gentle reminders on the phone for the journal, art therapy and reflection cards (smart timing from the person's own habits, never at night, easing off after a break, no streaks); phone notifications for replies, mentions, followed rooms and private messages (only what is still unread, quiet while the chat is open, one summary per burst, quiet hours, never message text); live unread counts on the tabs, the avatar and the app icon.
 - **Professionals** — a directory of verified psychologists: booking on their own hours, private messages, a professional workspace, and a flat monthly membership with **0% commission** on sessions.
 - **Admin control center** (`/admin`) — overview and analytics, accounts, support, verification and country policies, appointments, rooms, moderation and safety cases, AI usage and controls, finance (TEST), security, staff roles and settings. Every staff action is checked by permission on the server and recorded; private content stays out of reach.
 
@@ -44,7 +45,7 @@ Production: `deploy/docker-compose.yml` (PostgreSQL, API, Caddy with automatic H
 |---|---|
 | `npm run server:local` / `server:dev` | API with dev tools / restart on changes |
 | `npm run web:local` · `npm run web:proxy` | Expo web on 8082 · proxy on 8081 |
-| `npm test` | 103 tests: payments, AI proxy, quotas, accounts, community access, moderation, professionals, bookings, membership, staff security, analytics, the admin authorization matrix, scoring, text helpers, secret scan |
+| `npm test` | 127 tests: payments, AI proxy, quotas, accounts, community access, moderation, professionals, bookings, membership, staff security, analytics, the admin authorization matrix, phone notifications, reminder planning, scoring, text helpers, secret scan |
 | `npm run typecheck` · `npm run lint` | TypeScript · ESLint |
 | `npm run qa:i18n` | Every used key exists; coverage, placeholders and lists per language |
 | `npm run qa:pro` | Browser journey: apply → verify → trial → publish → book → confirm → message → membership checkout (`--pay` pays with the Flitt test card, `--app` targets a tunnel) |

@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsKo } from '../alerts/ko';
 
 /** 한국어 — BeHappy 3.0. 따뜻하고 정중한 해요체. */
 export const ko3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsKo,
   shell: {
     personal: '나',
     community: '커뮤니티',
@@ -366,6 +369,7 @@ export const ko3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym}님이 답장했어요',
       community_mention: '{pseudonym}님이 나를 언급했어요',
+      community_activity: '«{room}»에 새 메시지가 있어요',
       moderation_removed: '운영진이 내 메시지 하나를 삭제했어요',
       moderation_warning: '운영진이 가이드라인에 관한 경고를 보냈어요',
       moderation_suspended: '커뮤니티 글쓰기가 일시 중지되었어요',

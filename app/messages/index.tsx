@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { AppText, Badge, Card, EmptyState, Screen, Skeleton, space } from '@/design';
@@ -7,6 +7,7 @@ import { AccountGate } from '@/features/account/AccountParts';
 import { useT } from '@/i18n';
 import { useIdentity } from '@/lib/api/account';
 import { listThreads, Thread } from '@/lib/api/pros';
+import { getSocket, onEvent } from '@/lib/realtime/socket';
 
 export default function MessagesList() {
   const router = useRouter();
@@ -14,14 +15,25 @@ export default function MessagesList() {
   const identity = useIdentity();
   const [threads, setThreads] = useState<Thread[] | null>(null);
 
+  const load = useCallback(() => {
+    listThreads()
+      .then(setThreads)
+      .catch(() => setThreads((list) => list ?? []));
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      if (!identity.registered) return;
-      listThreads()
-        .then(setThreads)
-        .catch(() => setThreads([]));
-    }, [identity.registered])
+      if (identity.registered) load();
+    }, [identity.registered, load])
   );
+
+  // A new message elsewhere: the list (and its unread counts) updates live.
+  useEffect(() => {
+    if (!identity.registered) return;
+    getSocket().catch(() => {});
+    const offs = [onEvent('thread:message', load), onEvent('unread:changed', load)];
+    return () => offs.forEach((off) => off());
+  }, [identity.registered, load]);
 
   return (
     <Screen back title={t('messages.title')} subtitle={t('messages.private')} width="reading" testID="screen-messages">

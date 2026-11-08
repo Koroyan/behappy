@@ -116,6 +116,8 @@ export default function ProfileScreen() {
       <ListRow icon="language-outline" iconTone="primary" title={t('profile.language')} value={LANGUAGE_NAMES[language]} onPress={() => setLangOpen(true)} testID="profile-language" />
       {restartNeededForDirection ? <Banner tone="info" body={t('profile.rtlRestart')} /> : null}
       <Divider />
+      <ListRow icon="notifications-outline" iconTone="peach" title={t('alerts.settings.entry')} subtitle={t('alerts.settings.entryHint')} onPress={() => router.push('/settings/notifications' as never)} testID="profile-notifications" />
+      <Divider />
       <View style={{ paddingVertical: 14, gap: 10 }}>
         <AppText variant="callout">{t('profile.theme')}</AppText>
         <Segmented

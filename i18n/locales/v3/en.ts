@@ -8,11 +8,14 @@
  * guarantees about clients or income, no pressure.
  */
 import { acEn } from '../admin/en';
+import { alertsEn } from '../alerts/en';
 
 type Plural = { zero?: string; one: string; two?: string; few?: string; many?: string; other: string };
 const plural = (one: string, other: string): Plural => ({ one, other });
 
 export const en3 = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsEn,
   // Admin center (English and Georgian; see ../admin).
   ac: acEn,
   shell: {
@@ -379,6 +382,7 @@ export const en3 = {
     kinds: {
       community_reply: '{pseudonym} replied to you',
       community_mention: '{pseudonym} mentioned you',
+      community_activity: 'New messages in {room}',
       moderation_removed: 'A moderator removed one of your messages',
       moderation_warning: 'A moderator sent you a warning about the guidelines',
       moderation_suspended: 'Your posting in the community is paused',

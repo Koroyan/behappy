@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@/contexts/LanguageContext';
@@ -12,6 +12,7 @@ import { useT } from '@/i18n';
 import { useAccount, useIdentity } from '@/lib/api/account';
 import { ApiError } from '@/lib/api/client';
 import { listMyRooms, listRooms, Room, saveProfile, sendAppeal, Suspension } from '@/lib/api/community';
+import { onEvent } from '@/lib/realtime/socket';
 
 interface CommunityMe {
   profile: { pseudonym: string; ref: string; avatarSeed: number } | null;
@@ -40,6 +41,9 @@ export default function CommunityHome() {
   const [appealText, setAppealText] = useState('');
 
   const profile = community?.profile ?? null;
+  // A boolean, not the profile object: every refresh() returns a new object,
+  // and depending on it re-ran this focus effect (and refresh) in a loop.
+  const hasProfile = Boolean(profile);
 
   const load = useCallback(
     async (lang: AppLanguage) => {
@@ -57,9 +61,27 @@ export default function CommunityHome() {
   useFocusEffect(
     useCallback(() => {
       refresh();
-      if (identity.registered && profile) load(browseLang);
-    }, [refresh, identity.registered, profile, browseLang, load])
+      if (identity.registered && hasProfile) load(browseLang);
+    }, [refresh, identity.registered, hasProfile, browseLang, load])
   );
+
+  // Live: someone wrote in one of your rooms while you look at the list.
+  useEffect(() => {
+    if (!identity.registered || !hasProfile) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const soon = () => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        load(browseLang);
+      }, 800);
+    };
+    const offs = [onEvent('room:activity', soon), onEvent('unread:changed', soon)];
+    return () => {
+      offs.forEach((off) => off());
+      if (timer) clearTimeout(timer);
+    };
+  }, [identity.registered, hasProfile, browseLang, load]);
 
   const createProfile = async () => {
     setSetupError(null);

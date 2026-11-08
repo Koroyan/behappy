@@ -128,7 +128,30 @@ export function startRealtime({ server, deps, community }) {
         return {};
       })
     );
+    // Presence only: a private conversation open on this device. Nothing is
+    // broadcast to "thread:" rooms; the phone notification step uses this to
+    // stay quiet while the person is already reading that conversation.
+    socket.on(
+      'thread:watch',
+      guard(socket, async (_account, { threadId }) => {
+        if (typeof threadId === 'string' && threadId.length <= 64) socket.join(`thread:${threadId}`);
+        return {};
+      })
+    );
+    socket.on(
+      'thread:unwatch',
+      guard(socket, async (_account, { threadId }) => {
+        if (typeof threadId === 'string') socket.leave(`thread:${threadId}`);
+        return {};
+      })
+    );
   });
+
+  /** Is this person looking at that room or thread on any connected device? */
+  const isWatching = async (accountId, roomName) => {
+    for (const s of await io.in(`user:${accountId}`).fetchSockets()) if (s.rooms.has(roomName)) return true;
+    return false;
+  };
 
   // ---------- Fan-out after commit ----------
   const sendToRoom = async (roomId, messageId, event) => {
@@ -144,7 +167,13 @@ export function startRealtime({ server, deps, community }) {
     }
   };
 
-  community.bus.on('message:new', ({ roomId, messageId }) => sendToRoom(roomId, messageId, 'message:new'));
+  community.bus.on('message:new', async ({ roomId, messageId }) => {
+    await sendToRoom(roomId, messageId, 'message:new');
+    // Members who are elsewhere in the app update their unread badges.
+    const [row] = await loadMessageRows(db, [messageId]);
+    const members = await db.query('select account_id from room_memberships where room_id = $1 and account_id <> $2', [roomId, row?.author_account_id || '']);
+    if (members.rowCount) io.to(members.rows.map((m) => `user:${m.account_id}`)).emit('room:activity', { roomId });
+  });
   community.bus.on('message:update', ({ roomId, messageId }) => sendToRoom(roomId, messageId, 'message:update'));
   community.bus.on('message:reactions', ({ roomId, messageId }) => sendToRoom(roomId, messageId, 'message:update'));
   community.bus.on('message:held', async ({ roomId, messageId, accountId }) => {
@@ -155,7 +184,12 @@ export function startRealtime({ server, deps, community }) {
   community.bus.on('anulia:thinking', ({ roomId, replyToId }) => io.to(`room:${roomId}`).emit('anulia:thinking', { roomId, replyToId }));
   community.bus.on('anulia:unavailable', ({ accountId, roomId, reason }) => io.to(`user:${accountId}`).emit('anulia:unavailable', { roomId, reason }));
   community.bus.on('safety:notice', ({ accountId, roomId }) => io.to(`user:${accountId}`).emit('safety:notice', { roomId }));
-  community.bus.on('notification', ({ accountId }) => io.to(`user:${accountId}`).emit('notification:new', {}));
+  community.bus.on('notification', ({ accountId }) => {
+    io.to(`user:${accountId}`).emit('notification:new', {});
+    deps.push?.poke();
+  });
+  // Read on one device: the person's other devices update their badges.
+  community.bus.on('unread', ({ accountId }) => io.to(`user:${accountId}`).emit('unread:changed', {}));
   community.bus.on('suspended', ({ accountId }) => io.to(`user:${accountId}`).emit('account:suspended', {}));
   community.bus.on('relations', async ({ accountId }) => {
     for (const s of await io.in(`user:${accountId}`).fetchSockets()) await refreshRelations(s);
@@ -170,7 +204,11 @@ export function startRealtime({ server, deps, community }) {
 
   // Other modules (private messages, bookings, staff tools) push to or close a person's connections.
   deps.realtime = {
-    toUser: (accountId, event, payload) => io.to(`user:${accountId}`).emit(event, payload),
+    toUser: (accountId, event, payload) => {
+      io.to(`user:${accountId}`).emit(event, payload);
+      if (event === 'notification:new') deps.push?.poke();
+    },
+    isWatching,
     connections: () => io.engine.clientsCount,
     /** Closes live connections: all of a person's, or only those of one session. */
     disconnect: async (accountId, { sessionId, exceptSessionId } = {}) => {

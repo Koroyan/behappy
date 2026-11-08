@@ -2,7 +2,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { AppText, Button, Card, EmptyState, Icon, IconName, Screen, Skeleton, space, useTheme } from '@/design';
+import { AppText, Button, Card, EmptyState, Icon, IconButton, IconName, Screen, Skeleton, space, useTheme } from '@/design';
 import { AccountGate } from '@/features/account/AccountParts';
 import { useT } from '@/i18n';
 import { useAccount, useIdentity } from '@/lib/api/account';
@@ -23,6 +23,7 @@ function hrefFor(n: AppNotification, isPro: boolean): string | null {
   switch (n.kind) {
     case 'community_reply':
     case 'community_mention':
+    case 'community_activity':
     case 'moderation_removed':
       return d.roomId ? `/community/${d.roomId}` : '/community';
     case 'moderation_warning':
@@ -63,7 +64,7 @@ function hrefFor(n: AppNotification, isPro: boolean): string | null {
 export default function Notifications() {
   const router = useRouter();
   const identity = useIdentity();
-  const { me, refresh } = useAccount();
+  const { me, refreshUnread } = useAccount();
   const { colors } = useTheme();
   const { t, formatDate, formatTime } = useT();
   const [items, setItems] = useState<AppNotification[] | null>(null);
@@ -87,7 +88,9 @@ export default function Notifications() {
   const title = (n: AppNotification) => {
     const d = n.data || {};
     const key = `notifications.kinds.${n.kind}`;
+    const topic = typeof d.roomId === 'string' ? d.roomId.split(':')[0] : '';
     const text = t(key, {
+      room: topic ? t(`community.topics.${topic}.name`) : '',
       pseudonym: d.pseudonym || '',
       clientName: d.clientName || t('messages.formerClient'),
       from: d.from || '',
@@ -107,7 +110,7 @@ export default function Notifications() {
     if (!n.readAt) {
       setItems((list) => (list || []).map((x) => (x.id === n.id ? { ...x, readAt: Date.now() } : x)));
       markNotificationsRead([n.id])
-        .then(() => refresh())
+        .then(() => refreshUnread())
         .catch(() => {});
     }
     const href = hrefFor(n, isPro);
@@ -117,7 +120,7 @@ export default function Notifications() {
   const readAll = async () => {
     setItems((list) => (list || []).map((x) => ({ ...x, readAt: x.readAt || Date.now() })));
     await markNotificationsRead().catch(() => {});
-    refresh();
+    refreshUnread();
   };
 
   const unread = (items || []).filter((n) => !n.readAt).length;
@@ -128,7 +131,12 @@ export default function Notifications() {
       title={t('notifications.title')}
       width="reading"
       testID="screen-notifications"
-      headerRight={unread ? <Button label={t('notifications.markAllRead')} size="sm" variant="quiet" onPress={readAll} testID="notifications-read-all" /> : undefined}
+      headerRight={
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {unread ? <Button label={t('notifications.markAllRead')} size="sm" variant="quiet" onPress={readAll} testID="notifications-read-all" /> : null}
+          <IconButton icon="settings-outline" label={t('alerts.settings.title')} onPress={() => router.push('/settings/notifications' as never)} testID="notifications-settings" />
+        </View>
+      }
     >
       {!identity.registered ? (
         <AccountGate returnTo="/notifications" />

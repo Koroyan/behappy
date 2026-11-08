@@ -1,4 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { ART_TOPIC } from '@/lib/storage/activity';
+import { publish } from '@/lib/storage/json';
+
 import { ArtTherapyResponse } from './artTherapyService';
 import { artTherapyDB } from './database/artTherapyDatabase';
 
@@ -109,7 +113,6 @@ class ArtTherapyProgramManager {
         } as SessionProgress);
       }
 
-      console.log(`📖 Loaded progress for ${progressMap.size} sessions from AsyncStorage`);
       return progressMap;
     } catch (error) {
       console.error('Failed to load art therapy progress:', error);
@@ -262,10 +265,7 @@ class ArtTherapyProgramManager {
       });
 
       await AsyncStorage.setItem(this.storageKey, this.safeStringify(obj));
-      
-      const dataSize = this.safeStringify(obj).length;
-      const dataSizeKB = (dataSize / 1024).toFixed(2);
-      console.log(`💾 Saved progress for session ${sessionId} to AsyncStorage (${dataSizeKB} KB)`);
+      publish(ART_TOPIC);
     } catch (error) {
       console.error('Failed to save art therapy progress:', error);
       throw error;
@@ -286,7 +286,6 @@ class ArtTherapyProgramManager {
     };
     
     await this.saveProgress(sessionId, newProgress);
-    console.log(`🎨 Started new session ${sessionId}`);
     return newProgress;
   }
 
@@ -311,7 +310,6 @@ class ArtTherapyProgramManager {
     sessionProgress.chatHistory = chatHistory;
     
     await this.saveProgress(sessionId, sessionProgress);
-    console.log(`✅ Completed session ${sessionId}`);
   }
 
   /**

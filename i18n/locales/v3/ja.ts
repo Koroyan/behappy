@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsJa } from '../alerts/ja';
 
 /** 日本語 — BeHappy 3.0。やさしく丁寧に（です・ます調）。 */
 export const ja3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsJa,
   shell: {
     personal: 'パーソナル',
     community: 'コミュニティ',
@@ -366,6 +369,7 @@ export const ja3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym} さんが返信しました',
       community_mention: '{pseudonym} さんがあなたをメンションしました',
+      community_activity: '「{room}」に新しいメッセージがあります',
       moderation_removed: 'モデレーターがあなたのメッセージを 1 件削除しました',
       moderation_warning: 'モデレーターからルールについての警告が届きました',
       moderation_suspended: 'コミュニティでの投稿が一時停止されました',

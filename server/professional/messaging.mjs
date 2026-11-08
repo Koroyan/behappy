@@ -106,6 +106,9 @@ export function createMessaging({ db, clock = { now: () => Date.now() }, crypto,
   async function open(account, id) {
     const { th, side } = await threadFor(db, account, id);
     await db.query(`update pro_threads set ${side === 'client' ? 'client_last_read_at' : 'pro_last_read_at'} = $2 where id = $1`, [th.id, ts(clock.now())]);
+    // Opening the conversation settles its "new message" notifications too.
+    const settled = await db.query("update notifications set read_at = $3 where account_id = $1 and kind = 'pro_message' and read_at is null and data->>'threadId' = $2", [account.id, th.id, ts(clock.now())]);
+    if (settled.rowCount) emit(account.id, 'unread:changed', {});
     return threadDto(db, { ...th, [side === 'client' ? 'client_last_read_at' : 'pro_last_read_at']: new Date(clock.now()) }, side, clock.now(), { withMessages: true });
   }
 

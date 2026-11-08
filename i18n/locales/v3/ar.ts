@@ -1,10 +1,13 @@
 import type { PartialMessages } from '../../index';
+import { alertsAr } from '../alerts/ar';
 
 /**
  * العربية — BeHappy 3.0. فصحى مبسّطة ودافئة، بصيغ محايدة جنسيًا حيثما أمكن
  * (المصدر، «يُرجى…»، «يمكنك…»).
  */
 export const ar3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsAr,
   shell: {
     personal: 'شخصي',
     community: 'المجتمع',
@@ -369,6 +372,7 @@ export const ar3: PartialMessages = {
     kinds: {
       community_reply: 'ردّ {pseudonym} عليك',
       community_mention: 'أشار إليك {pseudonym}',
+      community_activity: 'رسائل جديدة في «{room}»',
       moderation_removed: 'أزال أحد المشرفين إحدى رسائلك',
       moderation_warning: 'أرسل إليك أحد المشرفين تحذيرًا بشأن الإرشادات',
       moderation_suspended: 'النشر في المجتمع متوقف مؤقتًا',

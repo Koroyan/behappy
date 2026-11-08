@@ -2,6 +2,10 @@
  * Picks an image and prepares it for AI: always JPEG (avoids HEIC/RAW
  * issues), downscaled and compressed toward ~700 KB.
  */
+// Static imports only: in Expo Go a dynamic import() loads a separate bundle
+// that restarts the module system ("Cannot find native module 'ExpoAsset'",
+// '"main" has not been registered') and crashes the app.
+import { Asset } from 'expo-asset';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
@@ -63,7 +67,6 @@ export async function pickImage(source: 'library' | 'camera'): Promise<PreparedI
 
 /** Loads a bundled asset (e.g. a card image) as a data URL for the AI. */
 export async function assetToDataUrl(moduleId: number, maxWidth = 1024): Promise<string> {
-  const { Asset } = await import('expo-asset');
   const asset = Asset.fromModule(moduleId);
   await asset.downloadAsync();
   const uri = asset.localUri || asset.uri;

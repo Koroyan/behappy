@@ -8,7 +8,7 @@ import { ChatScroll, Composer } from '@/features/chat/ChatKit';
 import { useT } from '@/i18n';
 import { ApiError } from '@/lib/api/client';
 import { openThread, reportThreadMessage, sendThreadMessage, Thread } from '@/lib/api/pros';
-import { getSocket, onEvent } from '@/lib/realtime/socket';
+import { getSocket, onEvent, onStatus, request } from '@/lib/realtime/socket';
 
 export default function ThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,6 +42,20 @@ export default function ThreadScreen() {
     getSocket().catch(() => {});
     return onEvent('thread:message', (p: { threadId: string }) => p.threadId === id && load());
   }, [id, load]);
+
+  // While this conversation is on screen the phone stays quiet about it
+  // (the server checks this before sending a push). Again after reconnecting.
+  useFocusEffect(
+    useCallback(() => {
+      const threadId = String(id);
+      const watch = () => request('thread:watch', { threadId }).catch(() => {});
+      const off = onStatus((s) => s === 'online' && watch());
+      return () => {
+        off();
+        request('thread:unwatch', { threadId }).catch(() => {});
+      };
+    }, [id])
+  );
 
   const send = async () => {
     const body = input.trim();

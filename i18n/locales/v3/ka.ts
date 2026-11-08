@@ -1,8 +1,11 @@
 import type { PartialMessages } from '../../index';
 import { acKa } from '../admin/ka';
+import { alertsKa } from '../alerts/ka';
 
 /** ქართული — BeHappy 3.0 (საზოგადოება, სპეციალისტები, პროფესიული სივრცე). თბილი ტონი, „შენ“. */
 export const ka3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsKa,
   // ადმინისტრირების ცენტრი (იხ. ../admin).
   ac: acKa,
   shell: {
@@ -369,6 +372,7 @@ export const ka3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym}-მა გიპასუხა',
       community_mention: '{pseudonym}-მა მოგიხსენია',
+      community_activity: 'ახალი შეტყობინებები ოთახში „{room}“',
       moderation_removed: 'მოდერატორმა შენი ერთ-ერთი შეტყობინება წაშალა',
       moderation_warning: 'მოდერატორმა წესებთან დაკავშირებით გაფრთხილება გამოგიგზავნა',
       moderation_suspended: 'საზოგადოებაში წერის უფლება შეჩერებულია',

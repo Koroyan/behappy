@@ -1,10 +1,13 @@
 import type { PartialMessages } from '../../index';
+import { alertsHi } from '../alerts/hi';
 
 /**
  * हिन्दी — BeHappy 3.0। आत्मीय, विनम्र «आप»। जहाँ स्वाभाविक लगे, वहाँ लिंग-निरपेक्ष
  * रचनाएँ (कर्मवाच्य, «आपको … लग रहा है») ताकि क्रिया उपयोगकर्ता के लिंग पर निर्भर न हो।
  */
 export const hi3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsHi,
   shell: {
     personal: 'निजी',
     community: 'समुदाय',
@@ -369,6 +372,7 @@ export const hi3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym} ने आपको जवाब दिया',
       community_mention: '{pseudonym} ने आपका ज़िक्र किया',
+      community_activity: '«{room}» में नए संदेश',
       moderation_removed: 'एक मॉडरेटर ने आपका एक संदेश हटाया',
       moderation_warning: 'एक मॉडरेटर ने आपको नियमों के बारे में चेतावनी भेजी',
       moderation_suspended: 'समुदाय में आपका पोस्ट करना रोका गया है',

@@ -12,6 +12,7 @@ import { mountSensitive } from './admin/sensitive.mjs';
 import { mountUsersAdmin } from './admin/users.mjs';
 import { mountAnalytics } from './analytics/index.mjs';
 import { mountCommunity, startCommunityRealtime } from './community/index.mjs';
+import { mountPush, startPushService } from './notify/routes.mjs';
 import { mountProfessionals } from './professional/index.mjs';
 import { startScheduler } from './scheduler.mjs';
 import { mountSupport } from './support/index.mjs';
@@ -20,6 +21,7 @@ import { mountSupport } from './support/index.mjs';
 export const FEATURE_MODULES = [
   mountCommunity,
   mountProfessionals,
+  mountPush,
   mountAnalytics,
   mountSupport,
   mountAdmin,
@@ -33,7 +35,7 @@ export const FEATURE_MODULES = [
   mountInsights,
 ];
 
-export const SERVICES = [startCommunityRealtime, startScheduler];
+export const SERVICES = [startCommunityRealtime, startScheduler, startPushService];
 
 /** Starts background services (real-time rooms, the scheduler). */
 export async function startFeatureServices({ server, app, deps }) {

@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsEs } from '../alerts/es';
 
 /** Español — BeHappy 3.0. Cálido y cercano («tú»). */
 export const es3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsEs,
   shell: {
     personal: 'Personal',
     community: 'Comunidad',
@@ -366,6 +369,7 @@ export const es3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym} te respondió',
       community_mention: '{pseudonym} te mencionó',
+      community_activity: 'Mensajes nuevos en «{room}»',
       moderation_removed: 'La moderación retiró uno de tus mensajes',
       moderation_warning: 'La moderación te envió una advertencia sobre las normas',
       moderation_suspended: 'Tus publicaciones en la comunidad están en pausa',

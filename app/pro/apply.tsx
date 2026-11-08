@@ -4,10 +4,10 @@ import { Platform, ScrollView, View } from 'react-native';
 
 import { LANGUAGE_NAMES } from '@/contexts/LanguageContext';
 import { AppText, Banner, Button, Card, Chip, Divider, Icon, IconButton, Press, Screen, SectionHeader, Skeleton, space, TextField, Toggle, useFeedback, useTheme } from '@/design';
-import { CodeField } from '@/features/account/AccountParts';
+import { AccountGate, CodeField } from '@/features/account/AccountParts';
 import { ProAvatar, VerificationBadge } from '@/features/pro/ProParts';
 import { useT } from '@/i18n';
-import { useAccount } from '@/lib/api/account';
+import { useAccount, useIdentity } from '@/lib/api/account';
 import { ApiError } from '@/lib/api/client';
 import { pickImage } from '@/lib/media/images';
 import * as pro from '@/lib/api/pros';
@@ -55,6 +55,7 @@ export default function ProApply() {
   const { t, tl } = useT();
   const { colors } = useTheme();
   const { refresh } = useAccount();
+  const identity = useIdentity();
   const { toast } = useFeedback();
   const [p, setP] = useState<ProProfile | null>(null);
   const [step, setStep] = useState<Step>('identity');
@@ -108,12 +109,22 @@ export default function ProApply() {
 
   useFocusEffect(
     useCallback(() => {
+      // Applying needs an account (opened from a link, someone may not have one yet).
+      if (!identity.registered) return;
       pro
         .proMe()
         .then(async (m) => adopt(m.profile || (await pro.startApplication())))
         .catch(() => setError(t('common.errorBody')));
-    }, [adopt, t])
+    }, [adopt, t, identity.registered])
   );
+
+  if (!identity.registered) {
+    return (
+      <Screen back title={t('pro.apply.title')} width="reading" testID="screen-pro-apply">
+        <AccountGate returnTo="/pro/apply" />
+      </Screen>
+    );
+  }
 
   if (!p) {
     return (

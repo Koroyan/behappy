@@ -3,6 +3,8 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+// Static: a dynamic import() of a native module crashes Expo Go (see lib/media/images.ts).
+import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
 import { resetAnalytics } from '@/lib/analytics';
@@ -43,7 +45,6 @@ export async function exportAllData(): Promise<void> {
   }
   const path = `${FileSystem.cacheDirectory}${name}`;
   await FileSystem.writeAsStringAsync(path, payload);
-  const Sharing = await import('expo-sharing');
   if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(path, { mimeType: 'application/json' });
 }
 

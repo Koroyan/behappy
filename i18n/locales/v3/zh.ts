@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsZh } from '../alerts/zh';
 
 /** 简体中文 — BeHappy 3.0。温和、亲切（“你”）。 */
 export const zh3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsZh,
   shell: {
     personal: '个人',
     community: '社区',
@@ -366,6 +369,7 @@ export const zh3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym} 回复了你',
       community_mention: '{pseudonym} 提到了你',
+      community_activity: '“{room}”有新消息',
       moderation_removed: '管理员移除了你的一条消息',
       moderation_warning: '管理员就社区守则向你发出了警告',
       moderation_suspended: '你在社区中的发言已被暂停',

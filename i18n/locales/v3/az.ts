@@ -1,7 +1,10 @@
 import type { PartialMessages } from '../../index';
+import { alertsAz } from '../alerts/az';
 
 /** Azərbaycanca — BeHappy 3.0. Səmimi və hörmətli («siz»). */
 export const az3: PartialMessages = {
+  // Notifications & reminders (see ../alerts).
+  alerts: alertsAz,
   shell: {
     personal: 'Şəxsi',
     community: 'İcma',
@@ -366,6 +369,7 @@ export const az3: PartialMessages = {
     kinds: {
       community_reply: '{pseudonym} sizə cavab verdi',
       community_mention: '{pseudonym} sizi xatırlatdı',
+      community_activity: '«{room}» otağında yeni mesajlar',
       moderation_removed: 'Moderator mesajlarınızdan birini sildi',
       moderation_warning: 'Moderator sizə qaydalarla bağlı xəbərdarlıq göndərdi',
       moderation_suspended: 'İcmada paylaşımınız dayandırılıb',
