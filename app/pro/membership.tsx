@@ -25,8 +25,12 @@ export default function ProMembership() {
   const load = useCallback(() => {
     membershipOverview()
       .then(setM)
-      .catch(() => setFailed(true));
-  }, []);
+      .catch((e) => {
+        // No specialist profile at all: the join page, not "your credentials need approval".
+        if (e instanceof ApiError && e.status === 404) router.replace('/pro' as any);
+        else setFailed(true);
+      });
+  }, [router]);
 
   useFocusEffect(
     useCallback(() => {

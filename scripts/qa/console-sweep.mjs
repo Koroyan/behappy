@@ -86,6 +86,12 @@ async function sweep(user, routes, viewport, label, extra = {}) {
   page.on('response', (res) => {
     if (res.status() < 400) return;
     const u = new URL(res.url());
+    // Access checks doing their job, not failures: someone without a staff role opening
+    // /moderation (the admin shell asks /api/admin/me → 403 "forbidden" and shows "no
+    // access"), and protected data before the password is confirmed again (403 "step_up_required").
+    if (res.status() === 403 && (u.pathname === '/api/admin/me' || u.pathname === '/api/admin/sensitive/requests')) return;
+    // Someone who isn't a specialist opening /pro/membership: 404 "no profile", the page then shows the join page.
+    if (res.status() === 404 && u.pathname === '/api/pro/membership' && where.startsWith('/pro/membership')) return;
     add(`[http ${res.status()}] ${res.request().method()} ${u.pathname}`, where);
   });
   for (const r of routes) {
