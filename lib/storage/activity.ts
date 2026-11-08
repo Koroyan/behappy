@@ -4,6 +4,8 @@
  */
 import { CheckIn, loadCheckIns } from './checkins';
 import { JournalEntry, loadEntries } from './journal';
+import { recordEvent } from '@/lib/wellbeing/eventStore';
+
 import { dayKey, readJson, writeJson } from './json';
 
 /** Published when art therapy progress changes (services/artTherapyProgramNew.ts). */
@@ -20,19 +22,33 @@ interface BreathingStore {
   completedSessions?: { patternId?: string; completedAt?: string; durationMinutes?: number }[];
 }
 
+/** Called when a breathing session is finished (never when the screen opens). */
 export async function logBreathing(patternId: string, minutes: number) {
   const current = await readJson<BreathingStore>(BREATHING_KEY, {});
   const sessions = Array.isArray(current.completedSessions) ? current.completedSessions : [];
-  const next = [{ patternId, completedAt: new Date().toISOString(), durationMinutes: Math.max(1, Math.round(minutes)) }, ...sessions].slice(0, 300);
+  const at = Date.now();
+  const durationMinutes = Math.max(1, Math.round(minutes));
+  const next = [{ patternId, completedAt: new Date(at).toISOString(), durationMinutes }, ...sessions].slice(0, 300);
   await writeJson(BREATHING_KEY, {
     totalMinutes: next.reduce((s, x) => s + (Number(x.durationMinutes) || 0), 0),
     completedSessions: next,
   });
+  // Same key as the legacy import (the end time), so it is counted once.
+  await recordEvent('breathing.completed', Date.parse(new Date(at).toISOString()), { minutes: durationMinutes, pattern: patternId }, at).catch(() => null);
 }
 
+/** Called when a meditation is finished. */
 export async function logMeditation(sessionId: string, minutes: number) {
   const list = await readJson<{ sessionId: string; at: number; minutes: number }[]>(MEDITATION_KEY, []);
-  await writeJson(MEDITATION_KEY, [{ sessionId, at: Date.now(), minutes }, ...list].slice(0, 300));
+  const at = Date.now();
+  await writeJson(MEDITATION_KEY, [{ sessionId, at, minutes }, ...list].slice(0, 300));
+  await recordEvent('meditation.completed', `${sessionId}:${at}`, { minutes }, at).catch(() => null);
+}
+
+/** Called when all five grounding steps are done. */
+export async function logGrounding() {
+  const at = Date.now();
+  await recordEvent('grounding.completed', at, { minutes: 3 }, at).catch(() => null);
 }
 
 export interface ActivityData {

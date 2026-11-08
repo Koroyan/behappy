@@ -12,6 +12,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { trackAction } from '@/lib/analytics';
+import { recordEvent } from '@/lib/wellbeing/eventStore';
 
 import { publish, readJson, uid, writeJson } from './json';
 
@@ -98,6 +99,8 @@ export async function createEntry(input: { title?: string; content: string; mood
   await persist([entry, ...list]);
   // Only that an entry was saved: never its text or mood.
   trackAction('journal', 'entry_saved');
+  // The saved entry (not opening the editor) is what completes a journal Step.
+  recordEvent('journal.saved', entry.id, { ...(typeof entry.mood === 'number' ? { mood: entry.mood } : {}), ...(entry.promptId ? { prompt: entry.promptId } : {}) }, entry.timestamp).catch(() => {});
   return entry;
 }
 

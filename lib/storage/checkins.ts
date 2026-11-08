@@ -4,6 +4,8 @@
  * scale) are imported read-only on first load so older history appears in
  * Insights.
  */
+import { recordEvent } from '@/lib/wellbeing/eventStore';
+
 import { MoodLevel } from './journal';
 import { dayKey, publish, readJson, uid, writeJson } from './json';
 
@@ -55,6 +57,7 @@ export async function addCheckIn(input: { mood: MoodLevel; feelings?: Feeling[];
   const entry: CheckIn = { id: uid('ci'), at: Date.now(), mood: input.mood, feelings: input.feelings ?? [], note: input.note?.trim() || undefined, source: 'today' };
   await writeJson(KEY, [entry, ...list]);
   publish(CHECKIN_TOPIC);
+  recordEvent('mood.checkin', entry.id, { mood: entry.mood, ...(entry.feelings?.length ? { feelings: entry.feelings.slice(0, 8).join(',') } : {}) }, entry.at).catch(() => {});
   return entry;
 }
 

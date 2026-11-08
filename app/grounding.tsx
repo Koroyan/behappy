@@ -9,6 +9,7 @@ import { View } from 'react-native';
 
 import { AppText, Button, Card, Icon, IconName, Press, ProgressBar, Screen, space, useTheme } from '@/design';
 import { useT } from '@/i18n';
+import { logGrounding } from '@/lib/storage/activity';
 
 const STEPS: { sense: 'see' | 'touch' | 'hear' | 'smell' | 'taste'; count: number; icon: IconName }[] = [
   { sense: 'see', count: 5, icon: 'eye-outline' },
@@ -28,6 +29,8 @@ export default function GroundingScreen() {
   const go = (next: number) => {
     setStep(next);
     setNoticed(0);
+    // All five senses done: this (not opening the screen) is a completed grounding.
+    if (next === 5) logGrounding().catch(() => {});
   };
 
   let body: React.ReactNode;
