@@ -119,6 +119,24 @@ sentences ("приятное напряжение", "центр стал ярч�
 - `X-BeHappy-Art-Run` (the session's start time) separates runs of a session.
 - If the server returns no response id (privacy mode below), the next turn
   sends the full history.
+- **Daily new-session limit** (found on an iPhone: Expo Go showed "Art Therapy
+  Streaming Error: Allowance reached"): expected outcomes (allowance, offline,
+  AI unavailable) are no longer logged as errors. The server reports which
+  sessions are already started (`usage.art.startedIds`, `resetAt`), so a new
+  session shows "new sessions open tomorrow" before a drawing is uploaded; if
+  the server still refuses the first turn (the allowance was used on another
+  device), the turn is rolled back and the typed words are kept. The
+  end-session button is hidden while the limit applies.
+
+### 5. Found in live testing (8 November)
+
+- After the second upload the full comparison instruction ("say you don't see
+  a change") is given only on the upload turn; later turns get a one-line
+  reminder ("already discussed; don't repeat it"). Before, the model repeated
+  "I don't see a change between the two images" on every following turn.
+- The per-turn app note always asks for JSON (OpenAI requires the word for
+  `json_object` output), so a request never depends on the client's text.
+- Upstream 4xx are logged with OpenAI's error type, code and parameter only.
 
 ## Privacy of AI sessions
 

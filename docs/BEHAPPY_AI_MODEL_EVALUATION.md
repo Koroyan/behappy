@@ -97,6 +97,9 @@ the live model:** the OpenAI account ran out of credits (HTTP 429
   enough to compare models on the known failure modes, not a statistical
   quality score. Model answers vary between runs.
 - The images are generated, not phone photos of real paper.
+- The same list prices are the server's default cost estimates per model
+  (`server/aiPricing.mjs`: admin AI page, daily budget); a price set by staff
+  overrides them.
 - Costs are list prices without the cached-input discount; with
   `previous_response_id` most of the ~5k input tokens per turn (instructions,
   earlier turns) are cached, so real costs are lower.

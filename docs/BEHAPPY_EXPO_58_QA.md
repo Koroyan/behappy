@@ -43,13 +43,33 @@ with `.web.ts` twins), so the web build carries no notification module.
 
 Browser journeys (real Chrome via Playwright): `qa:moderation` 14/14,
 `qa:account360` 10/10, `qa:admin` 25/25, `qa:pro` 17/17 (apply → verify → book →
-messages → Flitt TEST checkout), `qa:console` no errors. `qa:art` (live art
-session in the browser) was not run: the OpenAI account had no credits left.
+messages → Flitt TEST checkout), `qa:console` no errors. After credits were
+added: `qa:art` (Georgian, a real drawing) PASS; all journeys re-run after the
+Android fixes with the same results.
+
+## Android in Expo Go (8 November, evening)
+
+Expo Go 58.0.5 on an Android 12 emulator, Georgian, a registered test account:
+every user feature was used end to end (art therapy with real drawings, the
+daily limit, Anulia, cards, journal, community, private messages, check-in,
+breathing, meditation, grounding, questionnaires, trends, help screen,
+specialists, notification settings, admin). Results and fixes:
+`BEHAPPY_RELEASE_READINESS.md` → "Android test pass".
+
+Development notes from that pass:
+- `metro.config.js` keeps Metro from watching `.server-data` (the dev
+  database), `qa-shots` and `dist`; watching them made Metro's web server
+  rendering fail now and then ("Requiring unknown module …") during journeys.
+- Expo Go's floating "Tools" button can cover the send button when the
+  keyboard is open; drag it aside (development builds only).
+- On the emulator, a 15 MB development bundle sometimes stalled at 99 % over
+  10.0.2.2 or the LAN address; `adb reverse tcp:8082 tcp:8082` and
+  `adb reverse tcp:8787 tcp:8787`, then `exp://127.0.0.1:8082`, loads it in seconds.
 
 ## Not tested here
 
-- **Native iOS/Android builds** (Xcode, Gradle, EAS): not available on this
-  Windows machine without an Expo account. The JS bundles compile for both.
-- **On a physical phone:** this run did not drive a device. The earlier Expo Go
-  crash was diagnosed from the phone's own logs in Metro.
+- **Native iOS/Android store builds** (Xcode, Gradle, EAS): not made here. The
+  JS bundles compile for both.
+- **iOS:** no Mac here; the iPhone runs the same JavaScript in Expo Go. The
+  earlier Expo Go crash was diagnosed from the phone's own logs in Metro.
 - Android Expo Go remote push (not supported by Expo since SDK 53).

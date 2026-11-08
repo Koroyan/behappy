@@ -45,7 +45,7 @@ Production: `deploy/docker-compose.yml` (PostgreSQL, API, Caddy with automatic H
 |---|---|
 | `npm run server:local` / `server:dev` | API with dev tools / restart on changes |
 | `npm run web:local` · `npm run web:proxy` | Expo web on 8082 · proxy on 8081 |
-| `npm test` | 155 tests: payments, AI proxy, quotas, accounts, community access, moderation, professionals, bookings, membership, staff security, analytics, the admin authorization matrix, phone notifications and delivery reliability, art reflection checks (three phases, image comparison, negation, summaries), scoring, text helpers, secret scan |
+| `npm test` | 156 tests: payments, AI proxy, AI cost and budget, quotas, accounts, community access, moderation, professionals, bookings, membership, staff security, analytics, the admin authorization matrix, phone notifications and delivery reliability, art reflection checks (three phases, image comparison, negation, summaries), scoring, text helpers, secret scan |
 | `npm run typecheck` · `npm run lint` | TypeScript · ESLint |
 | `npm run qa:i18n` | Every used key exists; coverage, placeholders and lists per language |
 | `npm run qa:pro` | Browser journey: apply → verify → trial → publish → book → confirm → message → membership checkout (`--pay` pays with the Flitt test card, `--app` targets a tunnel) |

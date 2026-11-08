@@ -10,11 +10,9 @@ privacy decisions) and must be handled first.
 
 ## Production blockers
 
-1. **OpenAI account has no credits** (HTTP 429 `insufficient_quota` at the end
-   of the model evaluation). Every AI feature (Anulia, art, cards, community
-   Anulia, transcription, speech) is unavailable until credits are added at
-   platform.openai.com → Billing. The server now answers 503 `ai_unavailable`
-   and logs a warning instead of a vague error.
+1. ~~OpenAI account has no credits~~ — credits were added on 8 November; all
+   AI features were re-tested live (see "Android test pass"). If it happens
+   again the server answers 503 `ai_unavailable` and logs a warning.
 2. **Leaked OpenAI keys** in git history (`b38100c`, on `behappy-2.0`,
    `behappy-3.0`, `gh-pages`) and one still in the project-root `.env`
    (`EXPO_PUBLIC_API_KEY`): revoke both keys; delete the line.
@@ -37,13 +35,55 @@ privacy decisions) and must be handled first.
 
 | Check | Result |
 |---|---|
-| `npm test` | 155/155 (server: payments, AI proxy, quotas, accounts, community, moderation, professionals, bookings, membership, staff security, analytics, admin authorization matrix, push 17, art 20) |
+| `npm test` | 156/156 (server: payments, AI proxy, quotas, accounts, community, moderation, professionals, bookings, membership, staff security, analytics, admin authorization matrix, AI cost and budget, streamed token counts, push 17, art 20) |
 | `npm run test:unit` | 37/37 (scoring, dates, bidi, journal reflection, risk language, Georgian Latin, secret scan, reminder planner 9, art turn guard 3) |
 | typecheck / lint / i18n | 0 errors / 0 errors (29 old warnings) / 19 languages complete |
 | `npm ci`, `expo install --check`, `expo-doctor` | ok / up to date / 20/20 |
 | Web export; iOS + Android JS (Hermes) export | ok |
 | Browser journeys | moderation 14/14, account 360 10/10, admin 25/25, professional 17/17, console sweep: no JS errors |
 | Live model evaluation | 5 configurations × 39 turns (see `BEHAPPY_AI_MODEL_EVALUATION.md`) |
+
+## Android test pass (8 November 2026, evening)
+
+Expo Go 58.0.5 on an Android 12 emulator (Nexus 5X image), Georgian interface,
+a registered test account with Plus and the art program, live OpenAI (credits
+added), two real drawings (a painted eye, JPEG; a watercolour face, WebP).
+
+| Area | What was done | Result |
+|---|---|---|
+| Art therapy | Sessions 1–3 to the end: identical second drawing, a different second drawing (WebP first), the story branch, ending by button and by a written request; Latin-letter Georgian; "ara sasiamovno"; "sasiamovno daZabuloba" | Three phases unchanged; identical → "no visible change"; different → the real difference named; negation and mixed feelings kept; summaries contain only what was said |
+| Daily limit | Session 4 after today's new session was used; and the same after the allowance was used on another device | Notice before any upload, no error box; a refused first turn is rolled back |
+| Anulia | Text, a photo, finish and summarise, history | Works; summary rebuilt (see fixes) |
+| Cards, journal, check-in, breathing, meditation, grounding, GAD-7, trends, help screen | Each used once end to end | Work |
+| Community, private messages | Room message, Anulia in a room (Russian), private message | Work (rooms and private messages are text-only by design) |
+| Specialists | Directory, profile, booking up to the time slot | Works (booking itself is in the browser journey) |
+| Notifications | Settings, reminders on, alarms read from Android | Reminders scheduled at the planned local times; remote push not available in Expo Go on Android (expected) |
+| Admin on the phone | Overview, AI | Works; AI costs now shown |
+
+Live re-checks with credits: `art-model-eval --only regression,mixed` (Sol,
+10 turns: JSON 100 %, 0 reversed feelings, 0 invented changes, language
+100 %); `qa:art` in Georgian with the eye painting: PASS. Browser journeys
+after the fixes: admin 25/25, specialists 17/17, moderation 14/14,
+Account 360 10/10, console sweep clean.
+
+Found and fixed in this pass: the "Art Therapy Streaming Error: Allowance
+reached" error box; "I don't see a change" repeated on every turn; Anulia
+summaries that missed Latin-letter Georgian and invented topics; streamed
+Anulia replies recorded with 0 tokens (OpenAI's `tool_usage` came first);
+no AI cost without a staff-set price, so the daily budget never applied;
+3-column grids wrapping to 2 on phones; Georgian words split mid-word;
+same-topic rooms in two languages looking identical; "Georgia" in English
+on the Georgian help screen; "Get help now" in English inside Russian
+replies; the art suggestion shown when no art session was possible;
+the membership page for non-specialists; Metro's web rendering failing
+during journeys (it watched the dev database).
+
+Open product decision: the art session "focus" tags (89, English only, some
+clinical such as "trauma-processing") are now shown only in English;
+translate them or drop them.
+
+Not tested: iOS (no Mac here; your iPhone runs the same JavaScript), native
+store builds, remote push to a device.
 
 ## Failed / found and fixed during this work
 
@@ -54,9 +94,8 @@ privacy decisions) and must be handled first.
 
 ## Not tested
 
-- Native builds and physical devices (this run); remote push delivery to a phone.
-- `qa:art` (live art session in a browser) and the re-check of the last art
-  prompt line: no OpenAI credits.
+- Native store builds and iOS in this run (Android was tested in Expo Go on an
+  emulator, see above); remote push delivery to a phone.
 - Android Expo Go remote push (not supported by Expo).
 - Load and performance under many users (not measured; push and art add a few
   queries per notification/turn, all indexed).

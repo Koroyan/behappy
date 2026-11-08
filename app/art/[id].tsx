@@ -87,7 +87,8 @@ export default function ArtSessionDetail() {
             <AppText variant="bodySerif">{session.drawingPrompt}</AppText>
           </Card>
 
-          {session.focusAreas?.length ? (
+          {/* The focus tags exist only in English (89 tags); in other languages they showed as untranslated English. */}
+          {session.focusAreas?.length && language === 'en' ? (
             <View style={{ gap: 8 }}>
               <AppText variant="smallStrong" color="textSecondary">
                 {t('art.session.focus')}
