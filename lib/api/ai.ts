@@ -8,7 +8,7 @@ import { assertAiConsent } from '@/lib/privacy/consent';
 
 import { API_BASE_URL, ApiError, apiFetch, ensureAccount, NetworkError, parseError, QuotaError, TUNNEL_HEADERS } from './client';
 
-export type AiFeature = 'anulia' | 'art' | 'cards' | 'journal' | 'summary' | 'motivation' | 'transcribe' | 'speech';
+export type AiFeature = 'anulia' | 'art' | 'cards' | 'journal' | 'summary' | 'motivation' | 'transcribe' | 'speech' | 'reflection';
 
 export interface AiContext {
   feature: AiFeature;
@@ -69,6 +69,12 @@ async function post(path: string, body: unknown, ctx: AiContext) {
 /** Responses API with a hosted prompt (non-streaming). */
 export async function aiResponses<T = any>(body: Record<string, unknown>, ctx: AiContext): Promise<T> {
   const res = await post('/api/ai/responses', body, ctx);
+  return (await res.json()) as T;
+}
+
+/** A JSON POST to an AI route (e.g. /api/ai/reflection). */
+export async function aiPost<T = any>(path: string, body: Record<string, unknown>, ctx: AiContext): Promise<T> {
+  const res = await post(path, body, ctx);
   return (await res.json()) as T;
 }
 

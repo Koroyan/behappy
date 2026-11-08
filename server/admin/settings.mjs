@@ -65,6 +65,14 @@ export const SETTINGS = {
     validate: intIn(30, 760),
     description: 'Delete raw analytics events after this many days (daily totals are kept)',
   },
+  // docs/ETHICS.md: no streaks. This lets the owner allow an opt-in "classic
+  // streak" view in My Steps (gentle consistency stays the default for everyone).
+  'features.classicStreak': {
+    default: false,
+    ownerOnly: true,
+    validate: bool,
+    description: 'Allow people to opt in to a classic streak count in My Steps (off: gentle "5 of 7" consistency only)',
+  },
   'features.sensitiveAccess': {
     default: false,
     ownerOnly: true,
@@ -151,7 +159,7 @@ export function createSettings({ db, clock }) {
     const all = await load();
     const a = all.announcement.value;
     const showing = a.active && (!a.until || a.until > now);
-    return { announcement: showing ? { tone: a.tone, title: a.title, body: a.body } : null, ai: { features: all['ai.features'].value } };
+    return { announcement: showing ? { tone: a.tone, title: a.title, body: a.body } : null, ai: { features: all['ai.features'].value }, features: { classicStreak: all['features.classicStreak'].value === true } };
   }
 
   return { load, get, list, set, publicView, invalidate: () => (cache = null) };

@@ -146,6 +146,8 @@ export const config = {
       art: modelId(env.AI_MODEL_ART, 'gpt-6.1-sol'),
       cards: env.AI_MODEL_CARDS || 'gpt-5.4-mini',
       community: env.AI_MODEL_COMMUNITY || 'gpt-5.4-mini',
+      // Daily reflection: short, checked text from facts (server/reflection).
+      reflection: modelId(env.AI_MODEL_REFLECTION, 'gpt-5.4-mini'),
     },
     art: {
       // Used once if the art model is unavailable for this OpenAI project.

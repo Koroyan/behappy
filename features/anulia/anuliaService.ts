@@ -10,10 +10,10 @@
  */
 import type { AppLanguage } from '@/contexts/LanguageContext';
 import { aiChat, aiResponsesStream, createResponseStreamParser, parseJsonLoose, partialJsonField, StaleChainError } from '@/lib/api/ai';
-import { canPersonalize } from '@/lib/privacy/consent';
 import { publish, readJson, uid, writeJson } from '@/lib/storage/json';
 import { latinToGeorgian, looksLikeGeorgianLatin } from '@/lib/text/georgianLatin';
-import { buildProfileContextBlock, getUserProfile } from '@/services/userProfileService';
+
+import { hashText, loadAnuliaMemory } from './memoryLoader';
 
 const SESSIONS_KEY = 'therapy_sessions';
 export const ANULIA_TOPIC = 'anulia';
@@ -52,6 +52,10 @@ export interface Conversation {
   emotions: { emotion: string; intensity: number; timestamp: string }[];
   lastResponseId?: string;
   summary?: ConversationSummary;
+  /** Memory-consent version when the stored chain began; a revocation since then drops the chain. */
+  memoryVersion?: number;
+  /** Hash of the memory block last sent in this chain (sent again only when it changes). */
+  memoryHash?: string;
 }
 
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -89,6 +93,8 @@ function normalize(raw: any): Conversation | null {
     emotions: Array.isArray(raw.emotions) ? raw.emotions : [],
     lastResponseId: typeof raw.lastResponseId === 'string' ? raw.lastResponseId : undefined,
     summary: raw.summary,
+    memoryVersion: typeof raw.memoryVersion === 'number' ? raw.memoryVersion : undefined,
+    memoryHash: typeof raw.memoryHash === 'string' ? raw.memoryHash : undefined,
   };
 }
 
@@ -138,11 +144,7 @@ export function makeMessage(type: AnuliaMessage['type'], content: string, extra:
   return { id: uid(type === 'user' ? 'mu' : 'ma'), type, content, timestamp: new Date().toISOString(), ...extra };
 }
 
-async function contextBlock(language: AppLanguage): Promise<string> {
-  const profile = (await canPersonalize()) ? buildProfileContextBlock(await getUserProfile()) : '';
-  const lang = LANGUAGE_NAMES[language] || 'English';
-  return [profile, `[Reply in the language the person writes in. If unclear, use ${lang}.]`].filter(Boolean).join('\n');
-}
+const languageLine = (language: AppLanguage) => `[Reply in the language the person writes in. If unclear, use ${LANGUAGE_NAMES[language] || 'English'}.]`;
 
 function toReply(raw: string): AnuliaReply {
   const parsed = parseJsonLoose(raw);
@@ -176,9 +178,15 @@ export interface SendOptions {
  * Sends one user turn and resolves with Anulia's reply and the new chain id.
  * Throws QuotaError (402), ConsentRequiredError, NetworkError or ApiError.
  */
-export async function sendToAnulia({ conversation, history, text, imageDataUrl, language, onDelta }: SendOptions): Promise<{ reply: AnuliaReply; responseId?: string }> {
-  const ctx = await contextBlock(language);
+export async function sendToAnulia({ conversation, history, text, imageDataUrl, language, onDelta }: SendOptions): Promise<{ reply: AnuliaReply; responseId?: string; memoryVersion: number; memoryHash?: string }> {
+  // What the person allowed Anulia to remember (empty unless they switched categories on).
+  const memory = await loadAnuliaMemory({ query: text, conversationId: conversation.id });
+  const memoryHash = memory.text ? hashText(memory.text) : undefined;
+  // A category switched off (or an item excluded) since this chain began: the
+  // chain at OpenAI still holds the old context, so start a new one.
+  const chainValid = Boolean(conversation.lastResponseId) && conversation.memoryVersion === memory.version;
   const schemaHint = '[Reply with the JSON object described in your instructions.]';
+  const ctxFor = (newChain: boolean) => [newChain || memoryHash !== conversation.memoryHash ? memory.text : '', languageLine(language)].filter(Boolean).join('\n');
 
   const userContent = (withContext: string) => {
     const parts: any[] = [{ type: 'input_text', text: `${withContext}\n\n${text}\n\n${schemaHint}` }];
@@ -195,10 +203,10 @@ export async function sendToAnulia({ conversation, history, text, imageDataUrl, 
           ? { role: 'user', content: [{ type: 'input_text', text: m.content }] }
           : { role: 'assistant', content: [{ type: 'output_text', text: m.content }] }
       );
-    input.push({ role: 'user', content: userContent(ctx) });
+    input.push({ role: 'user', content: userContent(ctxFor(true)) });
     return input;
   };
-  const incrementalInput = () => [{ role: 'user', content: userContent(ctx) }];
+  const incrementalInput = () => [{ role: 'user', content: userContent(ctxFor(false)) }];
 
   const run = async (input: any[], chainId?: string) => {
     let lastShown = '';
@@ -224,10 +232,10 @@ export async function sendToAnulia({ conversation, history, text, imageDataUrl, 
     );
     const { text: finalText, id } = parser.finish();
     if (!finalText.trim()) throw new Error('Empty reply');
-    return { reply: toReply(finalText), responseId: id };
+    return { reply: toReply(finalText), responseId: id, memoryVersion: memory.version, memoryHash };
   };
 
-  if (conversation.lastResponseId) {
+  if (chainValid) {
     try {
       return await run(incrementalInput(), conversation.lastResponseId);
     } catch (e) {

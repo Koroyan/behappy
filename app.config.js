@@ -57,7 +57,8 @@ module.exports = {
       'expo-font',
       'expo-asset',
       ['expo-image-picker', { photosPermission: PHOTOS, cameraPermission: CAMERA }],
-      ['expo-audio', { microphonePermission: MIC }],
+      // Background playback for Sound Lab (iOS UIBackgroundModes=audio, Android media service).
+      ['expo-audio', { microphonePermission: MIC, enableBackgroundPlayback: true }],
       // Reminders (local) and chat notifications (Expo push). Icon colour = brand.
       ['expo-notifications', { color: '#4B9388' }],
       [

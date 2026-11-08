@@ -23,6 +23,8 @@ export const LIMITS = {
     transcribe: { count: 5, period: 'day' },
     speech: { count: 3, period: 'day' },
     community: { count: 5, period: 'day' },
+    // Daily reflection: one checked AI reflection a day (the factual recap is always free).
+    reflection: { count: 1, period: 'day' },
   },
   plus: {
     anulia: { messages: 40, period: 'day', graceMessages: 3 },
@@ -34,6 +36,7 @@ export const LIMITS = {
     transcribe: { count: 30, period: 'day' },
     speech: { count: 10, period: 'day' },
     community: { count: 15, period: 'day' },
+    reflection: { count: 3, period: 'day' },
   },
   // Art-program owners without Plus: full program, normal Anulia free tier.
   art: { newSessions: 1, period: 'day', messagesPerSession: 80 },
@@ -175,7 +178,7 @@ async function decide(t, { accountId, entitlements, ctx, now }) {
     return { allowed: true, tier, startedNew: true };
   }
 
-  const simple = { summary: limits.summary, motivation: limits.motivation, transcribe: limits.transcribe, speech: limits.speech, community: limits.community }[feature];
+  const simple = { summary: limits.summary, motivation: limits.motivation, transcribe: limits.transcribe, speech: limits.speech, community: limits.community, reflection: limits.reflection }[feature];
   if (simple) {
     const used = await readCounter(t, accountId, feature, simple.period, now);
     if (used >= simple.count) return deny('daily_limit', simple.period);

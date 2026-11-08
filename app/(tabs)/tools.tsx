@@ -18,6 +18,7 @@ import { loadRecentTools, markToolUsed, RecentTool, RECENT_TOOLS_TOPIC } from '@
 
 const SECTIONS: { key: ToolSection; title: string }[] = [
   { key: 'calm', title: 'explore.sections.calm' },
+  { key: 'grow', title: 'wb.tools.section' },
   { key: 'create', title: 'explore.sections.create' },
   { key: 'understand', title: 'explore.sections.understand' },
   { key: 'professional', title: 'tools.sectionProfessional' },

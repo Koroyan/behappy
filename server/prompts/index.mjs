@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = (name) => fs.readFileSync(path.join(here, name), 'utf8').trim();
 
-export const PROMPT_SET_VERSION = '3.1.1';
+export const PROMPT_SET_VERSION = '3.2.0';
 
 // The help screen as the app labels it (i18n safety.title). Without this a
 // Russian reply pointed people to «Get help now», a button they can't find.
@@ -23,6 +23,9 @@ export const HELP_SCREEN_NAMES =
   'tr "Şimdi yardım", az "İndi kömək", de „Hilfe jetzt“, fr « Aide immédiate », es "Ayuda ahora", it "Aiuto subito", pt "Ajuda agora", pl „Pomoc teraz”, ' +
   'id "Bantuan sekarang", ar "المساعدة الآن", hi "अभी मदद पाएँ", zh "立即求助", ja "今すぐ助けを", ko "지금 도움 받기". When you mention it, use the label of the language you reply in.';
 const withHelpNames = (text) => `${text}\n\n${HELP_SCREEN_NAMES}`;
+
+/** The daily reflection (server/reflection): facts in, a checked short text out. */
+export const REFLECTION_PROMPT = withHelpNames(read('reflection.md'));
 
 /** Per feature: instructions plus the request settings the hosted prompts used. */
 export const SERVER_PROMPTS = {

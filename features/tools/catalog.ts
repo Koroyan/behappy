@@ -6,7 +6,7 @@
 import type { IconName } from '@/design';
 
 export type ToolTone = 'primary' | 'peach' | 'lavender' | 'gold' | 'sage' | 'danger' | 'muted';
-export type ToolSection = 'calm' | 'create' | 'understand' | 'professional' | 'safety';
+export type ToolSection = 'calm' | 'grow' | 'create' | 'understand' | 'professional' | 'safety';
 
 export interface Tool {
   key: string;
@@ -21,11 +21,13 @@ export interface Tool {
 }
 
 const explore = (key: string) => ({ title: `explore.items.${key}.title`, subtitle: `explore.items.${key}.subtitle` });
+const wb = (key: string) => ({ title: `wb.tools.${key}.title`, subtitle: `wb.tools.${key}.subtitle` });
 
 export const TOOLS: Tool[] = [
   { key: 'breathing', icon: 'leaf-outline', tone: 'sage', route: '/breathing', section: 'calm', ...explore('breathing') },
   { key: 'meditation', icon: 'flower-outline', tone: 'lavender', route: '/meditation', section: 'calm', ...explore('meditation') },
   { key: 'grounding', icon: 'hand-left-outline', tone: 'primary', route: '/grounding', section: 'calm', ...explore('grounding') },
+  { key: 'sound', icon: 'musical-notes-outline', tone: 'lavender', route: '/sound', section: 'calm', ...wb('sound') },
   { key: 'cards', icon: 'albums-outline', tone: 'gold', route: '/cards', section: 'create', ...explore('cards') },
   { key: 'art', icon: 'color-palette-outline', tone: 'peach', route: '/art', section: 'create', ...explore('art') },
   { key: 'journal', icon: 'book-outline', tone: 'lavender', route: '/journal', section: 'create', ...explore('journal') },

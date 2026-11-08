@@ -1,11 +1,14 @@
 import type { PartialMessages } from '../../index';
 import { acKa } from '../admin/ka';
 import { alertsKa } from '../alerts/ka';
+import { wbKa } from '../wb/ka';
 
 /** ქართული — BeHappy 3.0 (საზოგადოება, სპეციალისტები, პროფესიული სივრცე). თბილი ტონი, „შენ“. */
 export const ka3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsKa,
+  // Well-being ecosystem: Sound Lab, Steps, badges, reflection, memory (see ../wb).
+  wb: wbKa,
   // ადმინისტრირების ცენტრი (იხ. ../admin).
   ac: acKa,
   shell: {

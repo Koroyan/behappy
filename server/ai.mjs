@@ -10,6 +10,7 @@
 import express from 'express';
 import { overridePrice, spendOf } from './aiPricing.mjs';
 import { createArtTurns } from './art/turn.mjs';
+import { cleanReflectionInput, createReflection } from './reflection/run.mjs';
 import { requireAccount } from './auth.mjs';
 import { entitlementsForAccount } from './entitlements.mjs';
 import { CHAT_PREAMBLE, LEGACY_PROMPT_IDS, SERVER_PROMPTS } from './prompts/index.mjs';
@@ -23,7 +24,7 @@ const REASONING_CHAT_MODELS = new Set(['gpt-5.4-mini']);
 const RESPONSES_FIELDS = new Set(['input', 'prompt', 'model', 'max_output_tokens', 'stream', 'store', 'previous_response_id', 'text', 'temperature']);
 const CHAT_FIELDS = new Set(['model', 'messages', 'max_tokens', 'temperature', 'response_format']);
 const VOICES = new Set(['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar']);
-const FEATURES = new Set(['anulia', 'art', 'cards', 'journal', 'summary', 'motivation', 'transcribe', 'speech']);
+const FEATURES = new Set(['anulia', 'art', 'cards', 'journal', 'summary', 'motivation', 'transcribe', 'speech', 'reflection']);
 
 const MAX_OUTPUT_TOKENS = 2048;
 const MAX_CHAT_TOKENS = 2000;
@@ -146,7 +147,7 @@ export async function recordAiUsage(db, { accountId, feature, model, usage, late
 }
 
 // Which staff switch (settings ai.features) covers each request feature.
-const SWITCH_FOR = { anulia: 'anulia', summary: 'anulia', motivation: 'anulia', transcribe: 'anulia', speech: 'anulia', journal: 'journal', cards: 'cards', art: 'art', community: 'community' };
+const SWITCH_FOR = { anulia: 'anulia', summary: 'anulia', motivation: 'anulia', transcribe: 'anulia', speech: 'anulia', reflection: 'anulia', journal: 'journal', cards: 'cards', art: 'art', community: 'community' };
 
 /**
  * Staff controls: a feature switched off, or today's estimated spend at the
@@ -181,6 +182,7 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
   const perAccount = new SlidingWindow(40, 60 * 1000);
   const controls = createAiControls({ db, settings, clock });
   const artTurns = createArtTurns({ db, config, fetchImpl, clock });
+  const reflection = createReflection({ config, fetchImpl });
   let globalDay = '';
   let globalCount = 0;
 
@@ -414,6 +416,22 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
   });
 
   // ---------- Speech-to-text ----------
+  // ---------- Daily reflection (facts in, checked text out) ----------
+  router.post('/reflection', ...guard(['reflection']), async (req, res) => {
+    const cleaned = cleanReflectionInput(req.body);
+    if (cleaned.error) return bad(res, 400, cleaned.error, 'Invalid reflection request.');
+    // Nothing to reflect on: the app shows its factual recap (no AI call, no allowance used).
+    if (!cleaned.input.facts.length) return res.status(422).json({ error: 'no_facts', fallback: 'facts' });
+    if (!(await meter(req, res))) return;
+    try {
+      const r = await reflection.run(cleaned.input);
+      await recordAiUsage(db, { accountId: req.account.id, feature: 'reflection', model: r.model, usage: r.usage, latencyMs: Date.now() - req.aiStartedAt, status: r.status === 200 ? 'ok' : 'error', errorCode: r.status === 200 ? null : r.body.error });
+      res.status(r.status).json(r.body);
+    } catch {
+      bad(res, 502, 'ai_upstream_unreachable', 'Could not reach the AI service.');
+    }
+  });
+
   router.post('/transcribe', ...guard(['transcribe']), async (req, res) => {
     const { audioBase64, mimeType = 'audio/m4a', fileName = 'audio.m4a', language } = req.body || {};
     if (typeof audioBase64 !== 'string' || audioBase64.length < 100) return bad(res, 400, 'bad_audio', 'audioBase64 is required.');

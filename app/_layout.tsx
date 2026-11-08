@@ -10,6 +10,7 @@ import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
 import { ConsentProvider } from '@/features/common/Consent';
 import { AppShell, FontGate } from '@/features/shell/AppShell';
 import { AccountProvider } from '@/lib/api/account';
+import { WellbeingBridge } from '@/features/wellbeing/WellbeingBridge';
 import { NotificationsBridge } from '@/lib/notifications/NotificationsBridge';
 
 function Navigator() {
@@ -27,6 +28,7 @@ function Navigator() {
       <AppShell>
         <AnalyticsTracker />
         <NotificationsBridge />
+        <WellbeingBridge />
         <Stack
           screenOptions={{
             headerShown: false,

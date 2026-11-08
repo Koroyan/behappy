@@ -10,6 +10,7 @@
  * - Fades: volume is ramped in small steps (no clicks), also for timers.
  */
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { encodeWav, fadeAt, mixGains, render, SoundSpec, specKey, toBase64, toInt16 } from './synth';
@@ -23,6 +24,9 @@ export interface Layer {
 export type EngineState = 'stopped' | 'loading' | 'playing' | 'paused';
 
 const DIR = `${FileSystem.cacheDirectory}sound/`;
+// Expo Go has no expo-audio lock-screen service (development builds and the
+// store app do, from the config plugin): there the call only logs an error.
+const LOCK_SCREEN = Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
 
 /** The WAV for a sound on this device (generated once). */
 export async function soundFile(spec: SoundSpec): Promise<string> {
@@ -125,10 +129,12 @@ class NativeEngine {
     if (!this.players.size) return;
     await setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true, interruptionMode: 'doNotMix' }).catch(() => {});
     const first = [...this.players.values()][0];
-    try {
-      first.player.setActiveForLockScreen(true, { title: this.title, artist: 'BeHappy' });
-    } catch {
-      // older runtimes: background playback still works for a while
+    if (LOCK_SCREEN) {
+      try {
+        first.player.setActiveForLockScreen(true, { title: this.title, artist: 'BeHappy' });
+      } catch {
+        // without it Android stops background playback after a few minutes
+      }
     }
     if (this.state !== 'paused') this.level = 0;
     this.players.forEach((e) => e.player.play());
@@ -146,10 +152,12 @@ class NativeEngine {
     if (this.state === 'playing') await this.fadeTo(0, fadeMs);
     this.players.forEach((e) => {
       e.sub?.remove();
-      try {
-        e.player.setActiveForLockScreen(false);
-      } catch {
-        // ignore
+      if (LOCK_SCREEN) {
+        try {
+          e.player.setActiveForLockScreen(false);
+        } catch {
+          // ignore
+        }
       }
       e.player.remove();
     });

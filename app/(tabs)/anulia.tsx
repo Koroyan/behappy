@@ -116,7 +116,7 @@ export default function AnuliaScreen() {
     setSending(true);
     setStreamText('');
     try {
-      const { reply, responseId } = await sendToAnulia({
+      const { reply, responseId, memoryVersion, memoryHash } = await sendToAnulia({
         conversation: base,
         history: base.messages,
         text: opts.imageDataUrl ? `${text ? `${text}\n\n` : ''}${t('anulia.imageInstruction')}` : userMsg.content,
@@ -129,6 +129,9 @@ export default function AnuliaScreen() {
         ...base,
         messages: [...base.messages, aiMsg],
         lastResponseId: responseId ?? base.lastResponseId,
+        // The chain now matches this memory consent (see sendToAnulia).
+        memoryVersion: responseId ? memoryVersion : base.memoryVersion,
+        memoryHash: responseId ? memoryHash : base.memoryHash,
         insights: [...base.insights, ...(reply.key_insights ?? [])].slice(-30),
         emotions: reply.detected_emotion ? [...base.emotions, { emotion: reply.detected_emotion, intensity: 5, timestamp: new Date().toISOString() }].slice(-60) : base.emotions,
       };
