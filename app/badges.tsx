@@ -65,12 +65,12 @@ export default function BadgesScreen() {
     <Screen back title={t('wb.badges.title')} subtitle={t('wb.badges.subtitle')} width="reading" testID="screen-badges">
       <SectionHeader title={t('wb.badges.earned')} />
       {earned.length ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[3], marginBottom: space[4] }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: space[3], marginBottom: space[4] }}>
           {earned.map((b) => {
             const def = BADGES.find((d) => d.id === b.id);
             if (!def) return null;
             return (
-              <Card key={b.id} padding={14} style={{ flexBasis: 150, flexGrow: 1, alignItems: 'center', gap: 6 }} testID={`badge-${b.id}`}>
+              <Card key={b.id} padding={14} style={{ width: '47%', flexGrow: 0, alignItems: 'center', gap: 6 }} testID={`badge-${b.id}`}>
                 <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors[`${def.tone}Soft` as 'primarySoft'], alignItems: 'center', justifyContent: 'center' }}>
                   <Icon name={def.icon as IconName} size={26} color="text" />
                 </View>
@@ -80,7 +80,7 @@ export default function BadgesScreen() {
                 <AppText variant="caption" color="textTertiary" align="center">
                   {t('wb.badges.earnedOn', { date: formatDate(b.earnedAt, { day: 'numeric', month: 'short' }) })}
                 </AppText>
-                {unseen.includes(b.id) ? <Badge label={t('wb.badges.new')} tone="primary" /> : null}
+                {unseen.includes(b.id) ? <View style={{ alignSelf: 'center' }}><Badge label={t('wb.badges.new')} tone="primary" /></View> : null}
               </Card>
             );
           })}

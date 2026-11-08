@@ -7,7 +7,7 @@ import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Chip, Icon, IconButton, ProgressBar, Screen, SectionHeader, Sheet, space, TextField, Toggle, useFeedback } from '@/design';
+import { AppText, Banner, Button, Card, Chip, Icon, IconButton, ProgressBar, Screen, SectionHeader, Sheet, space, TextField, ToggleRow, useFeedback } from '@/design';
 import { useT } from '@/i18n';
 import { bandOf, binauralLayer, HEADACHE_MAX_VOLUME, layerFor, LIBRARY, nameKey, noiseLayer, PRESETS } from '@/lib/audio/presets';
 import { lastFinished, pauseSound, resumeSound, setLayerVolume, setMasterVolume, startSound, stopSound, updateLayers, useSoundSession } from '@/lib/audio/session';
@@ -163,7 +163,7 @@ export default function SoundLabScreen() {
       {mode === 'headache' ? (
         <View style={{ gap: space[3], marginBottom: space[4] }}>
           <Button label={t('wb.sound.headache.dim')} icon="moon" onPress={() => setDim(true)} testID="sound-dim" />
-          <Toggle
+          <ToggleRow
             label={t('wb.sound.headache.softSound')}
             value={shown.some((l) => l.id === 'noise-brown')}
             onValueChange={(on) => change(on ? [noiseLayer('brown', 0.1)] : [])}
@@ -260,7 +260,7 @@ export default function SoundLabScreen() {
             <AppText variant="caption" color="textTertiary">
               {t('wb.sound.sleep.fadeNote')}
             </AppText>
-            <Toggle label={t('wb.sound.sleep.morning')} value={store?.morningCheckIn ?? true} onValueChange={(v) => setSoundPrefs({ morningCheckIn: v })} />
+            <ToggleRow label={t('wb.sound.sleep.morning')} value={store?.morningCheckIn ?? true} onValueChange={(v) => setSoundPrefs({ morningCheckIn: v })} />
           </>
         ) : null}
       </View>

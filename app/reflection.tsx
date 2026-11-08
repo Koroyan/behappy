@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { LANGUAGE_NAMES } from '@/contexts/LanguageContext';
-import { AppText, Banner, Button, Card, IconButton, Screen, SectionHeader, space, Toggle } from '@/design';
+import { AppText, Banner, Button, Card, IconButton, Screen, SectionHeader, space, ToggleRow } from '@/design';
 import { FactLine } from '@/features/wellbeing/FactLine';
 import { useT } from '@/i18n';
 import { askNotificationPermission } from '@/lib/notifications/reminders';
@@ -107,7 +107,7 @@ export default function ReflectionScreen() {
       {s ? (
         <>
           <SectionHeader title={t('wb.reflection.settings')} style={{ marginTop: space[5] }} />
-          <Toggle
+          <ToggleRow
             label={t('wb.reflection.remind')}
             value={s.enabled}
             onValueChange={async (v) => {
@@ -130,13 +130,13 @@ export default function ReflectionScreen() {
             {t('wb.reflection.categories')}
           </AppText>
           {RECAP_CATEGORIES.map((c) => (
-            <Toggle key={c} label={t(`wb.reflection.categoryNames.${c}`)} value={s.categories[c] !== false} onValueChange={(v) => setReflectionSettings({ categories: { ...s.categories, [c]: v } })} testID={`reflection-cat-${c}`} />
+            <ToggleRow key={c} label={t(`wb.reflection.categoryNames.${c}`)} value={s.categories[c] !== false} onValueChange={(v) => setReflectionSettings({ categories: { ...s.categories, [c]: v } })} testID={`reflection-cat-${c}`} />
           ))}
-          <Toggle label={t('wb.reflection.journalText')} value={s.journalText} onValueChange={(v) => setReflectionSettings({ journalText: v })} testID="reflection-journal-text" />
+          <ToggleRow label={t('wb.reflection.journalText')} value={s.journalText} onValueChange={(v) => setReflectionSettings({ journalText: v })} testID="reflection-journal-text" />
           <AppText variant="caption" color="textTertiary">
             {t('wb.reflection.journalTextNote')}
           </AppText>
-          <Toggle label={t('wb.reflection.artSummaries')} value={s.artSummaries} onValueChange={(v) => setReflectionSettings({ artSummaries: v })} testID="reflection-art" />
+          <ToggleRow label={t('wb.reflection.artSummaries')} value={s.artSummaries} onValueChange={(v) => setReflectionSettings({ artSummaries: v })} testID="reflection-art" />
           <AppText variant="caption" color="textTertiary">
             {t('wb.reflection.artSummariesNote')}
           </AppText>

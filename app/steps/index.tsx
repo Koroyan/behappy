@@ -7,7 +7,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { AppText, Badge, Banner, Button, Card, Chip, Icon, IconButton, IconName, Screen, SectionHeader, Sheet, space, TextField, Toggle, useFeedback, useTheme } from '@/design';
+import { AppText, Badge, Banner, Button, Card, Chip, Icon, IconButton, IconName, Screen, SectionHeader, Sheet, space, TextField, ToggleRow, useFeedback, useTheme } from '@/design';
 import { useT } from '@/i18n';
 import { useAccount } from '@/lib/api/account';
 import { askNotificationPermission } from '@/lib/notifications/reminders';
@@ -132,7 +132,7 @@ export default function StepsScreen() {
 
       {streakAllowed ? (
         <View style={{ marginBottom: space[4] }}>
-          <Toggle label={t('wb.steps.streakOptIn')} value={Boolean(data?.showStreaks)} onValueChange={(v) => setShowStreaks(v)} testID="steps-streak-toggle" />
+          <ToggleRow label={t('wb.steps.streakOptIn')} value={Boolean(data?.showStreaks)} onValueChange={(v) => setShowStreaks(v)} testID="steps-streak-toggle" />
           <AppText variant="caption" color="textTertiary">
             {t('wb.steps.streakNote')}
           </AppText>
@@ -289,7 +289,7 @@ function StepEditor({ step, goals, onClose, onRemove }: { step: Step; goals: Goa
         </View>
         {draft.time ? (
           <View>
-            <Toggle
+            <ToggleRow
               label={t('wb.steps.reminder')}
               value={draft.reminder}
               onValueChange={async (v) => {

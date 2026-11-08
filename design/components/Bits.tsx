@@ -3,7 +3,7 @@
  * Banner, EmptyState, ProgressBar, Toggle, Segmented, Avatar, Skeleton.
  */
 import React, { useEffect, useRef } from 'react';
-import { Animated, Platform, StyleProp, Switch, View, ViewStyle } from 'react-native';
+import { Animated, Platform, Pressable, StyleProp, Switch, View, ViewStyle } from 'react-native';
 
 import { useTheme } from '../ThemeProvider';
 import { ColorRole, Palette, radius, space } from '../tokens';
@@ -252,6 +252,18 @@ export function Toggle({ value, onValueChange, label, testID }: { value: boolean
       thumbColor={Platform.OS === 'android' ? (value ? colors.surface : colors.surface) : undefined}
       {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.surface } as any) : null)}
     />
+  );
+}
+
+/** A switch with its visible label; the whole row toggles. */
+export function ToggleRow({ value, onValueChange, label, testID }: { value: boolean; onValueChange: (v: boolean) => void; label: string; testID?: string }) {
+  return (
+    <Pressable onPress={() => onValueChange(!value)} accessibilityRole="switch" accessibilityState={{ checked: value }} accessibilityLabel={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 6 }}>
+      <AppText variant="body" style={{ flex: 1 }}>
+        {label}
+      </AppText>
+      <Toggle value={value} onValueChange={onValueChange} label={label} testID={testID} />
+    </Pressable>
   );
 }
 

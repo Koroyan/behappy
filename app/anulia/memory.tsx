@@ -8,7 +8,7 @@ import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Chip, IconButton, Screen, SectionHeader, space, TextField, Toggle, useFeedback, useTheme } from '@/design';
+import { AppText, Banner, Button, Card, Chip, IconButton, Screen, SectionHeader, space, TextField, ToggleRow, useFeedback, useTheme } from '@/design';
 import { chatSummaries, loadAnuliaMemory } from '@/features/anulia/memoryLoader';
 import { useT } from '@/i18n';
 import { addMemoryNote, deleteMemoryNote, MEMORY_CATEGORIES, revokeAllMemory, setMemoryCategory, setMemoryExcluded, useConsent, useMemoryConsent } from '@/lib/privacy/consent';
@@ -66,7 +66,7 @@ export default function AnuliaMemoryScreen() {
       <View style={{ gap: 4, marginTop: space[3] }}>
         {MEMORY_CATEGORIES.map((c) => (
           <View key={c} style={{ paddingVertical: 4 }}>
-            <Toggle label={t(`wb.memory.categories.${c}`)} value={memory.categories[c]} onValueChange={(v) => setMemoryCategory(c, v)} testID={`memory-${c}`} />
+            <ToggleRow label={t(`wb.memory.categories.${c}`)} value={memory.categories[c]} onValueChange={(v) => setMemoryCategory(c, v)} testID={`memory-${c}`} />
             <AppText variant="caption" color={c === 'journalText' ? 'danger' : 'textTertiary'}>
               {t(`wb.memory.hints.${c}`)}
             </AppText>

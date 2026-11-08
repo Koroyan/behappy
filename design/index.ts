@@ -11,7 +11,7 @@ export type { IconName } from './components/Icon';
 export { Button, IconButton } from './components/Button';
 export { Card } from './components/Card';
 export type { CardTone } from './components/Card';
-export { Chip, Badge, Divider, SectionHeader, ListRow, Banner, EmptyState, ProgressBar, Toggle, Segmented, Avatar, Skeleton } from './components/Bits';
+export { Chip, Badge, Divider, SectionHeader, ListRow, Banner, EmptyState, ProgressBar, Toggle, ToggleRow, Segmented, Avatar, Skeleton } from './components/Bits';
 export { TextField } from './components/TextField';
 export { Sheet, FeedbackProvider, useFeedback } from './components/Sheet';
 export { Screen } from './components/Screen';
