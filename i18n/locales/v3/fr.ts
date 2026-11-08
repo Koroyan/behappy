@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsFr } from '../alerts/fr';
+import { wbFr } from '../wb/fr';
 
 /** Français — BeHappy 3.0. Chaleureux et respectueux (« vous »). */
 export const fr3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsFr,
+  wb: wbFr,
   shell: {
     personal: 'Personnel',
     community: 'Communauté',

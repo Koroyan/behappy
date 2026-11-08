@@ -9,7 +9,7 @@ import { View } from 'react-native';
 
 import { LANGUAGE_NAMES } from '@/contexts/LanguageContext';
 import { AppText, Banner, Button, Card, IconButton, Screen, SectionHeader, space, ToggleRow } from '@/design';
-import { FactLine } from '@/features/wellbeing/FactLine';
+import { FactLine, useFactText } from '@/features/wellbeing/FactLine';
 import { useT } from '@/i18n';
 import { askNotificationPermission } from '@/lib/notifications/reminders';
 import { subscribe } from '@/lib/storage/json';
@@ -26,6 +26,7 @@ export default function ReflectionScreen() {
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const autoDone = useRef(false);
+  const describe = useFactText();
   const today = dayKey();
 
   const refresh = useCallback(() => {
@@ -46,11 +47,11 @@ export default function ReflectionScreen() {
   const make = useCallback(async () => {
     setBusy(true);
     try {
-      await makeReflection(language, LANGUAGE_NAMES[language] || 'English');
+      await makeReflection(language, LANGUAGE_NAMES[language] || 'English', { describe });
     } finally {
       setBusy(false);
     }
-  }, [language]);
+  }, [language, describe]);
 
   // Opened from the evening reminder: write it now (made on the phone, not while the app is closed).
   useEffect(() => {

@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsIt } from '../alerts/it';
+import { wbIt } from '../wb/it';
 
 /** Italiano — BeHappy 3.0. Caldo e diretto («tu»). */
 export const it3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsIt,
+  wb: wbIt,
   shell: {
     personal: 'Personale',
     community: 'Community',

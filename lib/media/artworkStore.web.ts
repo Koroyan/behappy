@@ -70,6 +70,22 @@ export async function listArtworks(): Promise<Artwork[]> {
   }
 }
 
+/** The saved image as a data URL (to show the first drawing to the AI again). */
+export async function artworkDataUrl(id: string): Promise<string | null> {
+  try {
+    const row = await tx<any>('readonly', (s) => s.get(id));
+    if (!row?.blob) return null;
+    return await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(row.blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function deleteArtwork(id: string): Promise<void> {
   await tx('readwrite', (s) => s.delete(id));
   const uri = urlCache.get(id);

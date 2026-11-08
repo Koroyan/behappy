@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = (name) => fs.readFileSync(path.join(here, name), 'utf8').trim();
 
-export const PROMPT_SET_VERSION = '3.2.0';
+export const PROMPT_SET_VERSION = '3.3.0';
 
 // The help screen as the app labels it (i18n safety.title). Without this a
 // Russian reply pointed people to «Get help now», a button they can't find.

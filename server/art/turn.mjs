@@ -104,20 +104,28 @@ const COMPARISON_NOTE = {
   identical:
     'IMAGE COMPARISON (exact, reliable): the "changed" drawing is the same image as the first one — no visible change. Do not describe any change. In response_text say, in the selected language, that you don\'t see changes between the two images, that perhaps the same drawing was sent, and that you can continue with it. Set comparison_claim = "no_change".',
   likely_same:
-    'IMAGE COMPARISON (reliable): the two photos are very likely the same drawing; the differences look like light, camera angle or compression only. Never claim the drawing changed. When it is time to compare, say that you can\'t see a clear change and ask what they changed or meant to change.',
+    'IMAGE COMPARISON: the app found no clear difference between the two photos, even in fine detail (light, angle or compression only). Do not describe a change, and do not say that nothing changed either: say you can\'t make out the change clearly, ask them to tell you what they changed and where, then explore it with them.',
   uncertain:
-    'IMAGE COMPARISON: uncertain — the app can\'t tell reliably what changed{where}. Do not assert any specific change; when it is time to compare, ask the person what they changed.',
+    'IMAGE COMPARISON: the app sees a possible change{where}. Look closely at both drawings there. If you clearly see what is new or different, name it neutrally and ask about it; if you are not sure, ask the person what they changed. Never say that nothing changed.',
   different:
     'IMAGE COMPARISON (reliable): the drawing changed; the clearest differences are {where}{kind}. When you name one difference, name only something you can actually see there, neutrally, without interpreting it.',
   comparison_unavailable:
     'IMAGE COMPARISON: not available for these photos. Only mention a difference that is clearly visible in both images; if you are not sure, ask the person what they changed.',
 };
 
+const KIND_NOTE = {
+  colour: ' (colours changed)',
+  more_drawn: ' (more was drawn)',
+  less_drawn: ' (something was removed or lightened)',
+  small_marks_added: ' (small new marks or thin lines — look closely, they are easy to miss)',
+  small_marks_removed: ' (small marks removed or lightened)',
+};
+
 function comparisonNote(cmp) {
   if (!cmp?.state) return '';
   const ev = cmp.evidence || {};
   const where = ev.regions?.length ? ` in the ${ev.regions.join(' and ')} area` : '';
-  const kind = ev.kind === 'colour' ? ' (colours changed)' : ev.kind === 'more_drawn' ? ' (more was drawn)' : ev.kind === 'less_drawn' ? ' (something was removed or lightened)' : '';
+  const kind = KIND_NOTE[ev.kind] || '';
   return (COMPARISON_NOTE[cmp.state] || '').replace('{where}', cmp.state === 'different' ? where.trim() || 'in the drawing' : where).replace('{kind}', kind);
 }
 
@@ -136,7 +144,7 @@ function upstreamReason(errorText) {
 const LATER_COMPARISON = {
   identical: 'the same image was sent twice (no visible change)',
   likely_same: 'very likely the same drawing (only light, angle or compression differ)',
-  uncertain: 'uncertain what changed',
+  uncertain: 'a possible change{where}',
   different: 'the drawing changed{where}{kind}',
   comparison_unavailable: 'not available',
 };
@@ -145,7 +153,7 @@ function laterComparisonNote(cmp) {
   if (!cmp?.state || !LATER_COMPARISON[cmp.state]) return '';
   const ev = cmp.evidence || {};
   const where = ev.regions?.length ? ` in the ${ev.regions.join(' and ')} area` : '';
-  const kind = ev.kind === 'colour' ? ' (colours)' : ev.kind === 'more_drawn' ? ' (more was drawn)' : ev.kind === 'less_drawn' ? ' (something removed or lightened)' : '';
+  const kind = KIND_NOTE[ev.kind] || '';
   const result = LATER_COMPARISON[cmp.state].replace('{where}', where).replace('{kind}', kind);
   return `Image comparison of the two drawings (already discussed; don't repeat it unless the person brings it up): ${result}. Never describe a change it doesn't support.`;
 }
@@ -241,8 +249,11 @@ export function createArtTurns({ db, config, fetchImpl, clock = { now: () => Dat
     let comparison = runState.comparison;
 
     // 2. Fingerprints and the comparison (first image of a run replaces the old one).
-    if (turn.upload && turn.images[0]) {
-      const fp = fingerprint(turn.images[0].image_url);
+    // The app may send the first drawing again next to the changed one (so the
+    // model sees both side by side): the new drawing is always the last image.
+    const newest = turn.images[turn.images.length - 1];
+    if (turn.upload && newest) {
+      const fp = fingerprint(newest.image_url);
       await db.query('insert into art_image_fingerprints (account_id, art_session, run_id, kind, fingerprint) values ($1, $2, $3, $4, $5::jsonb)', [accountId, session, runId, turn.upload, JSON.stringify(fp)]);
       if (turn.upload === 'image_v1') comparison = null;
       else {

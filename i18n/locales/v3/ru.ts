@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsRu } from '../alerts/ru';
+import { wbRu } from '../wb/ru';
 
 /** Русский — BeHappy 3.0 (сообщество, специалисты, кабинет специалиста). Тёплый тон на «вы». */
 export const ru3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsRu,
+  wb: wbRu,
   shell: {
     personal: 'Личное',
     community: 'Сообщество',

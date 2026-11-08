@@ -74,8 +74,13 @@ export interface ChatMessage {
   timestamp: Date;
   imageUri?: string;
   imageBase64?: string;
+  /** The first drawing, sent again next to the changed one so both are seen side by side (not stored). */
+  referenceImageBase64?: string;
   clinicalData?: ArtTherapyResponse;
 }
+
+const FIRST_LABEL = '[First drawing — before the change:]';
+const CHANGED_LABEL = '[Changed drawing — after the change:]';
 
 class ArtTherapyService {
   // The instructions for art reflection are server-owned (server/prompts/art.md);
@@ -386,6 +391,9 @@ class ArtTherapyService {
         if (msg.role === 'user') {
           const textContent = msg.apiOnlyContent || msg.content;
           if (textContent) content.push({ type: 'input_text', text: textContent });
+          if (msg.referenceImageBase64 && msg.imageBase64) {
+            content.push({ type: 'input_text', text: FIRST_LABEL }, { type: 'input_image', image_url: msg.referenceImageBase64, detail: 'high' }, { type: 'input_text', text: CHANGED_LABEL });
+          }
           if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64, detail: i === lastImageIdx ? 'high' : 'low' });
           input.push({ role: 'user', content });
         } else if (msg.role === 'assistant') {
@@ -555,6 +563,9 @@ class ArtTherapyService {
         if (msg.role === 'user') {
           const textContent = msg.apiOnlyContent || msg.content;
           if (textContent) content.push({ type: 'input_text', text: textContent });
+          if (msg.referenceImageBase64 && msg.imageBase64) {
+            content.push({ type: 'input_text', text: FIRST_LABEL }, { type: 'input_image', image_url: msg.referenceImageBase64, detail: 'high' }, { type: 'input_text', text: CHANGED_LABEL });
+          }
           if (msg.imageBase64) content.push({ type: 'input_image', image_url: msg.imageBase64, detail: i === lastImageIdx ? 'high' : 'low' });
           input.push({ role: 'user', content });
         } else if (msg.role === 'assistant') {
@@ -576,6 +587,9 @@ class ArtTherapyService {
       const content: any[] = [];
       const textContent = apiText + ctx;
       if (textContent) content.push({ type: 'input_text', text: textContent });
+      if (last.referenceImageBase64 && last.imageBase64) {
+        content.push({ type: 'input_text', text: FIRST_LABEL }, { type: 'input_image', image_url: last.referenceImageBase64, detail: 'high' }, { type: 'input_text', text: CHANGED_LABEL });
+      }
       if (last.imageBase64) content.push({ type: 'input_image', image_url: last.imageBase64, detail: 'high' });
       return [{ role: 'user', content }];
     };

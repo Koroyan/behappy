@@ -49,6 +49,17 @@ export async function listArtworks(): Promise<Artwork[]> {
   return present;
 }
 
+/** The saved image as a data URL (to show the first drawing to the AI again). */
+export async function artworkDataUrl(idOrUri: string): Promise<string | null> {
+  const item = (await readJson<Artwork[]>(INDEX_KEY, [])).find((a) => a.id === idOrUri || a.uri === idOrUri);
+  if (!item) return null;
+  try {
+    return `data:image/jpeg;base64,${await FileSystem.readAsStringAsync(item.uri, { encoding: FileSystem.EncodingType.Base64 })}`;
+  } catch {
+    return null;
+  }
+}
+
 export async function deleteArtwork(id: string): Promise<void> {
   const index = await readJson<Artwork[]>(INDEX_KEY, []);
   const item = index.find((a) => a.id === id);

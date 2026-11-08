@@ -153,7 +153,10 @@ export function checkContent(out, ctx = {}) {
   }
   const state = ctx.comparison?.state;
   const afterChangedImage = ctx.upload === 'image_v2' || ctx.hasSecondImage;
-  if (afterChangedImage && ['identical', 'likely_same', 'uncertain'].includes(state)) {
+  // "uncertain": the app saw a possible change; the model looks at both drawings
+  // and may name what it clearly sees there. Only "identical" and "likely_same"
+  // (even the fine checks found nothing) forbid describing a change.
+  if (afterChangedImage && ['identical', 'likely_same'].includes(state)) {
     if (out.comparison_claim === 'change_described' || claimsVisualChange(out.response_text)) problems.push({ code: 'visual_claim', where: 'response_text', state });
   }
   if (!ctx.userUsedClinical) for (const t of texts) if (clinicalClaims(t).length) problems.push({ code: 'clinical', where: t === out.response_text ? 'response_text' : 'session_summary' });
@@ -172,7 +175,7 @@ export function cleanSummary(summary, ctx = {}) {
   const sessionFacts = ctx.sessionFacts || [];
   const evals = sessionFacts.filter((f) => f.kind === 'eval' || f.polarity !== 0);
   const sessionPolarity = claimPolarity(evals);
-  const noChange = ['identical', 'likely_same', 'uncertain', 'comparison_unavailable'].includes(ctx.comparison?.state) && ctx.hasSecondImage;
+  const noChange = ['identical', 'likely_same'].includes(ctx.comparison?.state) && ctx.hasSecondImage;
   const removed = [];
   const kept = sentences(summary).filter((s) => {
     if (AI_NOTE.test(s)) return true;

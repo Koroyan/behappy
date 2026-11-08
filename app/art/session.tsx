@@ -17,7 +17,7 @@ import { LimitNotice } from '@/features/common/LimitNotice';
 import { useT } from '@/i18n';
 import { useAccount } from '@/lib/api/account';
 import { ApiError, NetworkError, QuotaError } from '@/lib/api/client';
-import { Artwork, listArtworks, saveArtwork } from '@/lib/media/artworkStore';
+import { Artwork, artworkDataUrl, listArtworks, saveArtwork } from '@/lib/media/artworkStore';
 import { MicPermissionError, speakText, stopSpeaking, transcribeRecording, useVoiceRecorder } from '@/lib/media/audio';
 import { ImageTooLargeError, pickImage } from '@/lib/media/images';
 import ArtTherapyProgramManager, { ArtTherapySession, SessionProgress } from '@/services/artTherapyProgramNew';
@@ -44,6 +44,15 @@ const isEndSessionTextIntent = (text: string): boolean => {
 };
 
 const RISK = new Set(['high', 'imminent']);
+
+/** The first drawing of this session as a data URL (in memory, or from the saved artworks). */
+async function firstDrawing(messages: ChatMessage[]): Promise<string | null> {
+  const first = messages.find((m) => m.role === 'user' && (m.imageBase64 || m.imageUri));
+  if (!first) return null;
+  if (first.imageBase64) return first.imageBase64;
+  const ref = first.imageUri?.startsWith('artwork:') ? first.imageUri.slice(8) : first.imageUri;
+  return ref ? artworkDataUrl(ref).catch(() => null) : null;
+}
 const uid = () => `${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
 
 export default function ArtSessionScreen() {
@@ -190,6 +199,10 @@ export default function ArtSessionScreen() {
     if (!session) return;
     setError(null);
 
+    const prior = messagesRef.current;
+    // A second drawing: send the first one again next to it, so the AI sees both
+    // side by side even when the stored conversation can't be continued.
+    const reference = opts.imageBase64 ? await firstDrawing(prior) : null;
     const userMessage: ChatMessage = {
       id: uid(),
       role: 'user',
@@ -198,8 +211,8 @@ export default function ArtSessionScreen() {
       timestamp: new Date(),
       imageUri: opts.imageUri,
       imageBase64: opts.imageBase64,
+      ...(reference ? { referenceImageBase64: reference } : {}),
     };
-    const prior = messagesRef.current;
     const nextMessages = [...prior, userMessage];
     setMessages(nextMessages);
     setInput('');

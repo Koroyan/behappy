@@ -1,5 +1,6 @@
 import type { PartialMessages } from '../../index';
 import { alertsAr } from '../alerts/ar';
+import { wbAr } from '../wb/ar';
 
 /**
  * العربية — BeHappy 3.0. فصحى مبسّطة ودافئة، بصيغ محايدة جنسيًا حيثما أمكن
@@ -8,6 +9,7 @@ import { alertsAr } from '../alerts/ar';
 export const ar3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsAr,
+  wb: wbAr,
   shell: {
     personal: 'شخصي',
     community: 'المجتمع',

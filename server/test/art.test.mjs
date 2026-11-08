@@ -69,6 +69,14 @@ describe('Art: building blocks', () => {
     assert.equal(cmp(img.encode(img.circle(img.clone(base), 240, 130, 62, [40, 70, 210]), 85)), 'different', 'recoloured');
     assert.equal(cmp(img.encode(img.rect(img.clone(base), 40, 290, 440, 340, [246, 243, 236]), 85)), 'different', 'erased');
     assert.notEqual(cmp(img.encode(img.circle(img.clone(base), 60, 300, 12, [200, 30, 120]), 85)), 'likely_same', 'a small new detail is never "unchanged"');
+    // Seen in a real session: a few thin strokes added across the middle of an edited
+    // picture came out "likely_same" (0 changed cells) and the reply said nothing changed.
+    const strokes = img.clone(base);
+    for (const [x0, y0] of [[40, 170], [100, 168], [250, 172], [330, 166]]) img.rect(strokes, x0, y0, x0 + 28, y0 + 3, [30, 30, 30]);
+    const edited = compareFingerprints(a, fingerprint(img.encode(strokes, 85)));
+    assert.equal(edited.state, 'different', `thin new strokes, same frame: ${JSON.stringify(edited.evidence)}`);
+    assert.equal(edited.evidence.kind, 'small_marks_added');
+    assert.notEqual(cmp(img.encode(img.shift(strokes, 8), 85)), 'likely_same', 'the same strokes in a new photo are never "unchanged"');
     assert.equal(compareFingerprints(a, fingerprint('data:image/png;base64,iVBORw0KGgo=')).state, 'comparison_unavailable');
     assert.equal(compareFingerprints(null, a).state, 'comparison_unavailable');
     const ev = compareFingerprints(a, fingerprint(MODIFIED)).evidence;
@@ -311,7 +319,7 @@ describe('Art: checked turns through the server', () => {
       const me = await person();
       const { upload } = await toSecondDrawing(me, copy);
       let r = await upload([reply({ response_text: 'Когда вы смотрите на эту новую версию сейчас, что вы чувствуете? Пока вы её меняли, что вы чувствовали?', session_phase: 1, action: 'analyze_second_drawing' })]);
-      assert.match(noteOf(lastCall()), /very likely the same drawing/, name);
+      assert.match(noteOf(lastCall()), /no clear difference between the two photos, even in fine detail/, name);
       const claim = reply({ response_text: 'Солнце стало больше и ярче. Что это значит для вас?', session_phase: 1, action: 'compare_drawings', comparison_claim: 'change_described' });
       script = [claim, claim, claim];
       r = await turn(me, { phase: 1, text: 'tsota spokoini', prev: r.id });

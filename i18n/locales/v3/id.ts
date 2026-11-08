@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsId } from '../alerts/id';
+import { wbId } from '../wb/id';
 
 /** Bahasa Indonesia — BeHappy 3.0. Hangat dan akrab («kamu»). */
 export const id3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsId,
+  wb: wbId,
   shell: {
     personal: 'Pribadi',
     community: 'Komunitas',

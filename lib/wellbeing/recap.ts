@@ -105,5 +105,10 @@ export function dayFacts(input: RecapInput): RecapFact[] {
   return facts;
 }
 
-/** Facts → the compact JSON the reflection model receives (ids and values only). */
-export const factsForModel = (facts: RecapFact[]) => facts.map((f) => ({ id: f.id, ...f.values }));
+/**
+ * Facts → the compact JSON the reflection model receives: ids, values and,
+ * when given, the line the person sees in their own language (so the text
+ * names things the way the app does, never by internal ids).
+ */
+export const factsForModel = (facts: RecapFact[], describe?: (f: RecapFact) => string) =>
+  facts.map((f) => ({ id: f.id, ...f.values, ...(describe ? { text: describe(f).slice(0, 120) } : {}) }));

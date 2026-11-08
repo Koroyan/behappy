@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsPt } from '../alerts/pt';
+import { wbPt } from '../wb/pt';
 
 /** Português (europeu) — BeHappy 3.0. Caloroso e respeitoso. */
 export const pt3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsPt,
+  wb: wbPt,
   shell: {
     personal: 'Pessoal',
     community: 'Comunidade',

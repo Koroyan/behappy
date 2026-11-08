@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsPl } from '../alerts/pl';
+import { wbPl } from '../wb/pl';
 
 /** Polski — BeHappy 3.0. Ciepło i bezpośrednio („ty”), bez form zależnych od płci tam, gdzie się da. */
 export const pl3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsPl,
+  wb: wbPl,
   shell: {
     personal: 'Osobiste',
     community: 'Społeczność',

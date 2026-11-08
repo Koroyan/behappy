@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsEs } from '../alerts/es';
+import { wbEs } from '../wb/es';
 
 /** Español — BeHappy 3.0. Cálido y cercano («tú»). */
 export const es3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsEs,
+  wb: wbEs,
   shell: {
     personal: 'Personal',
     community: 'Comunidad',

@@ -37,7 +37,8 @@
     "admin:grant": "node server/scripts/grant-role.mjs",
     "server:local": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON server/index.mjs --dev-tools",
     "web:proxy": "node scripts/dev/proxy.mjs",
-    "web:local": "npx expo start --web --port 8082"
+    "web:local": "npx expo start --web --port 8082",
+    "qa:wellbeing": "node scripts/qa/wellbeing-journey.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.15",

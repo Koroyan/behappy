@@ -22,8 +22,9 @@ The pre-2.0 version of this document described hidden "patient" risk analysis sh
 ## 3. Consent, privacy and control
 
 - Nothing goes to an AI provider until the person agrees on a consent screen that names the provider and explains what is sent.
-- Journaling works fully without AI. A journal entry is sent to Anulia only when the person asks for a reflection on that entry.
-- Personal details are shared with Anulia only if the person turns personalisation on.
+- Journaling works fully without AI. A journal entry is sent to Anulia only when the person asks for a reflection on that entry, or when they switched on "Full journal text" in "What Anulia can remember".
+- Agreeing to use AI never shares history. What Anulia may remember is a separate switch per category (profile, Steps and goals, mood, activity counts, sounds, sleep, earlier chat summaries, journal text, art summaries, self-check results), all off by default; items can be left out one by one, the exact text can be previewed, and turning anything off starts a fresh conversation without it. Community messages and messages with psychologists are never part of it.
+- The daily reflection sends only the day's allowed facts (ids and numbers); journal text and art summaries need their own separate permissions. If the AI text doesn't pass the server's checks (invented numbers, causes, feelings or diagnoses), it is not shown.
 - Journal entries, conversations, artwork photos and questionnaire answers stay on the device. The server keeps accounts, orders and usage counts, never content.
 - No third-party analytics, advertising SDKs or selling of data. The owner sees aggregate counts only.
 - People can export everything and delete everything, on the device and the server, from Profile › Privacy.
@@ -31,7 +32,8 @@ The pre-2.0 version of this document described hidden "patient" risk analysis sh
 ## 4. Honest design
 
 - No fabricated numbers: insights only show what the person recorded. No predictions about someone's mental health, no "wellness scores".
-- No streaks, guilt, loss-framing or nagging. Missing a day is not a failure.
+- No streaks, guilt, loss-framing or nagging. Missing a day is not a failure. My Steps shows gentle consistency ("5 of 7 planned"), skipped days are neutral, badges are permanent and never compared. The only exception: the owner may switch on `features.classicStreak` (owner-only, off by default), and even then a person sees a streak count only if they opt in; skipped days don't break it.
+- Sounds make no health claims: binaural tones are described as two tones and a perceived beat, nothing more — no "entrainment", no 432/528 Hz healing, no cures or guaranteed sleep.
 - Money: one exact price in GEL. No fake "regular" prices, countdowns or scarcity. Passes never renew by themselves. Limits are shown before buying and exist to keep costs and pace sustainable, not to pressure upgrades.
 - No control is decorative. If something cannot work yet, it is not shown.
 

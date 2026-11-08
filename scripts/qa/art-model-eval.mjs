@@ -56,6 +56,13 @@ const base = crayon();
 const FIRST = img.encode(base, 85);
 const LIGHTING = img.encode(img.lighting(base, { gain: 0.8, gradient: 0.3, cast: [1.07, 1, 0.9] }), 78);
 const MODIFIED = img.encode(img.circle(img.clone(base), 520, 110, 45, [35, 30, 40]), 85);
+// Seen in a real session: a few thin dark strokes added across the middle of the same picture.
+const STROKES = (() => {
+  const c = img.clone(base);
+  const y = Math.round(c.h / 2);
+  for (const [x, dy] of [[0.1, -4], [0.22, 2], [0.55, -2], [0.72, 4]]) img.rect(c, Math.round(c.w * x), y + dy, Math.round(c.w * x) + 34, y + dy + 3, [25, 25, 30]);
+  return img.encode(c, 85);
+})();
 
 const RU = 'Russian (Русский)';
 const KA = 'Georgian (ქართული)';
@@ -71,6 +78,7 @@ const SCENARIOS = {
   stop: { lang: RU, turns: [{ image: FIRST }, { text: 'спокойно' }, { text: 'давайте закончим сессию на этом', closes: true }] },
   identical: { lang: RU, turns: [{ image: FIRST }, { text: 'красный это энергия' }, { text: 'хочу изменить рисунок', phase: 1 }, { image: FIRST, phase: 1, v2: 'identical' }, { text: 'да', phase: 1, compare: 'identical' }, { text: 'это ничего не значит', phase: 1 }, { text: 'давайте закончим', phase: 2, closes: true }] },
   lighting: { lang: RU, turns: [{ image: FIRST }, { text: 'красный это энергия' }, { text: 'хочу изменить рисунок', phase: 1 }, { image: LIGHTING, phase: 1, v2: 'likely_same' }, { text: 'спокойно', phase: 1, compare: 'likely_same' }] },
+  strokes: { lang: KA, turns: [{ image: FIRST }, { text: 'mzes vxatavdi, sixarulia' }, { text: 'minda naxati shevcvalo', phase: 1 }, { image: STROKES, phase: 1, v2: 'different' }, { text: 'ki', phase: 1, compare: 'different' }] },
   modified: { lang: RU, turns: [{ image: FIRST }, { text: 'солнце это радость' }, { text: 'хочу изменить рисунок', phase: 1 }, { image: MODIFIED, phase: 1, v2: 'different' }, { text: 'интересно', phase: 1, compare: 'different' }] },
 };
 

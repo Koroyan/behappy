@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsDe } from '../alerts/de';
+import { wbDe } from '../wb/de';
 
 /** Deutsch — BeHappy 3.0. Warm, persönlich („du“). */
 export const de3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsDe,
+  wb: wbDe,
   shell: {
     personal: 'Persönlich',
     community: 'Community',

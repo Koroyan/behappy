@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsZh } from '../alerts/zh';
+import { wbZh } from '../wb/zh';
 
 /** 简体中文 — BeHappy 3.0。温和、亲切（“你”）。 */
 export const zh3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsZh,
+  wb: wbZh,
   shell: {
     personal: '个人',
     community: '社区',

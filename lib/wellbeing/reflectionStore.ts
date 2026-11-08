@@ -98,7 +98,7 @@ export const reflectionFor = async (day = dayKey()) => (await loadReflection()).
  * Makes (or re-makes) the reflection for a day. `useAi` false → facts only.
  * The result is saved; history keeps 90 days.
  */
-export async function makeReflection(language: AppLanguage, languageName: string, { day = dayKey(), useAi = true }: { day?: string; useAi?: boolean } = {}): Promise<ReflectionRecord> {
+export async function makeReflection(language: AppLanguage, languageName: string, { day = dayKey(), useAi = true, describe }: { day?: string; useAi?: boolean; describe?: (f: RecapFact) => string } = {}): Promise<ReflectionRecord> {
   const d = await loadReflection();
   const facts = await factsFor(day);
   let record: ReflectionRecord = { day, facts, source: 'facts', createdAt: Date.now() };
@@ -113,7 +113,7 @@ export async function makeReflection(language: AppLanguage, languageName: string
             .map((e) => `${e.title ? `${e.title}. ` : ''}${e.content}`.slice(0, 600))
         : [];
       const art = d.settings.artSummaries ? (await artSummaries()).filter((a) => dayKey(a.completedAt) === day).map((a) => a.summary.slice(0, 600)) : [];
-      const res = await aiPost<AiReflection & { source: 'ai' }>('/api/ai/reflection', { day, language: languageName, facts: factsForModel(facts), journal, art }, { feature: 'reflection' });
+      const res = await aiPost<AiReflection & { source: 'ai' }>('/api/ai/reflection', { day, language: languageName, facts: factsForModel(facts, describe), journal, art }, { feature: 'reflection' });
       record = { ...record, ai: { reflection: res.reflection, patterns: res.patterns || [], suggestion: res.suggestion || '' }, source: 'ai' };
     } catch (e) {
       record.reason = e instanceof QuotaError ? 'limit' : e instanceof NetworkError ? 'offline' : e instanceof ApiError && e.status === 422 ? 'unverified' : 'unavailable';

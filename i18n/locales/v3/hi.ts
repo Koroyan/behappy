@@ -1,5 +1,6 @@
 import type { PartialMessages } from '../../index';
 import { alertsHi } from '../alerts/hi';
+import { wbHi } from '../wb/hi';
 
 /**
  * हिन्दी — BeHappy 3.0। आत्मीय, विनम्र «आप»। जहाँ स्वाभाविक लगे, वहाँ लिंग-निरपेक्ष
@@ -8,6 +9,7 @@ import { alertsHi } from '../alerts/hi';
 export const hi3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsHi,
+  wb: wbHi,
   shell: {
     personal: 'निजी',
     community: 'समुदाय',

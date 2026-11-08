@@ -214,6 +214,32 @@ function correlation(a, b, n, border) {
  * 3×3 neighbourhood. Edge cells that are a blend of two sides stay within that
  * range; a new or removed mark does not.
  */
+/**
+ * Local marks between two pictures of the same frame: log-brightness change of
+ * each cell minus the median change around it (7×7), so exposure, gain and
+ * light gradients cancel out and only local changes remain.
+ */
+function localMarks(ga, gb, n, border, threshold = 0.18) {
+  const d = new Float64Array(n * n);
+  for (let i = 0; i < n * n; i += 1) d[i] = Math.log((gb[i] + 12) / (ga[i] + 12));
+  const out = [];
+  const win = [];
+  for (let y = border; y < n - border; y += 1)
+    for (let x = border; x < n - border; x += 1) {
+      win.length = 0;
+      for (let dy = -3; dy <= 3; dy += 1)
+        for (let dx = -3; dx <= 3; dx += 1) {
+          const yy = y + dy;
+          const xx = x + dx;
+          if (yy >= 0 && yy < n && xx >= 0 && xx < n) win.push(d[yy * n + xx]);
+        }
+      win.sort((p, q) => p - q);
+      const r = d[y * n + x] - win[win.length >> 1];
+      if (Math.abs(r) > threshold) out.push({ x, y, d: Math.abs(r), sign: r < 0 ? 1 : -1 });
+    }
+  return out;
+}
+
 function changedCells(a, b, n, border, threshold) {
   const out = [];
   const outside = (v, lo, hi) => (v < lo ? lo - v : v > hi ? v - hi : 0);
@@ -315,6 +341,30 @@ export function compareFingerprints(a, b) {
   };
 
   if (corr < 0.6 || ink.length >= 8 || colour.length >= 3) return { state: 'different', evidence };
+
+  // Fine marks: a few thin lines or small dots are diluted by the blur above and
+  // stay under its threshold (seen in a real session: new strokes across the
+  // middle, 0 changed cells, "likely_same", and the reply said nothing changed).
+  // Unblurred ink, same alignment, the same edge tolerance, a strong change only.
+  const untouchedFrame = best.deg === 0 && best.dx === 0 && best.dy === 0 && a.width === b.width && a.height === b.height;
+  let fine = changedCells(Array.from(inkMap(a.gray, N)), transform(Array.from(inkMap(b.gray, N)), N, best.deg, best.dx, best.dy, aspect), N, border, 0.25);
+  // An edited picture (same size, no shift or tilt): compare brightness cell by
+  // cell directly — the ink map divides by the local paper level and makes marks
+  // in coloured areas look weak. Smooth light changes (gain, offset, a gradient)
+  // are removed with a local median in the log domain; marks remain.
+  if (untouchedFrame) {
+    const local = localMarks(a.gray, b.gray, N, border);
+    if (local.length > fine.length) fine = local;
+  }
+  evidence.fineCells = fine.length;
+  if (fine.length >= 2) {
+    const fineRegions = new Map();
+    for (const c of fine) fineRegions.set(regionOf(c.x, c.y, N), (fineRegions.get(regionOf(c.x, c.y, N)) || 0) + 1);
+    evidence.regions = [...fineRegions.entries()].sort((x, y) => y[1] - x[1]).slice(0, 2).map(([name]) => name);
+    evidence.kind = fine.filter((c) => c.sign > 0).length >= fine.length / 2 ? 'small_marks_added' : 'small_marks_removed';
+    // Same size and no shift or tilt: an edited picture, not a new photo — the marks are real.
+    return { state: untouchedFrame ? 'different' : 'uncertain', evidence };
+  }
   if (ink.length <= 1 && colour.length <= 1 && corr >= 0.9) return { state: 'likely_same', evidence };
   return { state: 'uncertain', evidence };
 }

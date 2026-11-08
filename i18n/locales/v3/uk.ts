@@ -1,10 +1,12 @@
 import type { PartialMessages } from '../../index';
 import { alertsUk } from '../alerts/uk';
+import { wbUk } from '../wb/uk';
 
 /** Українська — BeHappy 3.0. Тепло й шанобливо («ви»). */
 export const uk3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsUk,
+  wb: wbUk,
   shell: {
     personal: 'Особисте',
     community: 'Спільнота',
