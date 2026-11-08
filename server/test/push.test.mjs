@@ -266,7 +266,7 @@ describe('Push reliability', () => {
   let receipts = {};
   const sends = [];
   before(async () => {
-    t = await startTestServer({ extend: [mountCommunity, mountProfessionals, mountPush], services: [startCommunityRealtime], config: { push: { driver: 'expo' } } });
+    t = await startTestServer({ extend: [mountCommunity, mountProfessionals, mountPush], services: [startCommunityRealtime], config: { push: { driver: 'expo', autoFlush: false } } });
     deps = t.app.locals.deps;
     let ticket = 0;
     deps.pushFetch = async (url, init) => {

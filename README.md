@@ -12,12 +12,12 @@ BeHappy is not medical care, therapy or a crisis service. Safety resources are f
 
 ## Stack
 
-- **App**: Expo SDK 54, React Native 0.81, React 19, expo-router 6 (iOS, Android, web)
+- **App**: Expo SDK 58, React Native 0.88, React 19.3, expo-router 58 (iOS, Android, web) — validation in [docs/BEHAPPY_EXPO_58_QA.md](docs/BEHAPPY_EXPO_58_QA.md)
 - **API server**: Node 24 + Express 5 (`server/`), PostgreSQL (PGlite for development and tests), Socket.IO for live rooms and messages
 - **Accounts**: anonymous device accounts; registration with email code and password for the community and professional features; seven staff roles (owner, admin, verifier, moderator, finance, support, analyst) with named permissions, step-up confirmation and optional two-step codes
-- **AI**: OpenAI, called only from the server with server-owned instructions (`server/prompts/`)
+- **AI**: OpenAI Responses API, called only from the server with server-owned instructions (`server/prompts/`, see [docs/prompts](docs/prompts/README.md)). Art reflection: GPT-6.1 Sol with medium reasoning, every reply checked before the person sees it (image comparison, the person's own words, the three-phase state, summaries) — [reliability](docs/BEHAPPY_ART_THERAPY_RELIABILITY.md), [model evaluation](docs/BEHAPPY_AI_MODEL_EVALUATION.md), [image comparison](docs/BEHAPPY_IMAGE_COMPARISON.md). Anulia, cards and community: gpt-5.4-mini.
 - **Payments**: Flitt, **TEST mode only** (Plus, the art program, the professional membership)
-- **Languages**: 19 interface languages, all complete (1,611 strings each), right-to-left for Arabic; the admin center in English and Georgian
+- **Languages**: 19 interface languages, all complete (1,690 strings each), right-to-left for Arabic; the admin center in English and Georgian
 
 ## Quick start (development)
 
@@ -45,7 +45,7 @@ Production: `deploy/docker-compose.yml` (PostgreSQL, API, Caddy with automatic H
 |---|---|
 | `npm run server:local` / `server:dev` | API with dev tools / restart on changes |
 | `npm run web:local` · `npm run web:proxy` | Expo web on 8082 · proxy on 8081 |
-| `npm test` | 127 tests: payments, AI proxy, quotas, accounts, community access, moderation, professionals, bookings, membership, staff security, analytics, the admin authorization matrix, phone notifications, reminder planning, scoring, text helpers, secret scan |
+| `npm test` | 155 tests: payments, AI proxy, quotas, accounts, community access, moderation, professionals, bookings, membership, staff security, analytics, the admin authorization matrix, phone notifications and delivery reliability, art reflection checks (three phases, image comparison, negation, summaries), scoring, text helpers, secret scan |
 | `npm run typecheck` · `npm run lint` | TypeScript · ESLint |
 | `npm run qa:i18n` | Every used key exists; coverage, placeholders and lists per language |
 | `npm run qa:pro` | Browser journey: apply → verify → trial → publish → book → confirm → message → membership checkout (`--pay` pays with the Flitt test card, `--app` targets a tunnel) |
@@ -55,6 +55,7 @@ Production: `deploy/docker-compose.yml` (PostgreSQL, API, Caddy with automatic H
 | `npm run qa:scroll` · `qa:shots` | Scroll and bar checks; screenshots |
 | `npm run admin:grant` | Set up the first owner (or grant/revoke a role) with the server's ADMIN_TOKEN |
 | `npm run build:web` | Static web build in `dist/` (not committed) |
+| `node scripts/qa/art-model-eval.mjs` | Live art-reflection model evaluation with synthetic conversations and drawings (costs OpenAI tokens) |
 
 ## Project layout
 
@@ -98,4 +99,6 @@ BeHappy 3.0:
 [Design system](docs/BEHAPPY_3_DESIGN_SYSTEM.md) ·
 [Test results](docs/BEHAPPY_3_TEST_RESULTS.md)
 
-From 2.0: [Redesign summary](docs/BEHAPPY_REDESIGN_SUMMARY.md) · [Audit](docs/BEHAPPY_AUDIT.md) · [Design system](docs/BEHAPPY_DESIGN_SYSTEM.md) · [Security review](docs/BEHAPPY_SECURITY_REVIEW.md) · [Pricing strategy](docs/BEHAPPY_PRICING_STRATEGY.md) · [Flitt test setup](docs/BEHAPPY_FLITT_TEST_SETUP.md) · [Updating the AI prompts](docs/prompts/ANULIA_PERSONA_NOTE.md)
+From 2.0: [Redesign summary](docs/BEHAPPY_REDESIGN_SUMMARY.md) · [Audit](docs/BEHAPPY_AUDIT.md) · [Design system](docs/BEHAPPY_DESIGN_SYSTEM.md) · [Security review](docs/BEHAPPY_SECURITY_REVIEW.md) · [Pricing strategy](docs/BEHAPPY_PRICING_STRATEGY.md) · [Flitt test setup](docs/BEHAPPY_FLITT_TEST_SETUP.md) · [AI instructions](docs/prompts/README.md)
+
+Intelligence and stability (November 2026): [Release readiness](docs/BEHAPPY_RELEASE_READINESS.md) — read the blockers first · [Art reflection reliability](docs/BEHAPPY_ART_THERAPY_RELIABILITY.md) · [AI model evaluation](docs/BEHAPPY_AI_MODEL_EVALUATION.md) · [Image comparison](docs/BEHAPPY_IMAGE_COMPARISON.md) · [Notifications](docs/BEHAPPY_NOTIFICATIONS_RELIABILITY.md) · [Expo SDK 58 QA](docs/BEHAPPY_EXPO_58_QA.md)

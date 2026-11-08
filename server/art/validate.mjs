@@ -200,8 +200,14 @@ export function fallbackReply(out, problems, ctx = {}) {
     v.response_text = artText(ctx.language, ctx.comparison?.state === 'identical' ? 'identical' : 'uncertain');
   } else if (codes.has('contradiction')) {
     const user = problems.find((p) => p.code === 'contradiction')?.user;
-    v.response_text = artText(ctx.language, user < 0 ? 'clarifyNeg' : 'clarifyPos');
-    if (!v.session_complete && ctx.upload !== 'image_v2') Object.assign(v, { required_input: 'text', action: v.action === 'compare_drawings' ? 'compare_drawings' : 'continue_exploration' });
+    if (v.session_complete) {
+      // A closing reply stays a closing reply: only the contradicting sentences go.
+      const kept = sentences(v.response_text).filter((s) => claimPolarity(assertedFeelings(s)) !== -user).join(' ').trim();
+      v.response_text = kept || artText(ctx.language, 'thanks');
+    } else {
+      v.response_text = artText(ctx.language, user < 0 ? 'clarifyNeg' : 'clarifyPos');
+      if (ctx.upload !== 'image_v2') Object.assign(v, { required_input: 'text', action: v.action === 'compare_drawings' ? 'compare_drawings' : 'continue_exploration' });
+    }
   } else if (codes.has('clinical')) {
     const kept = sentences(v.response_text).filter((s) => !clinicalClaims(s).length).join(' ').trim();
     v.response_text = kept || artText(ctx.language, 'retry');

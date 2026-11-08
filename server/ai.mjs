@@ -268,6 +268,10 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     if (!upstream.ok) {
       await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt });
       const text = await upstream.text().catch(() => '');
+      if (upstream.status === 429) {
+        if (/insufficient_quota|credit_balance/i.test(text)) console.warn('[ai] OpenAI reports no credits left (insufficient_quota): AI features are unavailable until credits are added.');
+        return bad(res, 503, 'ai_unavailable', 'AI is temporarily unavailable. Please try again later.');
+      }
       const stale = /previous[_ ]response/i.test(text) || (/not found/i.test(text) && upstream.status === 404);
       return res.status(stale ? 409 : upstream.status >= 500 ? 502 : 400).json({
         error: stale ? 'stale_previous_response' : 'ai_upstream_error',

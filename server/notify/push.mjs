@@ -431,7 +431,8 @@ export function createPush(deps) {
 
   /** Something new was written: send soon, so a burst of writes becomes one push. */
   function poke(delayMs = 2500) {
-    if (poked) return;
+    // Tests that drive the clock themselves turn this off (config.push.autoFlush = false).
+    if (poked || deps.config?.push?.autoFlush === false) return;
     poked = setTimeout(() => {
       poked = null;
       flush().catch((e) => console.error('[push] flush failed', e?.message));

@@ -265,7 +265,7 @@ export function createArtTurns({ db, config, fetchImpl, clock = { now: () => Dat
       return { ...base, input: items };
     };
 
-    const report = { calls: 0, retries: [], fixes: [], problems: [], comparison: hasV2 ? comparison?.state || null : null, ms: 0, usage: { input_tokens: 0, output_tokens: 0 } };
+    const report = { calls: 0, retries: [], fixes: [], problems: [], attempts: [], comparison: hasV2 ? comparison?.state || null : null, ms: 0, usage: { input_tokens: 0, output_tokens: 0 } };
     let last = null;
     let value = null;
     let extra = '';
@@ -285,14 +285,22 @@ export function createArtTurns({ db, config, fetchImpl, clock = { now: () => Dat
         await recordAiUsage(db, { accountId, feature: 'art', model: base.model, status: 'error', errorCode: r.errorText === 'timeout' ? 'timeout' : `upstream_${r.status}`, latencyMs: r.ms });
         if (value) break; // keep the best reply we already have
         const stale = /previous[_ ]response/i.test(r.errorText || '') || (r.status === 404 && /not found/i.test(r.errorText || ''));
+        // 429: rate limit or the OpenAI account is out of credits — "unavailable for now", not a bad request.
+        if (r.status === 429) {
+          if (/insufficient_quota|credit_balance/i.test(r.errorText || '')) console.warn('[ai] OpenAI reports no credits left (insufficient_quota): AI features are unavailable until credits are added.');
+          return { status: 503, error: 'ai_unavailable', report };
+        }
         return { status: stale ? 409 : r.status === 0 ? 502 : r.status >= 500 ? 502 : 400, error: stale ? 'stale_previous_response' : r.status === 0 ? 'ai_upstream_unreachable' : 'ai_upstream_error', report };
       }
       report.usage.input_tokens += Number(r.usage?.input_tokens || 0);
       report.usage.output_tokens += Number(r.usage?.output_tokens || 0);
       last = r;
       const parsed = parseModelJson(r.text);
+      // Model evaluation only (scripts/qa/art-model-eval.mjs): never set in production.
+      if (config.ai?.art?.keepDrafts) (report.drafts ||= []).push({ text: parsed.value?.response_text ?? r.text.slice(0, 400), summary: parsed.value?.session_summary || '', phase: parsed.value?.session_phase, action: parsed.value?.action, claim: parsed.value?.comparison_claim, ms: r.ms, usage: r.usage });
       if (!parsed.ok) {
         report.problems.push(r.incomplete ? 'incomplete' : parsed.error);
+        report.attempts.push([r.incomplete ? 'incomplete' : parsed.error]);
         extra = CORRECT.json();
         report.retries.push('json');
         continue;
@@ -305,6 +313,7 @@ export function createArtTurns({ db, config, fetchImpl, clock = { now: () => Dat
       value = { candidate: state.value, problems, summaryCodes, id: r.data?.id };
       if (!problems.length && !summaryCodes.length) break;
       report.problems.push(...problems.map((p) => p.code), ...summaryCodes.map((c) => `summary_${c}`));
+      report.attempts.push([...problems.map((p) => p.code), ...summaryCodes.map((c) => `summary_${c}`), ...state.fixes.map((x) => `state_${x}`)]);
       if (attempt === MAX_CALLS - 1) break;
       extra = [...problems.map((p) => CORRECT[p.code](p)), ...(summaryCodes.length ? [CORRECT.summary([...new Set(summaryCodes)])] : [])].join('\n');
       report.retries.push(...problems.map((p) => p.code), ...(summaryCodes.length ? ['summary'] : []));
@@ -344,7 +353,7 @@ export function createArtTurns({ db, config, fetchImpl, clock = { now: () => Dat
     const headers = { phase: req.get('x-behappy-art-phase'), upload: req.get('x-behappy-art-upload'), language: req.get('x-behappy-art-lang') };
     const out = await run({ accountId: req.account.id, artSessionId: req.aiContext?.artSessionId, runIdHeader: req.get('x-behappy-art-run'), headers, clean });
     if (out.status !== 200) {
-      return res.status(out.status).json({ error: out.error, message: out.error === 'stale_previous_response' ? 'previous_response_id not found' : 'The AI service returned an error.' });
+      return res.status(out.status).json({ error: out.error, message: out.error === 'stale_previous_response' ? 'previous_response_id not found' : out.error === 'ai_unavailable' ? 'AI is temporarily unavailable. Please try again later.' : 'The AI service returned an error.' });
     }
     if (out.id) await rememberResponse(out.id, req.account.id);
     const json = JSON.stringify(out.final);

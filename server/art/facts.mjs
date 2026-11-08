@@ -113,7 +113,8 @@ const HY_NEG = new Set(['ոչ', 'չէ', 'չեմ', 'չի', 'չէր']);
 // Words that are also common English words: never read as Latin Georgian/Russian.
 const LATIN_STOP = new Set(['a', 'an', 'and', 'the', 'is', 'it', 'in', 'on', 'of', 'to', 'me', 'my', 'so', 'i', 'you', 'be', 'bad', 'good', 'red', 'bel', 'sin', 'she', 'sila', 'bol']);
 
-const words = (text) => String(text || '').toLowerCase().match(/[\p{L}\p{M}'’-]+/gu) || [];
+// Typographic apostrophes ("didn’t") become plain ones, so negation is found either way.
+const words = (text) => String(text || '').toLowerCase().replace(/[’‘`´]/g, "'").match(/[\p{L}\p{M}'-]+/gu) || [];
 const script = (text) => (/[ა-ჰ]/.test(text) ? 'ka' : /[а-яё]/i.test(text) ? 'ru' : /[Ա-֏]/.test(text) ? 'hy' : /[a-z]/i.test(text) ? 'latin' : 'other');
 
 /** Latin letters that read as Georgian (also for one- or two-word answers). */
@@ -287,10 +288,17 @@ export const endIntent = (text) => STOP.some((re) => re.test(String(text || ''))
 const SENTENCES = (text) => String(text || '').split(/(?<=[.!?。！？])\s+|\n+/).map((s) => s.trim()).filter(Boolean);
 
 /** Feelings asserted (not asked) in a reply: question sentences are skipped. */
+// "Хорошо, пришлите фото", "OK, let's stop", "კარგი, დავასრულოთ": an
+// acknowledgment at the start of a sentence, not a statement about a feeling.
+const ACK_STEMS = new Set(['xorosh', 'kargi', 'kargia', 'good', 'fine', 'nice', 'great', 'klass']);
+
 export function assertedFeelings(text) {
   return SENTENCES(text)
     .filter((s) => !/[?？]\s*$/.test(s))
-    .flatMap((s) => extractFacts(s).feelings.filter((f) => f.kind === 'eval' || f.polarity !== 0));
+    .flatMap((s) => {
+      const first = words(s)[0];
+      return extractFacts(s).feelings.filter((f) => (f.kind === 'eval' || f.polarity !== 0) && !(f.term === first && ACK_STEMS.has(f.stem)));
+    });
 }
 
 // Statements that the drawing changed (for comparisons that found no change).

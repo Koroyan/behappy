@@ -85,6 +85,7 @@ describe('Art: building blocks', () => {
     assert.equal(pol('не приятно'), -1);
     assert.equal(pol('было приятно'), 1);
     assert.equal(pol('not pleasant at all'), -1);
+    assert.equal(pol('it didn’t feel good'), -1, 'typographic apostrophe (found by the live evaluation)');
     assert.equal(pol('ոչ հաճելի'), -1);
     assert.deepEqual(extractFacts('witeli').colours, ['red']);
     assert.deepEqual(extractFacts('tavshi').body, ['head']);
@@ -92,6 +93,14 @@ describe('Art: building blocks', () => {
     assert.match(languageNote('ara sasiamovno'), /არა სასიამოვნო/);
     assert.match(languageNote('naprajenie'), /напражение/);
     assert.equal(languageNote('I feel calm today'), '');
+  });
+
+  test('"Хорошо, …" / "OK, …" at the start of a sentence is an acknowledgment, not a feeling', async () => {
+    const { assertedFeelings } = await import('../art/facts.mjs');
+    assert.deepEqual(assertedFeelings('Хорошо, пришлите фото изменённого рисунка на бумаге.'), []);
+    assert.deepEqual(assertedFeelings('Good, let us stop here.'), []);
+    assert.equal(assertedFeelings('Это было хорошо.').length, 1);
+    assert.equal(assertedFeelings('Сейчас это звучит как приятное переживание.')[0].polarity, 1);
   });
 
   test('change claims respect negation', () => {
@@ -251,6 +260,19 @@ describe('Art: checked turns through the server', () => {
     assert.match(noteOf(lastCall()), new RegExp(`What they actually saw from you was: «${ART_TEXT.ru.clarifyNeg.replace(/[?]/g, '\\?')}»`));
   });
 
+  test('C2 — a closing reply that contradicts a feeling still closes (only that sentence goes)', async () => {
+    const me = await person();
+    script = [reply()];
+    let r = await turn(me, { image: FIRST });
+    script = [reply()];
+    r = await turn(me, { text: 'ara sasiamovno', prev: r.id });
+    const close = reply({ response_text: 'Спасибо за сессию. Это было приятное переживание.', session_phase: 2, phase_complete: true, session_complete: true, required_input: 'none', action: 'close_session', session_summary: 'Вы описали неприятное ощущение.' });
+    script = [close, close, close];
+    r = await turn(me, { text: 'давайте закончим', prev: r.id });
+    assert.equal(r.out.session_complete, true, 'the person asked to end: the session ends');
+    assert.equal(r.out.response_text, 'Спасибо за сессию.');
+  });
+
   const toSecondDrawing = async (me, second) => {
     script = [reply()];
     let r = await turn(me, { image: FIRST });
@@ -389,6 +411,11 @@ describe('Art: checked turns through the server', () => {
     assert.equal((await turn(me, { text: 'hi', prev: first.id })).status, 409);
     script = [{ httpStatus: 500, error: 'boom' }];
     assert.equal((await turn(me, { text: 'hi' })).status, 502);
+    // The OpenAI account ran out of credits (happened during the live evaluation): "unavailable", not "bad request".
+    script = [{ httpStatus: 429, error: '{"error":{"type":"insufficient_quota","code":"credit_balance_exhausted"}}' }];
+    const noCredit = await turn(me, { text: 'hi' });
+    assert.equal(noCredit.status, 503);
+    assert.equal(JSON.parse(noCredit.raw).error, 'ai_unavailable');
   });
 });
 
