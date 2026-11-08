@@ -14,6 +14,8 @@ export interface AiContext {
   feature: AiFeature;
   conversationId?: string;
   artSessionId?: number | string;
+  /** One run of an art session (its start time): the server keeps image fingerprints per run. */
+  artRunId?: string;
 }
 
 /** Thrown when a previous_response_id can't be continued (expired or not ours). */
@@ -34,6 +36,7 @@ function ctxHeaders(ctx: AiContext): Record<string, string> {
   const h: Record<string, string> = { 'X-BeHappy-Feature': ctx.feature };
   if (ctx.conversationId) h['X-BeHappy-Conversation'] = String(ctx.conversationId).slice(0, 80);
   if (ctx.artSessionId !== undefined) h['X-BeHappy-Art-Session'] = String(ctx.artSessionId);
+  if (ctx.artRunId && /^[A-Za-z0-9_-]{1,64}$/.test(ctx.artRunId)) h['X-BeHappy-Art-Run'] = ctx.artRunId;
   return h;
 }
 

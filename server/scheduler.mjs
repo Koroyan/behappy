@@ -9,7 +9,7 @@
 //  - retention: response-chain owners after 31 days, used codes after 7 days,
 //    resolved report snapshots after 180 days, raw analytics events after
 //    analytics.retentionDays (daily totals after 760 days), security events
-//    after 400 days
+//    after 400 days; art fingerprints/facts after 60 days, push deliveries after 30
 
 import { safetyFor } from './admin/safety.mjs';
 import { analyticsFor } from './analytics/index.mjs';
@@ -59,7 +59,12 @@ export async function runAllJobs(deps, now = deps.clock.now()) {
   if (deps.prosAdmin) await deps.prosAdmin.reloadPolicies();
   const c4 = await analyticsFor(deps).cleanup(now);
   const c5 = await db.query('delete from auth_events where created_at < $1', [ts(now - 400 * DAY)]);
-  out.cleaned = c1.rowCount + c2.rowCount + c3.rowCount + c4 + c5.rowCount;
+  // Art-reflection fingerprints and facts (no images, no text) after 60 days;
+  // phone delivery records after 30 days.
+  const c6 = await db.query('delete from art_image_fingerprints where created_at < $1', [ts(now - 60 * DAY)]);
+  const c7 = await db.query('delete from art_runs where updated_at < $1', [ts(now - 60 * DAY)]);
+  const c8 = await db.query("delete from push_deliveries where created_at < $1 and status <> 'sending'", [ts(now - 30 * DAY)]);
+  out.cleaned = c1.rowCount + c2.rowCount + c3.rowCount + c4 + c5.rowCount + c6.rowCount + c7.rowCount + c8.rowCount;
   deps.lastSchedulerRun = { at: now, ...out };
   return out;
 }

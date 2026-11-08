@@ -10,6 +10,7 @@ import { AppText, Banner, Button, Card, Icon, IconButton, space, useFeedback, us
 import { MaterialsCard } from '@/features/art/Materials';
 import { buildMemoryContext } from '@/features/art/memoryContext';
 import { needsAccess } from '@/features/art/program';
+import { isStaleTurn, nextPhase, runIdFor } from '@/features/art/turnGuard';
 import { ChatScroll, Composer, MessageBubble, TypingDots } from '@/features/chat/ChatKit';
 import { useEnsureConsent } from '@/features/common/Consent';
 import { LimitNotice } from '@/features/common/LimitNotice';
@@ -74,6 +75,7 @@ export default function ArtSessionScreen() {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [showMaterials, setShowMaterials] = useState(false);
   const lastResponseIdRef = useRef<string | undefined>(undefined);
+  const sendingRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
 
@@ -87,10 +89,13 @@ export default function ArtSessionScreen() {
   }, []);
 
   const persist = useCallback(
-    async (msgs: ChatMessage[], phase: 0 | 1 | 2, response?: ArtTherapyResponse) => {
+    async (msgs: ChatMessage[], phase: 0 | 1 | 2, response?: ArtTherapyResponse, answers?: string): Promise<SessionProgress | null> => {
       const map = await ArtTherapyProgramManager.getProgress();
       let sp = map.get(id);
       if (!sp) sp = await ArtTherapyProgramManager.startSession(id);
+      // A reply that arrives after the stored conversation moved on (the screen
+      // was left and opened again) must not overwrite the newer messages.
+      if (answers && isStaleTurn(sp.chatHistory as { id?: string }[], answers)) return null;
       sp.chatHistory = msgs;
       sp.phase = phase;
       if (lastResponseIdRef.current) sp.lastResponseId = lastResponseIdRef.current;
@@ -101,6 +106,7 @@ export default function ArtSessionScreen() {
       }
       await ArtTherapyProgramManager.saveProgress(id, sp);
       setProgress({ ...sp });
+      return sp;
     },
     [id]
   );
@@ -127,6 +133,7 @@ export default function ArtSessionScreen() {
       setProgress(sp);
       setCompleted(Boolean(sp?.completed));
       lastResponseIdRef.current = sp?.lastResponseId;
+      artTherapyService.setActiveRun(runIdFor(sp?.startedAt));
       const history = (sp?.chatHistory || []).map((m: any) => ({ ...m, id: m.id || uid(), timestamp: m.timestamp ? new Date(m.timestamp) : new Date() }));
       setMessages(history.length ? history : [{ id: uid(), role: 'assistant', content: `${s.title}\n\n${s.drawingPrompt}`, timestamp: new Date() }]);
       setShowMaterials(!history.some((m: any) => m.role === 'user'));
@@ -147,10 +154,21 @@ export default function ArtSessionScreen() {
   };
 
   const send = async (opts: { text?: string; imageUri?: string; imageBase64?: string; control?: string } = {}) => {
-    if (completed || streaming || !session) return;
+    // A ref, not state: two quick taps arrive before `streaming` re-renders.
+    if (completed || streaming || sendingRef.current || !session) return;
     const outgoing = (opts.text ?? input).trim();
     if (!outgoing && !opts.imageBase64) return;
-    if (!(await ensureConsent())) return;
+    sendingRef.current = true;
+    try {
+      if (!(await ensureConsent())) return;
+      await sendTurn(outgoing, opts);
+    } finally {
+      sendingRef.current = false;
+    }
+  };
+
+  const sendTurn = async (outgoing: string, opts: { text?: string; imageUri?: string; imageBase64?: string; control?: string }) => {
+    if (!session) return;
     setError(null);
 
     const userMessage: ChatMessage = {
@@ -167,7 +185,8 @@ export default function ArtSessionScreen() {
     setMessages(nextMessages);
     setInput('');
     const phase = (progress?.phase ?? 0) as 0 | 1 | 2;
-    await persist(nextMessages, phase);
+    const saved = await persist(nextMessages, phase);
+    artTherapyService.setActiveRun(runIdFor(saved?.startedAt));
 
     const buttonClose = Boolean(opts.control);
     const textHint = !buttonClose && isEndSessionTextIntent(outgoing);
@@ -179,6 +198,7 @@ export default function ArtSessionScreen() {
     setStreaming(true);
     setStreamText('');
     try {
+      let gotResponseId = false;
       let response = await artTherapyService.sendMessageStream(
         nextMessages,
         session.theme,
@@ -188,9 +208,12 @@ export default function ArtSessionScreen() {
         [memory, control].filter(Boolean).join('\n\n'),
         lastResponseIdRef.current,
         (rid) => {
+          gotResponseId = true;
           lastResponseIdRef.current = rid;
         }
       );
+      // No id back (the server keeps nothing at OpenAI): next turn sends the full history.
+      if (!gotResponseId) lastResponseIdRef.current = undefined;
       if (isModifiedUpload) {
         response = { ...response, session_phase: 1, phase_complete: false, session_complete: false, required_input: 'text', action: 'analyze_second_drawing' };
       }
@@ -210,15 +233,18 @@ export default function ArtSessionScreen() {
       }
       const aiMessage: ChatMessage = { id: uid(), role: 'assistant', content: formatAssistant(response), timestamp: new Date(), clinicalData: response };
       const finalMessages = [...nextMessages, aiMessage];
+      // The conversation moved on while this reply was on its way: drop it.
+      const stored = (await ArtTherapyProgramManager.getProgress()).get(id);
+      if (isStaleTurn(stored?.chatHistory as { id?: string }[], userMessage.id)) return;
       setMessages(finalMessages);
-      const finalPhase = (response.session_phase ?? 0) as 0 | 1 | 2;
+      const finalPhase = nextPhase(phase, response.session_phase);
       const done = response.session_complete || response.action === 'close_session' || (response.session_phase === 2 && response.phase_complete && Boolean(response.session_summary));
       if (done) {
         await ArtTherapyProgramManager.completeSession(id, { ...response, session_complete: true }, finalMessages);
         setCompleted(true);
         if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       } else {
-        await persist(finalMessages, finalPhase, response);
+        await persist(finalMessages, finalPhase, response, userMessage.id);
       }
     } catch (e) {
       if (e instanceof QuotaError) setQuota(e);

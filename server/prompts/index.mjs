@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = (name) => fs.readFileSync(path.join(here, name), 'utf8').trim();
 
-export const PROMPT_SET_VERSION = '3.0.0';
+export const PROMPT_SET_VERSION = '3.1.0';
 
 /** Per feature: instructions plus the request settings the hosted prompts used. */
 export const SERVER_PROMPTS = {

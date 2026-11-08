@@ -8,14 +8,24 @@
 //    or a private message they already opened, is never pushed.
 //  - Not while they are looking at it. Someone reading that room or thread
 //    right now sees the message live; their phone stays quiet.
-//  - One push per burst. Several notifications for one person within a short
-//    window become a single summary ("New notifications: 3"), and the same
-//    person is not pushed more than once a minute.
-//  - Quiet hours (22:00–08:00 on the phone's own clock by default). Nothing
-//    arrives during them; what is still unread afterwards comes as one
-//    summary. After 14 hours a notification stays in the app only.
+//  - One push per burst and phone. Several notifications become a single
+//    summary ("New notifications: 3"); a phone gets at most one push a minute.
+//  - Quiet hours (22:00–08:00 by default) on EACH phone's own clock: a phone in
+//    New York stays quiet at night even when the person's phone in Tbilisi is
+//    awake. What is still unread afterwards comes as one summary. After 14
+//    hours a notification stays in the app only.
 //  - Categories the person turned off are never pushed. Names appear only if
 //    they chose "show who wrote"; message text never does (see pushText.mjs).
+//
+// Reliability (migration 013): a notification becomes one delivery record per
+// phone. A delivery is marked "sent" only when Expo accepted it (a ticket);
+// temporary errors (network, 5xx, 429, rate limits) are retried with
+// exponential backoff (30 s, 1, 2, 4 min…, at most 5 attempts); phones Expo no
+// longer knows are removed; deliveries claimed by a worker that crashed are
+// taken back after 5 minutes. Claims happen in a transaction with
+// FOR UPDATE SKIP LOCKED, so several server instances never send the same
+// delivery twice. Later, Expo's receipts say whether Apple/Google accepted it
+// (receipt_status) — the closest a server can get to "delivered".
 //
 // Drivers: "expo" (https://exp.host, the default), "log" (development and
 // tests: kept in `outbox`, nothing leaves the machine) and "off".
@@ -27,8 +37,14 @@ const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const MAX_AGE = 14 * HOUR;
 const MIN_GAP = MINUTE;
-const EXPO_URL = 'https://exp.host/--/api/v2/push/send';
+const MAX_ATTEMPTS = 5;
+const STUCK_AFTER = 5 * MINUTE;
+const RECEIPT_AFTER = 15 * MINUTE;
+const EXPO_SEND = 'https://exp.host/--/api/v2/push/send';
+const EXPO_RECEIPTS = 'https://exp.host/--/api/v2/push/getReceipts';
 const TOKEN_RE = /^Expo(nent)?PushToken\[[A-Za-z0-9_-]{8,200}\]$/;
+// Expo ticket/receipt errors worth trying again later; everything else is final.
+const TEMPORARY = new Set(['MessageRateExceeded', 'network', 'http_5xx', 'http_429', 'timeout', 'unknown']);
 
 export const DEFAULT_PREFS = Object.freeze({
   community: true,
@@ -73,6 +89,16 @@ export function inQuietHours(prefs, now, tz) {
   return prefs.quietFrom < prefs.quietTo ? m >= prefs.quietFrom && m < prefs.quietTo : m >= prefs.quietFrom || m < prefs.quietTo;
 }
 
+/** When the phone's quiet hours end (ms), counted on its own clock. */
+export function quietEndsAt(prefs, now, tz) {
+  const m = localMinutes(now, tz);
+  const minutes = (prefs.quietTo - m + 24 * 60) % (24 * 60) || 24 * 60;
+  return now + minutes * MINUTE - (new Date(now).getUTCSeconds() * 1000) + 1000;
+}
+
+/** Wait before attempt n+1: 30 s, 1, 2, 4, 8 min (at most 30 min). */
+export const backoffMs = (attempts) => Math.min(30 * MINUTE, 30 * 1000 * 2 ** Math.max(0, attempts - 1));
+
 export const validPushToken = (token) => TOKEN_RE.test(String(token || ''));
 
 export function createPush(deps) {
@@ -82,7 +108,6 @@ export function createPush(deps) {
   // Read when sending, so tests can put a fake Expo endpoint in place.
   const send = (...a) => (deps.pushFetch || globalThis.fetch)(...a);
   const outbox = [];
-  const lastPushAt = new Map();
   let running = null;
   let poked = null;
 
@@ -110,23 +135,14 @@ export function createPush(deps) {
          language = excluded.language, tz = excluded.tz, last_seen_at = excluded.last_seen_at`,
       [token, account.id, account.sessionId || null, platform, String(language || 'en').slice(0, 12), tz ? String(tz).slice(0, 64) : null, ts(now)]
     );
+    // The phone now belongs to this account: nothing still queued for someone else.
+    await db.query("update push_deliveries set status = 'skipped', last_error = 'device_reassigned' where token = $1 and account_id <> $2 and status in ('pending', 'sending')", [token, account.id]);
     // A first phone starts fresh: what is already in the app is not pushed now.
     if (!had.rowCount) await db.query('update notifications set pushed_at = $2 where account_id = $1 and pushed_at is null', [account.id, ts(now)]);
   }
 
   async function removeDevice(account, token) {
     await db.query('delete from push_devices where token = $1 and account_id = $2', [token, account.id]);
-  }
-
-  /** Phones that may still be notified: their session is neither revoked nor expired. */
-  async function devicesFor(q, accountId, now) {
-    const r = await q.query(
-      `select d.token, d.platform, d.language, d.tz, d.last_seen_at from push_devices d join sessions s on s.id = d.session_id
-       where d.account_id = $1 and s.revoked_at is null and (s.expires_at is null or s.expires_at > $2)
-       order by d.last_seen_at desc`,
-      [accountId, ts(now)]
-    );
-    return r.rows;
   }
 
   /** The app icon number: unread notifications plus unread private messages. */
@@ -144,6 +160,7 @@ export function createPush(deps) {
 
   /** Still worth telling? (Not read in the app, the room or the thread since.) */
   async function stillUnread(q, n) {
+    if (n.read_at) return false;
     const d = n.data || {};
     if (n.kind.startsWith('community_') && d.roomId && d.messageId) {
       const r = await q.query(
@@ -174,107 +191,234 @@ export function createPush(deps) {
     return false;
   }
 
+  /** Sends messages; returns one ticket per message ({ status: 'ok', id } or { status: 'error', error }). */
   async function deliver(messages) {
     if (!messages.length) return [];
-    if (driver === 'off') return messages.map(() => ({ status: 'ok' }));
+    if (driver === 'off') return messages.map(() => ({ status: 'error', error: 'push_off', final: true }));
     if (driver !== 'expo') {
       outbox.push(...messages);
       if (outbox.length > 200) outbox.splice(0, outbox.length - 200);
       if (!deps.config?.isProduction && driver === 'log' && !deps.config?.quietPushLog) console.log(`[push] (log) ${messages.length} message(s) → ${messages.map((m) => m.body).join(' | ')}`);
-      return messages.map(() => ({ status: 'ok' }));
+      return messages.map((_, i) => ({ status: 'ok', id: `log-${clock.now()}-${i}` }));
     }
     const tickets = [];
     for (let i = 0; i < messages.length; i += 100) {
       const chunk = messages.slice(i, i + 100);
+      let res;
       try {
-        const res = await send(EXPO_URL, {
+        res = await send(EXPO_SEND, {
           method: 'POST',
           headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
           body: JSON.stringify(chunk),
         });
-        const body = await res.json().catch(() => ({}));
-        const data = Array.isArray(body?.data) ? body.data : [];
-        chunk.forEach((_, j) => tickets.push(data[j] || { status: res.ok ? 'ok' : 'error' }));
-        if (!res.ok) console.warn(`[push] Expo answered ${res.status}`);
       } catch (e) {
         console.warn('[push] could not reach the Expo push service:', e?.message);
-        chunk.forEach(() => tickets.push({ status: 'error', details: { error: 'network' } }));
+        chunk.forEach(() => tickets.push({ status: 'error', error: 'network' }));
+        continue;
       }
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const error = res.status === 429 ? 'http_429' : res.status >= 500 ? 'http_5xx' : `http_${res.status}`;
+        console.warn(`[push] Expo answered ${res.status}`);
+        chunk.forEach(() => tickets.push({ status: 'error', error }));
+        continue;
+      }
+      const data = Array.isArray(body?.data) ? body.data : [];
+      chunk.forEach((_, j) => {
+        const t = data[j];
+        if (t?.status === 'ok') tickets.push({ status: 'ok', id: t.id || null });
+        else tickets.push({ status: 'error', error: t?.details?.error || 'unknown', message: t?.message });
+      });
     }
     return tickets;
   }
 
-  /** One pass: decide, merge and send. Safe to run at any time and in parallel with writes. */
-  async function flushOnce(now = clock.now()) {
-    const out = { sent: 0, skipped: 0, held: 0 };
-    // Too old or already read: stays in the app only.
-    const stale = await db.query('update notifications set pushed_at = $1 where pushed_at is null and (read_at is not null or created_at < $2)', [ts(now), ts(now - MAX_AGE)]);
-    out.skipped += stale.rowCount;
+  /** Turns new notifications into one pending delivery per active phone. */
+  async function expand(now) {
+    await db.query('update notifications set pushed_at = $1 where pushed_at is null and (read_at is not null or created_at < $2)', [ts(now), ts(now - MAX_AGE)]);
+    return db.tx(async (t) => {
+      const rows = (
+        await t.query(
+          `select id, account_id from notifications where pushed_at is null and read_at is null and created_at >= $1 order by id limit 500 for update skip locked`,
+          [ts(now - MAX_AGE)]
+        )
+      ).rows;
+      if (!rows.length) return 0;
+      const ids = rows.map((r) => r.id);
+      // Phones whose session is neither revoked nor expired.
+      await t.query(
+        `insert into push_deliveries (notification_id, account_id, token, next_attempt_at)
+         select n.id, n.account_id, d.token, $2 from notifications n
+         join push_devices d on d.account_id = n.account_id
+         join sessions s on s.id = d.session_id and s.revoked_at is null and (s.expires_at is null or s.expires_at > $2)
+         where n.id = any($1::bigint[])
+         on conflict (notification_id, token) do nothing`,
+        [ids, ts(now)]
+      );
+      await t.query('update notifications set pushed_at = $2 where id = any($1::bigint[])', [ids, ts(now)]);
+      return rows.length;
+    });
+  }
 
-    const rows = (
-      await db.query(
-        `select n.id, n.account_id, n.kind, n.data, n.created_at from notifications n
-         where n.pushed_at is null and n.read_at is null
-           and exists (select 1 from push_devices d join sessions s on s.id = d.session_id
-                       where d.account_id = n.account_id and s.revoked_at is null and (s.expires_at is null or s.expires_at > $1))
-         order by n.id limit 500`,
-        [ts(now)]
-      )
-    ).rows;
-    const byAccount = new Map();
-    for (const r of rows) byAccount.set(r.account_id, [...(byAccount.get(r.account_id) || []), r]);
+  /** Takes due deliveries for this worker (other workers skip them). */
+  async function claim(now) {
+    await db.query("update push_deliveries set status = 'pending', claimed_at = null where status = 'sending' and claimed_at < $1", [ts(now - STUCK_AFTER)]);
+    await db.query(
+      `update push_deliveries d set status = 'expired', last_error = 'too_old' from notifications n
+       where d.notification_id = n.id and d.status = 'pending' and n.created_at < $1`,
+      [ts(now - MAX_AGE)]
+    );
+    return db.tx(async (t) => {
+      const due = (await t.query("select id from push_deliveries where status = 'pending' and next_attempt_at <= $1 order by id limit 500 for update skip locked", [ts(now)])).rows.map((r) => r.id);
+      if (!due.length) return [];
+      return (
+        await t.query(
+          `update push_deliveries set status = 'sending', claimed_at = $2 where id = any($1::bigint[])
+           returning id, notification_id, account_id, token, attempts`,
+          [due, ts(now)]
+        )
+      ).rows;
+    });
+  }
+
+  const setStatus = (ids, status, extra = {}) =>
+    ids.length
+      ? db.query(
+          `update push_deliveries set status = $2, claimed_at = null, last_error = coalesce($3, last_error), next_attempt_at = coalesce($4, next_attempt_at), sent_at = coalesce($5, sent_at), ticket_id = coalesce($6, ticket_id), attempts = attempts + $7 where id = any($1::bigint[])`,
+          [ids, status, extra.error ?? null, extra.next ? ts(extra.next) : null, extra.sentAt ? ts(extra.sentAt) : null, extra.ticket ?? null, extra.attempt ? 1 : 0]
+        )
+      : null;
+
+  /** One pass: expand, claim, decide per phone, send, record. */
+  async function flushOnce(now = clock.now()) {
+    const out = { sent: 0, skipped: 0, held: 0, retried: 0, failed: 0 };
+    await expand(now);
+    const claimed = await claim(now);
+    if (!claimed.length) {
+      await checkReceipts(now).catch(() => {});
+      return out;
+    }
+
+    const notifications = new Map(
+      (await db.query('select id, account_id, kind, data, created_at, read_at from notifications where id = any($1::bigint[])', [[...new Set(claimed.map((c) => c.notification_id))]])).rows.map((n) => [Number(n.id), n])
+    );
+    const byToken = new Map();
+    for (const d of claimed) byToken.set(d.token, [...(byToken.get(d.token) || []), d]);
 
     const messages = [];
     const plan = [];
-    for (const [accountId, list] of byAccount) {
-      if (now - (lastPushAt.get(accountId) || 0) < MIN_GAP) {
-        out.held += list.length;
+    const prefsCache = new Map();
+    const badgeCache = new Map();
+    for (const [token, list] of byToken) {
+      const device = (
+        await db.query(
+          `select d.token, d.account_id, d.language, d.tz, d.last_push_at from push_devices d join sessions s on s.id = d.session_id
+           where d.token = $1 and s.revoked_at is null and (s.expires_at is null or s.expires_at > $2)`,
+          [token, ts(now)]
+        )
+      ).rows[0];
+      if (!device || device.account_id !== list[0].account_id) {
+        await setStatus(list.map((d) => d.id), 'skipped', { error: 'device_gone' });
+        out.skipped += list.length;
         continue;
       }
-      const prefs = await getPrefs(db, accountId);
+      if (!prefsCache.has(device.account_id)) prefsCache.set(device.account_id, await getPrefs(db, device.account_id));
+      const prefs = prefsCache.get(device.account_id);
+
       const keep = [];
       const drop = [];
-      for (const n of list) {
-        if (!prefs[categoryOf(n.kind)] || !(await stillUnread(db, n)) || (await watching(n))) drop.push(n.id);
-        else keep.push(n);
+      for (const d of list) {
+        const n = notifications.get(Number(d.notification_id));
+        if (!n || !prefs[categoryOf(n.kind)] || !(await stillUnread(db, n)) || (await watching(n))) drop.push(d.id);
+        else keep.push({ d, n });
       }
       if (drop.length) {
-        await db.query('update notifications set pushed_at = $2 where id = any($1::bigint[])', [drop, ts(now)]);
+        await setStatus(drop, 'skipped', { error: 'not_needed' });
         out.skipped += drop.length;
       }
       if (!keep.length) continue;
-      const devices = await devicesFor(db, accountId, now);
-      if (!devices.length) continue;
-      if (inQuietHours(prefs, now, devices[0].tz)) {
+
+      // This phone's own night, and at most one push a minute to it.
+      let wait = null;
+      if (inQuietHours(prefs, now, device.tz)) wait = quietEndsAt(prefs, now, device.tz);
+      else if (device.last_push_at && now - ms(device.last_push_at) < MIN_GAP) wait = ms(device.last_push_at) + MIN_GAP;
+      if (wait) {
+        await setStatus(keep.map((k) => k.d.id), 'pending', { next: wait });
         out.held += keep.length;
         continue;
       }
-      const badge = await badgeFor(db, accountId);
-      const url = pushUrl(keep);
-      for (const d of devices) {
-        const text = pushText(d.language, keep, { previews: prefs.previews });
-        messages.push({
-          to: d.token,
-          title: text.title,
-          body: text.body,
-          sound: 'default',
-          badge,
-          priority: 'high',
-          channelId: ['community', 'messages'].includes(categoryOf(keep[0].kind)) ? 'messages' : 'updates',
-          data: { url, kind: keep.length === 1 ? keep[0].kind : 'summary', notificationIds: keep.map((n) => Number(n.id)) },
-        });
-        plan.push(d.token);
-      }
-      await db.query('update notifications set pushed_at = $2 where id = any($1::bigint[])', [keep.map((n) => n.id), ts(now)]);
-      lastPushAt.set(accountId, now);
-      out.sent += keep.length;
+
+      if (!badgeCache.has(device.account_id)) badgeCache.set(device.account_id, await badgeFor(db, device.account_id));
+      const items = keep.map((k) => k.n);
+      const text = pushText(device.language, items, { previews: prefs.previews });
+      messages.push({
+        to: token,
+        title: text.title,
+        body: text.body,
+        sound: 'default',
+        badge: badgeCache.get(device.account_id),
+        priority: 'high',
+        channelId: ['community', 'messages'].includes(categoryOf(items[0].kind)) ? 'messages' : 'updates',
+        data: { url: pushUrl(items), kind: items.length === 1 ? items[0].kind : 'summary', notificationIds: items.map((n) => Number(n.id)) },
+      });
+      plan.push({ token, ids: keep.map((k) => k.d.id), attempts: Math.max(...keep.map((k) => k.d.attempts)) });
     }
 
     const tickets = await deliver(messages);
-    // Phones that uninstalled the app or turned BeHappy off are forgotten.
-    const gone = tickets.map((t, i) => (t?.status === 'error' && t?.details?.error === 'DeviceNotRegistered' ? plan[i] : null)).filter(Boolean);
-    if (gone.length) await db.query('delete from push_devices where token = any($1::text[])', [gone]);
+    for (let i = 0; i < plan.length; i += 1) {
+      const p = plan[i];
+      const t = tickets[i] || { status: 'error', error: 'unknown' };
+      if (t.status === 'ok') {
+        await setStatus(p.ids, 'sent', { sentAt: now, ticket: t.id, attempt: true });
+        await db.query('update push_devices set last_push_at = $2 where token = $1', [p.token, ts(now)]);
+        out.sent += p.ids.length;
+      } else if (t.error === 'DeviceNotRegistered') {
+        await setStatus(p.ids, 'invalid_token', { error: t.error, attempt: true });
+        await db.query('delete from push_devices where token = $1', [p.token]);
+        out.failed += p.ids.length;
+      } else if (TEMPORARY.has(t.error) && p.attempts + 1 < MAX_ATTEMPTS && !t.final) {
+        await setStatus(p.ids, 'pending', { error: t.error, next: now + backoffMs(p.attempts + 1), attempt: true });
+        out.retried += p.ids.length;
+      } else {
+        await setStatus(p.ids, 'failed', { error: String(t.error).slice(0, 80), attempt: true });
+        out.failed += p.ids.length;
+      }
+    }
+    await checkReceipts(now).catch(() => {});
     return out;
+  }
+
+  /**
+   * Expo's receipts (about 15 minutes after sending): did Apple/Google accept
+   * the notification? A phone that no longer exists is removed.
+   */
+  async function checkReceipts(now) {
+    if (driver !== 'expo') return 0;
+    const rows = (
+      await db.query("select id, ticket_id, token from push_deliveries where status = 'sent' and receipt_status is null and ticket_id is not null and sent_at < $1 order by id limit 300", [ts(now - RECEIPT_AFTER)])
+    ).rows;
+    if (!rows.length) return 0;
+    let body;
+    try {
+      const res = await send(EXPO_RECEIPTS, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+        body: JSON.stringify({ ids: rows.map((r) => r.ticket_id) }),
+      });
+      if (!res.ok) return 0;
+      body = await res.json();
+    } catch {
+      return 0;
+    }
+    const data = body?.data || {};
+    for (const r of rows) {
+      const receipt = data[r.ticket_id];
+      if (!receipt) continue;
+      const error = receipt.status === 'ok' ? null : receipt.details?.error || 'error';
+      await db.query('update push_deliveries set receipt_status = $2, receipt_checked_at = $3, last_error = coalesce($4, last_error) where id = $1', [r.id, receipt.status === 'ok' ? 'ok' : 'error', ts(now), error]);
+      if (error === 'DeviceNotRegistered') await db.query('delete from push_devices where token = $1', [r.token]);
+    }
+    return rows.length;
   }
 
   async function flush(now) {
@@ -300,7 +444,7 @@ export function createPush(deps) {
     poked = null;
   }
 
-  return { driver, outbox, getPrefs: (accountId) => getPrefs(db, accountId), setPrefs, registerDevice, removeDevice, flush, poke, stop };
+  return { driver, outbox, getPrefs: (accountId) => getPrefs(db, accountId), setPrefs, registerDevice, removeDevice, flush, flushOnce, checkReceipts, poke, stop };
 }
 
 const instances = new WeakMap();

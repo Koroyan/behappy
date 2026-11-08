@@ -8,12 +8,13 @@
 // conversation.
 
 import express from 'express';
+import { createArtTurns } from './art/turn.mjs';
 import { requireAccount } from './auth.mjs';
 import { entitlementsForAccount } from './entitlements.mjs';
 import { CHAT_PREAMBLE, LEGACY_PROMPT_IDS, SERVER_PROMPTS } from './prompts/index.mjs';
 import { checkAndRecord } from './quota.mjs';
 
-const DEFAULT_MODELS = { anulia: 'gpt-5.4-mini', art: 'gpt-5.4-mini', cards: 'gpt-5.4-mini' };
+const DEFAULT_MODELS = { anulia: 'gpt-5.4-mini', art: 'gpt-6.1-sol', cards: 'gpt-5.4-mini' };
 const CHAT_MODELS = new Set(['gpt-4o', 'gpt-4o-mini', 'gpt-4.1-mini']);
 // `prompt` is still accepted from app builds before 3.0, then replaced (see below).
 const RESPONSES_FIELDS = new Set(['input', 'prompt', 'model', 'max_output_tokens', 'stream', 'store', 'previous_response_id', 'text', 'temperature']);
@@ -135,6 +136,7 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
   const router = express.Router();
   const perAccount = new SlidingWindow(40, 60 * 1000);
   const controls = createAiControls({ db, settings, clock });
+  const artTurns = createArtTurns({ db, config, fetchImpl, clock });
   let globalDay = '';
   let globalCount = 0;
 
@@ -222,6 +224,11 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
         return bad(res, 409, 'stale_previous_response', 'previous_response_id not found');
       }
     }
+    // Art without OpenAI storage (AI_ART_STORE=false): there is no chain to
+    // continue, so the app is told to resend its own history (before metering).
+    if (feature === 'art' && config.ai?.art?.store === false && body.previous_response_id !== undefined) {
+      return bad(res, 409, 'stale_previous_response', 'previous_response_id not found');
+    }
     const serverPrompt = SERVER_PROMPTS[feature];
     const { prompt: _ignoredPrompt, model: _ignoredModel, ...rest } = body;
     const clean = {
@@ -233,6 +240,18 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     };
 
     if (!(await meter(req, res))) return;
+
+    // Art reflection: every reply is checked before the person sees it
+    // (image comparison, their own words, the three-phase state, summaries).
+    if (feature === 'art') {
+      try {
+        return await artTurns.handle(req, res, clean, { rememberResponse });
+      } catch (e) {
+        console.error('[art] turn failed', e?.message);
+        if (!res.headersSent) return bad(res, 502, 'ai_upstream_error', 'The AI service returned an error.');
+        return res.end();
+      }
+    }
 
     let upstream;
     try {
@@ -249,7 +268,7 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     if (!upstream.ok) {
       await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt });
       const text = await upstream.text().catch(() => '');
-      const stale = /previous_response/i.test(text) || (/not found/i.test(text) && upstream.status === 404);
+      const stale = /previous[_ ]response/i.test(text) || (/not found/i.test(text) && upstream.status === 404);
       return res.status(stale ? 409 : upstream.status >= 500 ? 502 : 400).json({
         error: stale ? 'stale_previous_response' : 'ai_upstream_error',
         message: stale ? 'previous_response_id not found' : 'The AI service returned an error.',

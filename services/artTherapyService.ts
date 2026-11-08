@@ -77,14 +77,21 @@ class ArtTherapyService {
   // The instructions for art reflection are server-owned (server/prompts/art.md);
   // requests go through the BeHappy server, which holds the API key.
   private activeSessionId: number | undefined;
+  private activeRunId: string | undefined;
 
   /** The art session number (1–43) that the next requests belong to; the server meters per session. */
-  setActiveSession(sessionId: number | undefined) {
+  setActiveSession(sessionId: number | undefined, runId?: string) {
     this.activeSessionId = sessionId;
+    this.activeRunId = runId;
+  }
+
+  /** This run of the session (from its start time): the server compares drawings within a run. */
+  setActiveRun(runId: string | undefined) {
+    this.activeRunId = runId;
   }
 
   private ctx() {
-    return { feature: 'art' as const, artSessionId: this.activeSessionId };
+    return { feature: 'art' as const, artSessionId: this.activeSessionId, artRunId: this.activeRunId };
   }
 
   /**

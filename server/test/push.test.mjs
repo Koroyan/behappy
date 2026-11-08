@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 
 import { mountCommunity, startCommunityRealtime } from '../community/index.mjs';
-import { cleanPrefs, inQuietHours, localMinutes } from '../notify/push.mjs';
+import { backoffMs, cleanPrefs, createPush, inQuietHours, localMinutes, quietEndsAt } from '../notify/push.mjs';
 import { pushText } from '../notify/pushText.mjs';
 import { mountPush } from '../notify/routes.mjs';
 import { mountProfessionals } from '../professional/index.mjs';
@@ -254,5 +254,152 @@ describe('Push delivery through Expo', () => {
     assert.equal(calls[0].body[0].to, tok);
     const left = await t.db.query('select 1 from push_devices where token = $1', [tok]);
     assert.equal(left.rowCount, 0);
+  });
+});
+
+describe('Push reliability', () => {
+  let t;
+  let deps;
+  let expo;
+  // A fake Expo: each send answers from `plan` (ok, a temporary or a final error); receipts from `receipts`.
+  let plan = [];
+  let receipts = {};
+  const sends = [];
+  before(async () => {
+    t = await startTestServer({ extend: [mountCommunity, mountProfessionals, mountPush], services: [startCommunityRealtime], config: { push: { driver: 'expo' } } });
+    deps = t.app.locals.deps;
+    let ticket = 0;
+    deps.pushFetch = async (url, init) => {
+      const body = JSON.parse(init.body);
+      if (String(url).endsWith('/getReceipts')) return new Response(JSON.stringify({ data: Object.fromEntries(body.ids.map((id) => [id, receipts[id] || { status: 'ok' }])) }), { status: 200 });
+      const step = plan.length ? plan.shift() : 'ok';
+      sends.push({ body, step });
+      if (step === 'network') throw new Error('ECONNRESET');
+      if (step === '500') return new Response('oops', { status: 500 });
+      return new Response(JSON.stringify({ data: body.map(() => (step === 'ok' ? { status: 'ok', id: `tkt-${(ticket += 1)}` } : { status: 'error', message: step, details: { error: step } })) }), { status: 200 });
+    };
+    expo = deps.push;
+  });
+  after(() => t.stop());
+
+  let clockAt = Date.now() + 10 * 60 * 1000;
+  const at = (later = 2 * 60 * 1000) => (clockAt += later);
+  const member = async (name) => {
+    const u = await t.registered(`${name.toLowerCase()}-${Math.random().toString(36).slice(2, 7)}@example.org`);
+    await t.api('/api/community/profile', { token: u.token, method: 'PUT', body: { pseudonym: `${name}${Math.random().toString(36).slice(2, 5)}`, acceptGuidelines: true } });
+    await t.api(`/api/community/rooms/${ROOM}/join`, { token: u.token, method: 'POST' });
+    return u;
+  };
+  const phone = async (u, tz = 'UTC', awake = true) => {
+    const tok = token();
+    await t.api('/api/push/devices', { token: u.token, method: 'POST', body: { token: tok, platform: 'ios', language: 'en', tz } });
+    if (awake) await t.api('/api/push/prefs', { token: u.token, method: 'PUT', body: { prefs: { quiet: false } } });
+    return tok;
+  };
+  const replyTo = async (from, to, text = `hello ${Math.random().toString(36).slice(2, 8)}`) => {
+    const first = await t.api(`/api/community/rooms/${ROOM}/messages`, { token: to.token, method: 'POST', body: { body: `${text} (start)` } });
+    await t.api(`/api/community/rooms/${ROOM}/messages`, { token: from.token, method: 'POST', body: { body: text, replyToId: first.json.message.id } });
+  };
+  const deliveries = async (tok) => (await t.db.query('select status, attempts, ticket_id, receipt_status, last_error from push_deliveries where token = $1 order by id', [tok])).rows;
+  const sentTo = (tok) => sends.filter((s) => s.step === 'ok' && s.body.some((m) => m.to === tok));
+
+  test('a temporary failure is retried with backoff; the in-app notification is never lost', async () => {
+    const a = await member('Ana');
+    const b = await member('Beka');
+    const tok = await phone(b);
+    await replyTo(a, b);
+    plan = ['500'];
+    await expo.flushOnce(at());
+    let d = await deliveries(tok);
+    assert.deepEqual([d[0].status, d[0].attempts, d[0].last_error], ['pending', 1, 'http_5xx'], 'not marked sent: Expo did not accept it');
+    assert.equal((await t.api('/api/notifications', { token: b.token })).json.unread, 1, 'still in the app');
+    await expo.flushOnce(clockAt + 10 * 1000);
+    assert.equal((await deliveries(tok))[0].attempts, 1, 'not before the backoff');
+    plan = ['network'];
+    await expo.flushOnce(at(backoffMs(1) + 1000));
+    d = await deliveries(tok);
+    assert.deepEqual([d[0].status, d[0].attempts, d[0].last_error], ['pending', 2, 'network']);
+    plan = ['ok'];
+    await expo.flushOnce(at(backoffMs(2) + 1000));
+    d = await deliveries(tok);
+    assert.equal(d[0].status, 'sent');
+    assert.match(d[0].ticket_id, /^tkt-/);
+    assert.equal(sentTo(tok).length, 1, 'sent exactly once');
+    await expo.flushOnce(at());
+    assert.equal(sentTo(tok).length, 1, 'never twice');
+  });
+
+  test('a failure that keeps coming stops after 5 attempts; a final error stops at once', async () => {
+    const a = await member('Ceko');
+    const b = await member('Dali');
+    const tok = await phone(b);
+    await replyTo(a, b);
+    for (let i = 1; i <= 5; i += 1) {
+      plan = ['MessageRateExceeded'];
+      await expo.flushOnce(at(backoffMs(i) + 1000));
+    }
+    const d = await deliveries(tok);
+    assert.deepEqual([d[0].status, d[0].attempts], ['failed', 5]);
+    const c = await member('Eka');
+    const tok2 = await phone(c);
+    await replyTo(a, c);
+    plan = ['InvalidCredentials'];
+    await expo.flushOnce(at());
+    assert.deepEqual((await deliveries(tok2)).map((x) => [x.status, x.attempts]), [['failed', 1]]);
+  });
+
+  test('quiet hours are kept per phone: Tbilisi awake, New York asleep', async () => {
+    // 12:00 UTC is 16:00 in Tbilisi (awake) and 07:00 in New York (quiet until 08:00).
+    const day = 24 * 3600 * 1000;
+    const now = Date.parse('2026-11-09T12:00:00Z') + day * Math.max(0, Math.ceil((clockAt - Date.parse('2026-11-09T12:00:00Z')) / day));
+    const a = await member('Gela');
+    const b = await member('Hana');
+    const tbilisi = await phone(b, 'Asia/Tbilisi', false);
+    const newYork = await phone(b, 'America/New_York', false);
+    await replyTo(a, b);
+    await t.db.query('update notifications set created_at = $1 where account_id = $2', [new Date(now - 30000), b.accountId]);
+    await expo.flushOnce(now);
+    assert.equal(sentTo(tbilisi).length, 1, 'the awake phone gets it');
+    assert.equal(sentTo(newYork).length, 0, 'the phone in its night does not');
+    assert.equal((await deliveries(newYork))[0].status, 'pending');
+    assert.equal(quietEndsAt(cleanPrefs({}), now, 'America/New_York'), now + 60 * 60 * 1000 + 1000);
+    await expo.flushOnce(now + 61 * 60 * 1000);
+    assert.equal(sentTo(newYork).length, 1, 'after 08:00 New York time');
+    assert.equal(sentTo(tbilisi).length, 1, 'and Tbilisi is not pushed twice');
+  });
+
+  test('receipts: what Apple/Google answered is recorded; a phone that no longer exists is removed', async () => {
+    const a = await member('Ia');
+    const b = await member('Jano');
+    const tok = await phone(b);
+    await replyTo(a, b);
+    plan = ['ok'];
+    await expo.flushOnce(at());
+    const [{ ticket_id: ticket }] = await deliveries(tok);
+    receipts = { [ticket]: { status: 'error', details: { error: 'DeviceNotRegistered' } } };
+    await expo.checkReceipts(at(20 * 60 * 1000));
+    const d = await deliveries(tok);
+    assert.deepEqual([d[0].status, d[0].receipt_status, d[0].last_error], ['sent', 'error', 'DeviceNotRegistered']);
+    assert.equal((await t.db.query('select 1 from push_devices where token = $1', [tok])).rowCount, 0);
+  });
+
+  test('a delivery left "sending" by a crashed worker is taken back; two workers never send the same one', async () => {
+    const a = await member('Keti');
+    const b = await member('Lado');
+    const tok = await phone(b);
+    await replyTo(a, b);
+    plan = ['500'];
+    await expo.flushOnce(at());
+    // A worker claimed it and died 6 minutes ago.
+    await t.db.query("update push_deliveries set status = 'sending', claimed_at = $2 where token = $1", [tok, new Date(clockAt - 6 * 60 * 1000)]);
+    plan = ['ok'];
+    await expo.flushOnce(at(backoffMs(1) + 1000));
+    assert.equal((await deliveries(tok))[0].status, 'sent', 'taken back and sent');
+    const second = createPush(deps);
+    await replyTo(a, b, 'again');
+    const moment = at();
+    const count = sends.length;
+    await Promise.all([expo.flushOnce(moment), second.flushOnce(moment)]);
+    assert.equal(sends.slice(count).filter((s) => s.body.some((m) => m.to === tok)).length, 1, 'one send for one delivery');
   });
 });

@@ -26,6 +26,16 @@ const int = (value, fallback) => {
   const n = Number.parseInt(String(value ?? ''), 10);
   return Number.isFinite(n) ? n : fallback;
 };
+/** One of the allowed values; anything else falls back (with a warning). */
+const oneOf = (value, allowed, fallback, name) => {
+  if (value === undefined || value === '') return fallback;
+  const v = String(value).trim().toLowerCase();
+  if (allowed.includes(v)) return v;
+  console.warn(`[config] ${name}="${value}" is not one of ${allowed.join(', ')}; using "${fallback}".`);
+  return fallback;
+};
+/** A plausible OpenAI model id (letters, digits, dot, dash). */
+const modelId = (value, fallback) => (value && /^[a-z0-9][a-z0-9.\-]{1,63}$/i.test(String(value).trim()) ? String(value).trim() : fallback);
 
 export const NODE_ENV = env.NODE_ENV || 'development';
 export const IS_PRODUCTION = NODE_ENV === 'production';
@@ -130,9 +140,24 @@ export const config = {
   ai: {
     models: {
       anulia: env.AI_MODEL_ANULIA || 'gpt-5.4-mini',
-      art: env.AI_MODEL_ART || 'gpt-5.4-mini',
+      // Art reflection reads two photos, follows a three-phase method and keeps
+      // the person's words straight; it uses a stronger model than the others
+      // (docs/BEHAPPY_AI_MODEL_EVALUATION.md). Other features stay independent.
+      art: modelId(env.AI_MODEL_ART, 'gpt-6.1-sol'),
       cards: env.AI_MODEL_CARDS || 'gpt-5.4-mini',
       community: env.AI_MODEL_COMMUNITY || 'gpt-5.4-mini',
+    },
+    art: {
+      // Used once if the art model is unavailable for this OpenAI project.
+      fallbackModel: modelId(env.AI_MODEL_ART_FALLBACK, 'gpt-5.4-mini'),
+      reasoning: oneOf(env.AI_REASONING_ART, ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'], 'medium', 'AI_REASONING_ART'),
+      // Reasoning tokens count against this budget; too small cuts the JSON off.
+      maxOutputTokens: Math.min(32000, Math.max(2048, int(env.AI_ART_MAX_OUTPUT_TOKENS, 8000))),
+      // true: OpenAI keeps responses (30 days by default) so turns can chain
+      // with previous_response_id. false: nothing is stored there and the app
+      // resends the session history each turn (more input tokens).
+      store: bool(env.AI_ART_STORE, true),
+      timeoutMs: Math.min(300000, Math.max(20000, int(env.AI_ART_TIMEOUT_MS, 120000))),
     },
   },
 
