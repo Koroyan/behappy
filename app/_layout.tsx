@@ -8,6 +8,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { FeedbackProvider, ThemeProvider, useTheme } from '@/design';
 import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
 import { ConsentProvider } from '@/features/common/Consent';
+import { PwaBridge } from '@/features/pwa/PwaBridge';
 import { AppShell, FontGate } from '@/features/shell/AppShell';
 import { AccountProvider } from '@/lib/api/account';
 import { WellbeingBridge } from '@/features/wellbeing/WellbeingBridge';
@@ -37,6 +38,8 @@ function Navigator() {
           }}
         />
       </AppShell>
+      {/* Web: service worker, "new version" prompt, theme colour (nothing on iOS/Android). */}
+      <PwaBridge />
     </NavigationThemeProvider>
   );
 }

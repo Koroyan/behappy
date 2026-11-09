@@ -1,11 +1,14 @@
 import type { PartialMessages } from '../../index';
 import { alertsKo } from '../alerts/ko';
+import { pwaKo } from '../pwa/ko';
 import { wbKo } from '../wb/ko';
 
 /** 한국어 — BeHappy 3.0. 따뜻하고 정중한 해요체. */
 export const ko3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsKo,
+  // Installed web app: updates, installing, Web Push (see ../pwa).
+  pwa: pwaKo,
   wb: wbKo,
   shell: {
     personal: '나',

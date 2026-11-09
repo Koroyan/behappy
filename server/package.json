@@ -17,7 +17,8 @@
     "express": "^5.1.0",
     "jpeg-js": "^0.4.4",
     "pg": "^8.23.1",
-    "socket.io": "^4.8.4"
+    "socket.io": "^4.8.4",
+    "web-push": "^3.6.7"
   },
   "optionalDependencies": {
     "@electric-sql/pglite": "^0.5.15"

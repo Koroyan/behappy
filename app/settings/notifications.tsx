@@ -1,9 +1,12 @@
 /**
- * Notifications & reminders: gentle reminders (phones), chats and messages
- * (phone notifications or, on the web, browser notifications) and quiet hours.
+ * Notifications & reminders: gentle reminders, chats and messages and quiet
+ * hours. Phones: local reminders and Expo push. Web: both by Web Push in the
+ * installed app or a browser that supports it (iPhone/iPad: only from the
+ * Home Screen, and the screen says so); otherwise chats fall back to
+ * notifications while BeHappy is open in a tab.
  * Every switch here does something; what can't work on this device is not shown.
  */
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 
@@ -12,10 +15,11 @@ import { AccountGate } from '@/features/account/AccountParts';
 import { useT } from '@/i18n';
 import { useIdentity } from '@/lib/api/account';
 import { DEFAULT_REMINDER_PREFS, ReminderPrefs } from '@/lib/notifications/planner';
-import { disableThisPhone, enableThisPhone, getPushPrefs, loadPushState, pushAvailability, PushPrefs, setPushPrefs } from '@/lib/notifications/push';
-import { askNotificationPermission, loadReminderPrefs, notificationsAllowed, remindersSupported, rescheduleReminders, saveReminderPrefs, scheduledReminders } from '@/lib/notifications/reminders';
+import { disableThisPhone, enableThisPhone, getPushPrefs, loadPushState, pushAvailability, PushAvailability, PushPrefs, setPushPrefs } from '@/lib/notifications/push';
+import { enableReminders, loadReminderPrefs, notificationsAllowed, remindersSupported, rescheduleReminders, saveReminderPrefs, scheduledReminders } from '@/lib/notifications/reminders';
 import { useReminderCopy } from '@/lib/notifications/useReminderCopy';
 import { setWebNotify, webNotifyBlocked, webNotifyEnabled, webNotifySupported } from '@/lib/notifications/web';
+import { useBrowserValue } from '@/lib/pwa/usePwa';
 
 const DAY_MINUTES = 24 * 60;
 
@@ -43,8 +47,12 @@ export default function NotificationSettings() {
   const { t, formatDate, formatTime, language } = useT();
   const identity = useIdentity();
   const copy = useReminderCopy();
+  const router = useRouter();
   const native = Platform.OS === 'ios' || Platform.OS === 'android';
-  const availability = pushAvailability();
+  // On the web the answer depends on the browser (the pre-rendered page assumes "tab only").
+  const availability = useBrowserValue<PushAvailability>(pushAvailability, native ? pushAvailability() : 'web');
+  const [webIssue, setWebIssue] = useState<'needs-install' | 'denied' | 'unsupported' | null>(null);
+  const webPush = !native && availability === 'ok';
 
   const [reminders, setReminders] = useState<ReminderPrefs>(DEFAULT_REMINDER_PREFS);
   const [next, setNext] = useState<{ kind: string; at: number }[]>([]);
@@ -80,9 +88,14 @@ export default function NotificationSettings() {
 
   const toggleReminders = async (on: boolean) => {
     setProblem(null);
-    if (on && (await askNotificationPermission()) !== 'granted') {
-      setDenied(true);
-      return;
+    setWebIssue(null);
+    if (on) {
+      const r = await enableReminders();
+      if (r !== 'ok') {
+        if (native) setDenied(true);
+        else setWebIssue(r);
+        return;
+      }
     }
     setDenied(false);
     await updateReminders({ enabled: on, enabledAt: on ? Date.now() : reminders.enabledAt });
@@ -101,8 +114,10 @@ export default function NotificationSettings() {
       if (r === 'ok') {
         setPhoneOn(true);
         setPrefs(await getPushPrefs().catch(() => prefs));
-      } else if (r === 'denied') setDenied(true);
-      else setProblem(t('common.errorBody'));
+      } else if (r === 'denied') {
+        if (native) setDenied(true);
+        else setWebIssue('denied');
+      } else setProblem(t('common.errorBody'));
     } finally {
       setBusy(false);
     }
@@ -129,7 +144,9 @@ export default function NotificationSettings() {
   };
 
   const kindLabel = (k: string) => (k === 'journal' ? t('alerts.reminders.journal') : k === 'art' ? t('alerts.reminders.art') : t('alerts.reminders.cards'));
-  const showChats = identity.registered && ((native && availability === 'ok') || webNotifySupported());
+  const showChats = identity.registered && ((native && availability === 'ok') || webPush || webNotifySupported());
+  const pushOn = (native || webPush) && phoneOn && prefs;
+  const installButton = <Button label={t('pwa.push.howToInstall')} size="sm" variant="secondary" onPress={() => router.push('/install' as never)} testID="notifications-install" />;
 
   return (
     <Screen back title={t('alerts.settings.title')} width="reading" testID="screen-notification-settings">
@@ -138,6 +155,9 @@ export default function NotificationSettings() {
         {denied && native ? (
           <Banner tone="warning" body={t('alerts.reminders.denied')} action={<Button label={t('alerts.reminders.openSettings')} size="sm" variant="secondary" onPress={() => Linking.openSettings().catch(() => {})} />} />
         ) : null}
+        {webIssue === 'needs-install' ? <Banner tone="info" body={t('pwa.push.needsInstall')} action={installButton} /> : null}
+        {webIssue === 'denied' ? <Banner tone="warning" body={t('pwa.push.denied')} /> : null}
+        {webIssue === 'unsupported' ? <Banner tone="info" body={t('pwa.push.unsupported')} /> : null}
 
         {remindersSupported ? (
           <View>
@@ -168,10 +188,14 @@ export default function NotificationSettings() {
             <AccountGate returnTo="/settings/notifications" />
           ) : native && availability !== 'ok' ? (
             <Banner tone="info" body={t('alerts.chats.unavailable')} />
+          ) : !native && availability === 'needs-install' ? (
+            <Banner tone="info" body={t('pwa.push.needsInstall')} action={installButton} />
           ) : showChats ? (
             <Card padding={8}>
               {native ? (
                 <ListRow icon="phone-portrait-outline" iconTone="primary" title={t('alerts.chats.enable')} right={<Toggle value={phoneOn} onValueChange={(v) => !busy && togglePhone(v)} label={t('alerts.chats.enable')} testID="toggle-push" />} />
+              ) : webPush ? (
+                <ListRow icon="notifications-outline" iconTone="primary" title={t('pwa.push.webDevice')} right={<Toggle value={phoneOn} onValueChange={(v) => !busy && togglePhone(v)} label={t('pwa.push.webDevice')} testID="toggle-push" />} />
               ) : (
                 <ListRow
                   icon="desktop-outline"
@@ -181,7 +205,7 @@ export default function NotificationSettings() {
                   right={<Toggle value={webOn} onValueChange={async (v) => setWebOn(await setWebNotify(v))} label={t('alerts.chats.web')} testID="toggle-web-notify" />}
                 />
               )}
-              {native && phoneOn && prefs ? (
+              {pushOn && prefs ? (
                 <>
                   <ListRow icon="people-outline" title={t('alerts.chats.community')} right={<Toggle value={prefs.community} onValueChange={(v) => updatePush({ community: v })} label={t('alerts.chats.community')} testID="toggle-push-community" />} />
                   <ListRow icon="mail-outline" title={t('alerts.chats.messages')} right={<Toggle value={prefs.messages} onValueChange={(v) => updatePush({ messages: v })} label={t('alerts.chats.messages')} testID="toggle-push-messages" />} />
@@ -199,7 +223,7 @@ export default function NotificationSettings() {
           ) : null}
         </View>
 
-        {(remindersSupported && reminders.enabled) || (native && phoneOn && prefs) ? (
+        {(remindersSupported && reminders.enabled) || pushOn ? (
           <View>
             <SectionHeader title={t('alerts.quiet.title')} subtitle={t('alerts.quiet.hint')} />
             <Card padding={8}>

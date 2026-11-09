@@ -8,6 +8,7 @@ import { AppText, Avatar, Banner, Button, Card, Chip, Icon, IconName, MoodGlyph,
 import { conversationTitle, listConversations, type Conversation } from '@/features/anulia/anuliaService';
 import { loadProgram, type ProgramState } from '@/features/art/program';
 import { MoodPicker } from '@/features/mood/MoodPicker';
+import { InstallCard } from '@/features/pwa/InstallCard';
 import { ProfileButton } from '@/features/shell/ProfileButton';
 import { TODAY_TOOLS, TONE_BG, TONE_FG, TOOLS } from '@/features/tools/catalog';
 import { markToolUsed } from '@/lib/storage/recentTools';
@@ -472,6 +473,8 @@ export default function TodayScreen() {
         ) : null}
         {firstTime}
         {checkInCard}
+        {/* Web on phones only: a gentle "Install BeHappy" (never on the first visit, never in the installed app). */}
+        <InstallCard />
         <TodaySteps />
         <TodaySound />
         {toolsStrip}

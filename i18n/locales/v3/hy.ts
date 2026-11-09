@@ -1,11 +1,14 @@
 import type { PartialMessages } from '../../index';
 import { alertsHy } from '../alerts/hy';
+import { pwaHy } from '../pwa/hy';
 import { wbHy } from '../wb/hy';
 
 /** Հայերեն — BeHappy 3.0 (համայնք, մասնագետներ, մասնագետի աշխատատարածք)։ Ջերմ տոն («դուք»)։ */
 export const hy3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsHy,
+  // Installed web app: updates, installing, Web Push (see ../pwa).
+  pwa: pwaHy,
   wb: wbHy,
   shell: {
     personal: 'Անձնական',

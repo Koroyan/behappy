@@ -1,11 +1,14 @@
 import type { PartialMessages } from '../../index';
 import { alertsAz } from '../alerts/az';
+import { pwaAz } from '../pwa/az';
 import { wbAz } from '../wb/az';
 
 /** Azərbaycanca — BeHappy 3.0. Səmimi və hörmətli («siz»). */
 export const az3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsAz,
+  // Installed web app: updates, installing, Web Push (see ../pwa).
+  pwa: pwaAz,
   wb: wbAz,
   shell: {
     personal: 'Şəxsi',

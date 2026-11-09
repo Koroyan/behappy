@@ -67,6 +67,31 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(im
   await render(page, tile, 1024, path.join(out, 'splash-icon.png'), true);
   await render(page, full, 48, path.join(out, 'favicon.png'), false);
   await render(page, full, 256, path.join(root, 'assets/brand/behappy-logo-256.png'), false);
+
+  // Web app (PWA) icons in public/icons: the full-bleed tile for "any", the same
+  // art a little smaller for "maskable" (Android crops to a circle/squircle: the
+  // art stays inside the 80% safe zone), an opaque Apple touch icon (iOS rounds
+  // it), a white-on-transparent badge for Android's status bar, and shortcuts.
+  const icons = path.join(root, 'public/icons');
+  fs.mkdirSync(icons, { recursive: true });
+  for (const size of [192, 512]) {
+    await render(page, full, size, path.join(icons, `icon-${size}.png`), false);
+    await render(page, artwork({ scale: 0.82 }), size, path.join(icons, `maskable-${size}.png`), false);
+  }
+  await render(page, full, 180, path.join(icons, 'apple-touch-icon.png'), false);
+  const badge = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+    <circle cx="512" cy="560" r="250" fill="#FFFFFF" clip-path="url(#a)"/><defs><clipPath id="a"><rect width="1024" height="566"/></clipPath></defs>
+    <path d="M150 600 Q512 860 874 600" fill="none" stroke="#FFFFFF" stroke-width="96" stroke-linecap="round"/></svg>`;
+  await render(page, badge, 96, path.join(icons, 'badge-96.png'), true);
+  const glyphs = {
+    journal: '<path d="M330 280h300a60 60 0 0 1 60 60v400H390a60 60 0 0 1-60-60z" fill="none" stroke="#FBF8F1" stroke-width="56" stroke-linejoin="round"/><path d="M420 400h170M420 500h170" stroke="#FBF8F1" stroke-width="48" stroke-linecap="round"/>',
+    calm: '<path d="M250 470c90-80 170-80 260 0s170 80 260 0M250 610c90-80 170-80 260 0s170 80 260 0" fill="none" stroke="#FBF8F1" stroke-width="56" stroke-linecap="round"/>',
+    bea: '<path d="M290 300h444a60 60 0 0 1 60 60v250a60 60 0 0 1-60 60H480l-140 110v-110h-50a60 60 0 0 1-60-60V360a60 60 0 0 1 60-60z" fill="none" stroke="#FBF8F1" stroke-width="56" stroke-linejoin="round"/>',
+  };
+  for (const [name, glyph] of Object.entries(glyphs)) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${COLORS.tealLight}"/><stop offset="1" stop-color="${COLORS.tealDeep}"/></linearGradient></defs><rect width="1024" height="1024" rx="230" fill="url(#g)"/>${glyph}</svg>`;
+    await render(page, svg, 96, path.join(icons, `shortcut-${name}.png`), true);
+  }
   await browser.close();
   void splash;
   console.log('icons written: icon.png, adaptive-icon.png, splash-icon.png, favicon.png (+ assets/brand)');

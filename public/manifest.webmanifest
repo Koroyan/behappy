@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "BeHappy",
+  "short_name": "BeHappy",
+  "description": "Reflection, creativity and calm: a private journal, art therapy, breathing, sounds and Bea, a gentle AI companion.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#F7F8F5",
+  "background_color": "#F7F8F5",
+  "lang": "en",
+  "dir": "auto",
+  "categories": ["health", "lifestyle", "medical"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Journal", "short_name": "Journal", "url": "/journal/editor?source=pwa-shortcut", "icons": [{ "src": "/icons/shortcut-journal.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Calm now", "short_name": "Calm", "url": "/calm?source=pwa-shortcut", "icons": [{ "src": "/icons/shortcut-calm.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Talk to Bea", "short_name": "Bea", "url": "/anulia?source=pwa-shortcut", "icons": [{ "src": "/icons/shortcut-bea.png", "sizes": "96x96", "type": "image/png" }] }
+  ]
+}

@@ -23,7 +23,8 @@ import { askNotificationPermission, notificationsAllowed } from './reminders';
 
 const KEY = '@behappy_push_v1';
 
-export type PushAvailability = 'ok' | 'web' | 'expo-go-android' | 'not-configured';
+/** 'needs-install' only on the web (iPhone/iPad: BeHappy must be on the Home Screen). */
+export type PushAvailability = 'ok' | 'web' | 'expo-go-android' | 'not-configured' | 'needs-install';
 
 export interface PushPrefs {
   community: boolean;

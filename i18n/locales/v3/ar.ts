@@ -1,5 +1,6 @@
 import type { PartialMessages } from '../../index';
 import { alertsAr } from '../alerts/ar';
+import { pwaAr } from '../pwa/ar';
 import { wbAr } from '../wb/ar';
 
 /**
@@ -9,6 +10,8 @@ import { wbAr } from '../wb/ar';
 export const ar3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsAr,
+  // Installed web app: updates, installing, Web Push (see ../pwa).
+  pwa: pwaAr,
   wb: wbAr,
   shell: {
     personal: 'شخصي',

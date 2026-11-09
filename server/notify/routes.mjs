@@ -2,7 +2,11 @@
 // sender. Mounted like the other feature modules (features.mjs).
 //
 //   POST   /api/push/devices   { token, platform, language, tz }   this phone may be notified
+//          browsers: { token: endpoint, platform: 'web', keys: { p256dh, auth }, chats }
 //   DELETE /api/push/devices   { token }                           not any more
+//   GET    /api/push/web-key   the server's public VAPID key (for subscribing a browser)
+//   PUT    /api/push/reminders { token, reminders: [{ id, kind, at, title, body, url }] }
+//                              a browser's reminder plan (replaces the pending one)
 //   GET    /api/push/prefs     categories, "show who wrote", quiet hours
 //   PUT    /api/push/prefs
 //   GET    /api/unread         small, cheap counts for badges (notifications,
@@ -12,7 +16,8 @@ import express from 'express';
 
 import { requireAccount } from '../auth.mjs';
 import { unreadCount } from './notifications.mjs';
-import { pushFor, validPushToken } from './push.mjs';
+import { isWebToken, pushFor, validPushToken } from './push.mjs';
+import { vapidKeys } from './webpush.mjs';
 
 export function mountPush(app, deps) {
   const { db, clock } = deps;
@@ -22,16 +27,38 @@ export function mountPush(app, deps) {
   const json = express.json({ limit: '8kb' });
 
   app.post('/api/push/devices', json, auth, async (req, res) => {
-    const { token, platform, language, tz } = req.body || {};
-    if (!validPushToken(token)) return res.status(400).json({ error: 'bad_token' });
-    if (!['ios', 'android'].includes(platform)) return res.status(400).json({ error: 'bad_platform' });
-    await push.registerDevice(req.account, { token, platform, language, tz });
+    const { token, platform, language, tz, keys, chats } = req.body || {};
+    const problem = push.checkDevice({ token, platform, keys });
+    if (problem) return res.status(400).json({ error: problem });
+    if (platform === 'web' && !(await vapidKeys(deps).catch(() => null))) return res.status(503).json({ error: 'web_push_off' });
+    await push.registerDevice(req.account, { token, platform, language, tz, keys, chats: chats !== false });
     res.json({ ok: true, prefs: await push.getPrefs(req.account.id) });
   });
 
   app.delete('/api/push/devices', json, auth, async (req, res) => {
-    if (validPushToken(req.body?.token)) await push.removeDevice(req.account, req.body.token);
+    const token = req.body?.token;
+    if (validPushToken(token) || (isWebToken(token) && String(token).length <= 2048)) await push.removeDevice(req.account, token);
     res.json({ ok: true });
+  });
+
+  // Public by nature (it is in every subscription); no account needed.
+  app.get('/api/push/web-key', async (_req, res) => {
+    const keys = await vapidKeys(deps).catch(() => null);
+    if (!keys) return res.status(503).json({ error: 'web_push_off' });
+    res.set('Cache-Control', 'no-store').json({ publicKey: keys.publicKey });
+  });
+
+  app.put('/api/push/reminders', express.json({ limit: '48kb' }), auth, async (req, res) => {
+    const { token, reminders } = req.body || {};
+    if (!isWebToken(token)) return res.status(400).json({ error: 'bad_token' });
+    try {
+      const count = await push.setReminders(req.account, token, reminders);
+      res.json({ ok: true, count, pending: await push.listReminders(req.account, token) });
+    } catch (e) {
+      if (e?.code === 'unknown_device') return res.status(404).json({ error: 'unknown_device' });
+      if (e?.code === 'bad_reminders') return res.status(400).json({ error: 'bad_reminders' });
+      throw e;
+    }
   });
 
   app.get('/api/push/prefs', auth, async (req, res) => {

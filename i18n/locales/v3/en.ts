@@ -9,6 +9,7 @@
  */
 import { acEn } from '../admin/en';
 import { alertsEn } from '../alerts/en';
+import { pwaEn } from '../pwa/en';
 import { wbEn } from '../wb/en';
 
 type Plural = { zero?: string; one: string; two?: string; few?: string; many?: string; other: string };
@@ -17,6 +18,8 @@ const plural = (one: string, other: string): Plural => ({ one, other });
 export const en3 = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsEn,
+  // Installed web app: updates, installing, Web Push (see ../pwa).
+  pwa: pwaEn,
   // Well-being ecosystem: Sound Lab, Steps, badges, reflection, memory (see ../wb).
   wb: wbEn,
   // Admin center (English and Georgian; see ../admin).

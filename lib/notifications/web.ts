@@ -9,8 +9,17 @@ const KEY = '@behappy_web_notify_v1';
 
 export const webNotifySupported = () => Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window;
 
+/** Chats already come by Web Push to this browser (webPush.ts): no second, in-tab notification. */
+const webPushChats = () => {
+  try {
+    return JSON.parse(window.localStorage.getItem('@behappy_webpush_v1') || '{}').chats === true;
+  } catch {
+    return false;
+  }
+};
+
 export function webNotifyEnabled(): boolean {
-  if (!webNotifySupported()) return false;
+  if (!webNotifySupported() || webPushChats()) return false;
   try {
     return window.localStorage.getItem(KEY) === '1' && Notification.permission === 'granted';
   } catch {

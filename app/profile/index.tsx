@@ -7,6 +7,7 @@ import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@
 import { AppText, Avatar, Badge, Banner, Button, Card, Divider, Icon, ListRow, ProgressBar, Press, Screen, Segmented, SectionHeader, Sheet, space, TEXT_SCALES, Toggle, useFeedback, useLayout, useTheme } from '@/design';
 import { MoreMenu } from '@/features/shell/MoreMenu';
 import { useT } from '@/i18n';
+import { useInBrowserTab } from '@/lib/pwa/usePwa';
 import { AccountDeletionError, useAccount, useIdentity } from '@/lib/api/account';
 import { saveAnalyticsChoice } from '@/lib/analytics';
 import { MEMORY_CATEGORIES, setAiConsent, useConsent, useMemoryConsent } from '@/lib/privacy/consent';
@@ -26,6 +27,8 @@ export default function ProfileScreen() {
   const { confirm, toast } = useFeedback();
   const [name, setName] = useState('');
   const [langOpen, setLangOpen] = useState(false);
+  // Web in a browser tab (not the installed app): how to install BeHappy.
+  const showInstall = useInBrowserTab();
 
   useFocusEffect(
     useCallback(() => {
@@ -119,6 +122,12 @@ export default function ProfileScreen() {
       <Divider />
       <ListRow icon="notifications-outline" iconTone="peach" title={t('alerts.settings.entry')} subtitle={t('alerts.settings.entryHint')} onPress={() => router.push('/settings/notifications' as never)} testID="profile-notifications" />
       <Divider />
+      {showInstall ? (
+        <>
+          <ListRow icon="download-outline" iconTone="sage" title={t('pwa.install.cardTitle')} subtitle={t('pwa.install.settingsHint')} onPress={() => router.push('/install' as never)} testID="profile-install" />
+          <Divider />
+        </>
+      ) : null}
       <ListRow icon="ribbon-outline" iconTone="gold" title={t('wb.tools.badges.title')} subtitle={t('wb.tools.badges.subtitle')} onPress={() => router.push('/badges' as never)} testID="profile-badges" />
       <Divider />
       <ListRow icon="footsteps-outline" iconTone="primary" title={t('wb.tools.steps.title')} subtitle={t('wb.tools.steps.subtitle')} onPress={() => router.push('/steps' as never)} testID="profile-steps" />

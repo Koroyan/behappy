@@ -1,5 +1,6 @@
 import type { PartialMessages } from '../../index';
 import { alertsHi } from '../alerts/hi';
+import { pwaHi } from '../pwa/hi';
 import { wbHi } from '../wb/hi';
 
 /**
@@ -9,6 +10,8 @@ import { wbHi } from '../wb/hi';
 export const hi3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsHi,
+  // Installed web app: updates, installing, Web Push (see ../pwa).
+  pwa: pwaHi,
   wb: wbHi,
   shell: {
     personal: 'निजी',

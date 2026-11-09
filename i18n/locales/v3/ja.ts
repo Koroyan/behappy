@@ -1,11 +1,14 @@
 import type { PartialMessages } from '../../index';
 import { alertsJa } from '../alerts/ja';
+import { pwaJa } from '../pwa/ja';
 import { wbJa } from '../wb/ja';
 
 /** 日本語 — BeHappy 3.0。やさしく丁寧に（です・ます調）。 */
 export const ja3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsJa,
+  // Installed web app: updates, installing, Web Push (see ../pwa).
+  pwa: pwaJa,
   wb: wbJa,
   shell: {
     personal: 'パーソナル',

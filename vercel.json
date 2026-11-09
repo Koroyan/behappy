@@ -1,5 +1,130 @@
 {
   "buildCommand": "npm run build:web",
   "outputDirectory": "dist",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/_expo/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'none'"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(), payment=()"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/admin/applications/:id",
+      "destination": "/admin/applications/[id].html"
+    },
+    {
+      "source": "/admin/moderation/members/:memberRef",
+      "destination": "/admin/moderation/members/[memberRef].html"
+    },
+    {
+      "source": "/admin/moderation/messages/:messageId",
+      "destination": "/admin/moderation/messages/[messageId].html"
+    },
+    {
+      "source": "/admin/moderation/reports/:reportId",
+      "destination": "/admin/moderation/reports/[reportId].html"
+    },
+    {
+      "source": "/admin/safety/:id",
+      "destination": "/admin/safety/[id].html"
+    },
+    {
+      "source": "/admin/support/:id",
+      "destination": "/admin/support/[id].html"
+    },
+    {
+      "source": "/admin/users/:id",
+      "destination": "/admin/users/[id].html"
+    },
+    {
+      "source": "/appointments/:id",
+      "destination": "/appointments/[id].html"
+    },
+    {
+      "source": "/art/:id",
+      "destination": "/art/[id].html"
+    },
+    {
+      "source": "/assessments/:test",
+      "destination": "/assessments/[test].html"
+    },
+    {
+      "source": "/cards/:deck",
+      "destination": "/cards/[deck].html"
+    },
+    {
+      "source": "/community/:roomId",
+      "destination": "/community/[roomId].html"
+    },
+    {
+      "source": "/messages/:id",
+      "destination": "/messages/[id].html"
+    },
+    {
+      "source": "/pro/receipt/:orderId",
+      "destination": "/pro/receipt/[orderId].html"
+    },
+    {
+      "source": "/specialists/:id",
+      "destination": "/specialists/[id].html"
+    },
+    {
+      "source": "/support/:id",
+      "destination": "/support/[id].html"
+    }
+  ]
 }

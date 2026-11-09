@@ -1,11 +1,14 @@
 import type { PartialMessages } from '../../index';
 import { alertsTr } from '../alerts/tr';
+import { pwaTr } from '../pwa/tr';
 import { wbTr } from '../wb/tr';
 
 /** Türkçe — BeHappy 3.0. Sıcak ve yakın («sen»). */
 export const tr3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsTr,
+  // Installed web app: updates, installing, Web Push (see ../pwa).
+  pwa: pwaTr,
   wb: wbTr,
   shell: {
     personal: 'Kişisel',

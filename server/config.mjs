@@ -66,6 +66,14 @@ export const config = {
   push: {
     driver: (env.PUSH_DRIVER || 'expo').toLowerCase(),
     accessToken: env.EXPO_ACCESS_TOKEN || '',
+    // Web Push for the installed web app and browsers (VAPID). Generate a pair
+    // once with `npx web-push generate-vapid-keys`; the public key is public,
+    // the private key is a secret. Development makes and keeps its own pair.
+    web: {
+      publicKey: env.WEB_PUSH_PUBLIC_KEY || '',
+      privateKey: env.WEB_PUSH_PRIVATE_KEY || '',
+      subject: env.WEB_PUSH_SUBJECT || '',
+    },
   },
   sms: {
     driver: (env.SMS_DRIVER || (IS_PRODUCTION ? 'none' : 'log')).toLowerCase(),
@@ -225,6 +233,7 @@ export function describeConfig() {
     email: config.mail.driver,
     sms: config.sms.driver,
     push: config.push.driver,
+    webPush: config.push.web.publicKey && config.push.web.privateKey ? 'configured (WEB_PUSH_*)' : config.isProduction ? 'OFF (WEB_PUSH_* not set)' : 'development key pair',
     devTools: config.devTools,
     professional: `${config.professional.amountMinor / 100} ${config.professional.currency} / ${config.professional.durationDays} days, trial ${config.professional.trialDays} days, 0% commission`,
   };
@@ -257,5 +266,7 @@ export function productionProblems(c = config) {
   if (c.mail.driver !== 'resend' || !c.mail.resendApiKey || !c.mail.from) warnings.push('Email is not configured (MAIL_DRIVER=resend, RESEND_API_KEY, MAIL_FROM): registration and password reset answer 503.');
   if (c.sms.driver !== 'twilio' || !c.sms.twilioAccountSid) warnings.push('SMS is not configured (SMS_DRIVER=twilio + TWILIO_*): professional phone verification answers 503.');
   if (!c.openai.apiKey) warnings.push('OPENAI_API_KEY is missing: AI features answer 503.');
+  if (!c.push.web.publicKey || !c.push.web.privateKey || !/^(mailto:|https:\/\/)/.test(c.push.web.subject || ''))
+    warnings.push('Web Push is not configured (WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY, WEB_PUSH_SUBJECT=mailto:…): the web app offers no notifications or reminders.');
   return { blocking, warnings };
 }

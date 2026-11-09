@@ -12,6 +12,9 @@
  *    again on new activity, on return to the app and every 90 seconds.
  *  - The app icon shows unread notifications and messages; a browser tab shows
  *    the count in its title and, if allowed, a discreet browser notification.
+ *  - Web: the same through Web Push (installed app / supporting browsers); the
+ *    browser's registration follows sign-in, language and time zone, and a
+ *    subscription the browser renewed is registered again.
  */
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
@@ -19,6 +22,7 @@ import { AppState, Platform } from 'react-native';
 
 import { useT } from '@/i18n';
 import { useAccount, useIdentity, useUnread } from '@/lib/api/account';
+import { onServiceWorkerMessage } from '@/lib/pwa/pwa';
 import { getSocket, onEvent, onStatus } from '@/lib/realtime/socket';
 import { CARDS_TOPIC } from '@/features/cards/storage';
 import { ART_TOPIC } from '@/lib/storage/activity';
@@ -83,11 +87,23 @@ export function NotificationsBridge() {
     };
   }, [plan, language]);
 
-  // ---------- This phone's push registration ----------
+  // ---------- This phone's (or browser's) push registration ----------
   useEffect(() => {
-    if (!native || !identity.registered) return;
+    // Phones: chats need a registered account. Browsers: also reminders, which any account may have.
+    if (native && !identity.registered) return;
     refreshThisPhone(language).catch(() => {});
   }, [identity.registered, account?.accountId, language]);
+
+  // The browser renewed its push subscription (service worker message): register it and the reminders again.
+  useEffect(
+    () =>
+      onServiceWorkerMessage('behappy:resubscribe', () => {
+        refreshThisPhone(language)
+          .then(() => plan(true))
+          .catch(() => {});
+      }),
+    [language, plan]
+  );
 
   // ---------- Live unread badges ----------
   useEffect(() => {
@@ -131,6 +147,8 @@ export function NotificationsBridge() {
     const base = document.title.replace(/^\(\d+\+?\)\s*/, '') || 'BeHappy';
     const n = identity.registered ? unread.badge + unread.communityMessages : 0;
     document.title = n ? `(${n > 99 ? '99+' : n}) ${base}` : base;
+    // The installed web app's icon (where the system supports badges), like a phone's.
+    setAppBadge(identity.registered ? unread.badge : 0);
   }, [identity.registered, unread.badge, unread.communityMessages, pathname]);
 
   return null;

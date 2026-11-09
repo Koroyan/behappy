@@ -1,11 +1,14 @@
 import type { PartialMessages } from '../../index';
 import { alertsFr } from '../alerts/fr';
+import { pwaFr } from '../pwa/fr';
 import { wbFr } from '../wb/fr';
 
 /** Français — BeHappy 3.0. Chaleureux et respectueux (« vous »). */
 export const fr3: PartialMessages = {
   // Notifications & reminders (see ../alerts).
   alerts: alertsFr,
+  // Installed web app: updates, installing, Web Push (see ../pwa).
+  pwa: pwaFr,
   wb: wbFr,
   shell: {
     personal: 'Personnel',
