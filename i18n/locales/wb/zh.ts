@@ -50,7 +50,9 @@ export const wbZh = {
       "padWarm": "柔和和声（温暖）",
       "padDeep": "柔和和声（深沉）",
       "padSoft": "柔和和声（轻柔）",
-      "tones": "纯音"
+      "tones": "纯音",
+      "bowls": "颂钵",
+      "chimes": "轻柔铃声"
     },
     "binaural": {
       "title": "双耳节拍音",
@@ -68,6 +70,8 @@ export const wbZh = {
       "headphones": "请戴耳机：不用耳机时，两个音调会在空气中混合，无法产生双耳节拍。",
       "gotIt": "明白了"
     },
+    "styleBowls": "颂钵与溪流",
+    "styleRainBells": "雨声与轻柔铃声",
     "styleMixes": "预设混音",
     "tonesNote": "在柔和和声的背景上播放 174 Hz 和 528 Hz 的纯音，如同常见的冥想音乐。这些只是音乐中的音调，双耳听到的完全相同：没有证据表明任何频率能治病。",
     "honesty": "这些声音可以让周围的氛围更平静，或帮助你专注。它们不能治疗头痛、睡眠问题或其他状况。",

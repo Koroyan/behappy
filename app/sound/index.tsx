@@ -10,12 +10,13 @@ import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { AppText, Banner, Button, Card, Chip, Icon, IconButton, ProgressBar, Screen, SectionHeader, Sheet, space, TextField, ToggleRow, useFeedback } from '@/design';
 import { useT } from '@/i18n';
 import { bandOf, binauralLayer, HEADACHE_MAX_VOLUME, layerFor, LIBRARY, nameKey, noiseLayer, PRESETS, STYLE_MIXES } from '@/lib/audio/presets';
-import { lastFinished, pauseSound, resumeSound, setLayerVolume, setMasterVolume, startSound, stopSound, updateLayers, useSoundSession } from '@/lib/audio/session';
+import { lastFinished, pauseSound, prepareSounds, resumeSound, setLayerVolume, setMasterVolume, startSound, stopSound, updateLayers, useSoundSession } from '@/lib/audio/session';
 import { loadSound, MixLayer, removeFavorite, saveFavorite, setSoundPrefs, SOUND_TOPIC, SoundMode } from '@/lib/audio/soundStore';
 import { BEAT_BANDS, BeatBand, binaural, CARRIER } from '@/lib/audio/synth';
 import { subscribe } from '@/lib/storage/json';
 
 const MODES: SoundMode[] = ['focus', 'sleep', 'relax', 'headache', 'mix'];
+const sameLayers = (a: MixLayer[], b: MixLayer[]) => a.length === b.length && b.every((l) => a.some((x) => x.id === l.id));
 const clamp01 = (v: number) => Math.max(0, Math.min(1, Math.round(v * 10) / 10));
 const mmss = (ms: number) => {
   const s = Math.max(0, Math.round(ms / 1000));
@@ -53,6 +54,13 @@ export default function SoundLabScreen() {
 
   const live = session && session.mode === mode ? session : null;
   const shown = live ? live.layers : layers;
+  // Generate this mix's sounds in the background while the person looks, so Play starts at once.
+  const shownKey = shown.map((l) => l.id).join('|');
+  useEffect(() => {
+    const timer = setTimeout(() => prepareSounds(shown.map((l) => l.spec)), 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownKey]);
   const cap = mode === 'headache' ? HEADACHE_MAX_VOLUME : 1;
 
   const chooseMode = (m: SoundMode) => {
@@ -136,7 +144,7 @@ export default function SoundLabScreen() {
           </AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {STYLE_MIXES.map((m) => (
-              <Chip key={m.id} label={m.label} icon="musical-notes-outline" selected={shown.some((l) => l.id === 'tones')} onPress={() => change(m.layers())} testID={`sound-style-${m.id}`} />
+              <Chip key={m.id} label={m.label ?? t(`wb.sound.${m.labelKey}`)} icon="musical-notes-outline" selected={sameLayers(shown, m.layers())} onPress={() => change(m.layers())} testID={`sound-style-${m.id}`} />
             ))}
           </View>
           {shown.some((l) => l.id === 'tones') ? (
@@ -196,7 +204,7 @@ export default function SoundLabScreen() {
           {shown.map((l) => (
             <Card key={l.id} padding={16} testID={`sound-layer-${l.id}`}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                <Icon name={l.spec.kind === 'binaural' ? 'headset-outline' : l.spec.kind === 'noise' ? 'radio-outline' : l.spec.kind === 'pad' || l.spec.kind === 'tones' ? 'musical-note-outline' : 'rainy-outline'} size={20} color="textSecondary" />
+                <Icon name={l.spec.kind === 'binaural' ? 'headset-outline' : l.spec.kind === 'noise' ? 'radio-outline' : l.spec.kind === 'pad' || l.spec.kind === 'tones' ? 'musical-note-outline' : l.spec.kind === 'bowls' || l.spec.kind === 'chimes' ? 'notifications-outline' : 'rainy-outline'} size={20} color="textSecondary" />
                 <AppText variant="bodyStrong" style={{ flex: 1 }}>
                   {t(`wb.sound.names.${nameKey(l.spec)}`)}
                 </AppText>

@@ -10,10 +10,10 @@
  * - Fades: volume is ramped in small steps (no clicks), also for timers.
  */
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { isRunningInExpoGo } from 'expo';
 import * as FileSystem from 'expo-file-system/legacy';
 
-import { encodeWav, fadeAt, mixGains, render, SoundSpec, specKey, toBase64, toInt16 } from './synth';
+import { encodeWav, fadeAt, mixGains, renderAsync, SoundSpec, specKey, toBase64, toInt16 } from './synth';
 
 export interface Layer {
   id: string;
@@ -26,17 +26,41 @@ export type EngineState = 'stopped' | 'loading' | 'playing' | 'paused';
 const DIR = `${FileSystem.cacheDirectory}sound/`;
 // Expo Go has no expo-audio lock-screen service (development builds and the
 // store app do, from the config plugin): there the call only logs an error.
-const LOCK_SCREEN = Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+// (Constants.executionEnvironment did not say "storeClient" in Expo Go 58.)
+const LOCK_SCREEN = !isRunningInExpoGo();
 
-/** The WAV for a sound on this device (generated once). */
-export async function soundFile(spec: SoundSpec): Promise<string> {
-  const path = `${DIR}${specKey(spec)}.wav`;
+const inflight = new Map<string, Promise<string>>();
+
+/** The WAV for a sound on this device (generated once; one generation at a time per sound). */
+export function soundFile(spec: SoundSpec): Promise<string> {
+  const key = specKey(spec);
+  let job = inflight.get(key);
+  if (!job) {
+    job = makeSoundFile(spec, key).finally(() => inflight.delete(key));
+    inflight.set(key, job);
+  }
+  return job;
+}
+
+async function makeSoundFile(spec: SoundSpec, key: string): Promise<string> {
+  const path = `${DIR}${key}.wav`;
   const info = await FileSystem.getInfoAsync(path);
   if (info.exists && (info as any).size > 44) return path;
   await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
-  const wav = encodeWav(toInt16(render(spec)), 24000);
-  await FileSystem.writeAsStringAsync(path, toBase64(wav), { encoding: FileSystem.EncodingType.Base64 });
+  const pcm = await renderAsync(spec);
+  const wav = encodeWav(toInt16(pcm), pcm.sampleRate);
+  // Written under a temporary name first: an interrupted write never leaves a broken sound behind.
+  await FileSystem.writeAsStringAsync(`${path}.part`, toBase64(wav), { encoding: FileSystem.EncodingType.Base64 });
+  await FileSystem.moveAsync({ from: `${path}.part`, to: path });
   return path;
+}
+
+/**
+ * Generates the sounds of a mix in the background (one after another, in small
+ * slices), so Play starts at once. Failures are ignored here: Play tries again.
+ */
+export async function prepareSounds(specs: SoundSpec[]) {
+  for (const spec of specs) await soundFile(spec).catch(() => {});
 }
 
 /** Generated sounds (deleted with "delete all data"; regenerated when needed). */

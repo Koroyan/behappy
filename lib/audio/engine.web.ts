@@ -4,7 +4,7 @@
  * the buffer go to the left and right ear). Gains ramp smoothly; nothing is
  * downloaded, so it works offline once the app is loaded.
  */
-import { mixGains, render, SoundSpec, specKey } from './synth';
+import { mixGains, renderAsync, SoundSpec, specKey } from './synth';
 
 export interface Layer {
   id: string;
@@ -18,6 +18,8 @@ export async function soundFile(_spec: SoundSpec): Promise<string> {
   return '';
 }
 export async function clearSoundCache() {}
+/** The web renders quickly when Play is pressed: nothing to prepare. */
+export async function prepareSounds(_specs: SoundSpec[]) {}
 
 const buffers = new Map<string, AudioBuffer>();
 
@@ -51,12 +53,12 @@ class WebEngine {
     return this.ctx;
   }
 
-  private buffer(spec: SoundSpec): AudioBuffer {
+  private async buffer(spec: SoundSpec): Promise<AudioBuffer> {
     const key = specKey(spec);
     const cached = buffers.get(key);
     if (cached) return cached;
     const ctx = this.context();
-    const pcm = render(spec);
+    const pcm = await renderAsync(spec);
     const buf = ctx.createBuffer(2, pcm.left.length, pcm.sampleRate);
     buf.copyToChannel(pcm.left as Float32Array<ArrayBuffer>, 0);
     buf.copyToChannel(pcm.right as Float32Array<ArrayBuffer>, 1);
@@ -108,7 +110,7 @@ class WebEngine {
         existing.gain.disconnect();
       }
       const source = ctx.createBufferSource();
-      source.buffer = this.buffer(layer.spec);
+      source.buffer = await this.buffer(layer.spec);
       source.loop = true;
       const gain = ctx.createGain();
       gain.gain.value = 0;

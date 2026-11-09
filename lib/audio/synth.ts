@@ -10,31 +10,46 @@
  *
  * Every sound is built to loop without a click: tones complete whole cycles
  * in the loop, modulations are periodic over it, noise is cross-faded.
+ * Music-like layers (harmonies, tones, bowls, bells) are built in ambient.ts.
  */
+import { bowlsJob, chimesJob, Job, MUSIC_RATE, padJob, runJob, runJobAsync, tonesJob } from './ambient';
 
 export const SAMPLE_RATE = 24000;
 
 export type NoiseColor = 'white' | 'pink' | 'brown';
 export type NatureScene = 'rain' | 'ocean' | 'wind' | 'stream';
 export type PadMood = 'warm' | 'deep' | 'soft';
-export type SoundSpec = { kind: 'binaural'; leftHz: number; rightHz: number } | { kind: 'noise'; color: NoiseColor } | { kind: 'nature'; scene: NatureScene } | { kind: 'pad'; mood: PadMood } | { kind: 'tones'; hz: number[] };
+export type SoundSpec = { kind: 'binaural'; leftHz: number; rightHz: number } | { kind: 'noise'; color: NoiseColor } | { kind: 'nature'; scene: NatureScene } | { kind: 'pad'; mood: PadMood } | { kind: 'tones'; hz: number[] } | { kind: 'bowls'; mood: PadMood } | { kind: 'chimes'; mood: PadMood };
 
 /**
- * A soft, slowly breathing chord to listen to (and to carry a binaural tone, as
- * relaxing tracks usually do). Every frequency is a multiple of 0.05 Hz, so it
- * completes whole cycles in its 20 s loop. Pure musical tones: no claim about
- * any frequency doing anything.
+ * A soft, slowly breathing chord to listen to (and to carry a binaural tone or
+ * pure tones, as relaxing tracks usually do): three slightly detuned voices per
+ * note in a long reverb (ambient.ts). Every frequency is a multiple of 0.05 Hz,
+ * so it completes whole cycles in its 20 s loop. Musical tones only: no claim
+ * about any frequency doing anything.
  */
-export const PADS: Record<PadMood, { hz: number[]; amp: number[] }> = {
-  // A major: A2 E3 A3 C#4 E4
-  warm: { hz: [110, 165, 220, 277.2, 330], amp: [0.1, 0.07, 0.06, 0.035, 0.03] },
+export const PADS: Record<PadMood, { hz: number[]; amp: number[]; h2: number[]; h3: number[] }> = {
+  // A major, open: A2 E3 C#4 E4 A4. The A2 has no octave, so 175-250 Hz stays
+  // free for the binaural tone (200/210 Hz in Relax): nothing beats against it.
+  warm: { hz: [110, 165, 277.2, 330, 440], amp: [1, 0.7, 0.45, 0.4, 0.25], h2: [0, 0.22, 0.18, 0.15, 0.1], h3: [0.06, 0.05, 0.04, 0.03, 0] },
   // E major, lower: E2 B2 E3 G#3 B3
-  deep: { hz: [82.4, 123.5, 164.8, 207.65, 247], amp: [0.11, 0.07, 0.055, 0.03, 0.025] },
-  // Only octaves of 174 and 528 Hz (87, 174, 348 / 132, 264), each with its own
-  // octave: no partial lands near a tone of the 174 + 528 Hz mix, so nothing beats
-  // (an earlier 261 Hz note put 522 Hz next to 528 Hz: a 6 Hz wobble).
-  soft: { hz: [87, 132, 174, 264, 348], amp: [0.09, 0.06, 0.05, 0.035, 0.025] },
+  deep: { hz: [82.4, 123.5, 164.8, 207.65, 247], amp: [1, 0.7, 0.55, 0.35, 0.3], h2: [0.22, 0.2, 0.18, 0.15, 0.1], h3: [0.06, 0.05, 0.04, 0, 0] },
+  // Only octaves of 174 and 528 Hz (87, 174, 348 / 132, 264) with octave
+  // overtones and no twelfths: no partial lands near a tone of the 174 + 528 Hz
+  // mix, so nothing beats (a 261 Hz note once put 522 Hz beside 528: a 6 Hz wobble).
+  soft: { hz: [87, 132, 174, 264, 348], amp: [1, 0.65, 0.55, 0.38, 0.25], h2: [0.25, 0.2, 0.2, 0.15, 0.1], h3: [0, 0, 0, 0, 0] },
 };
+
+/**
+ * Singing bowls and soft bells for each harmony, chosen with a roughness model
+ * (Sethares) against that harmony's partials and tones: the least rough pitches.
+ */
+export const BOWLS: Record<PadMood, number[]> = { warm: [330, 277.2], soft: [264, 174], deep: [164.8, 247] };
+export const CHIMES: Record<PadMood, number[]> = { warm: [330, 440, 495, 554.4, 660, 880], soft: [264, 348, 396, 440, 528, 696], deep: [247, 329.6, 412, 494.4, 659.2] };
+
+const MUSIC = new Set(['pad', 'tones', 'bowls', 'chimes']);
+/** Sample rate per sound: musical layers have nothing above ~4 kHz. */
+export const rateFor = (s: SoundSpec) => (MUSIC.has(s.kind) ? MUSIC_RATE : SAMPLE_RATE);
 
 /**
  * Pure tones like those in popular meditation tracks (e.g. 528 Hz + 174 Hz):
@@ -68,7 +83,7 @@ export function binaural(carrierHz: number, beatHz: number): SoundSpec {
   return { kind: 'binaural', leftHz: c, rightHz: Math.round((c + b) * 10) / 10 };
 }
 
-export const specKey = (s: SoundSpec) => (s.kind === 'binaural' ? `bin-${s.leftHz}-${s.rightHz}` : s.kind === 'noise' ? `noise-${s.color}` : s.kind === 'pad' ? `pad-${s.mood}-v${s.mood === 'soft' ? 2 : 1}` : s.kind === 'tones' ? `tones-${s.hz.join('-')}-v1` : `nature-${s.scene}-v2`);
+export const specKey = (s: SoundSpec) => (s.kind === 'binaural' ? `bin-${s.leftHz}-${s.rightHz}` : s.kind === 'noise' ? `noise-${s.color}` : s.kind === 'pad' ? `pad-${s.mood}-v4` : s.kind === 'tones' ? `tones-${s.hz.join('-')}-v3` : s.kind === 'bowls' ? `bowls-${s.mood}-v2` : s.kind === 'chimes' ? `chimes-${s.mood}-v2` : `nature-${s.scene}-v2`);
 
 /** Loop length: tones need whole cycles of both frequencies (0.1 Hz resolution → 10 s). */
 export function loopSeconds(s: SoundSpec): number {
@@ -77,6 +92,8 @@ export function loopSeconds(s: SoundSpec): number {
     return 10;
   }
   if (s.kind === 'pad' || s.kind === 'tones') return 20;
+  if (s.kind === 'bowls') return 30;
+  if (s.kind === 'chimes') return 36;
   if (s.kind === 'nature' && s.scene === 'ocean') return 24;
   return 12;
 }
@@ -99,7 +116,26 @@ export interface Pcm {
   right: Float32Array;
 }
 
-export function render(s: SoundSpec, seconds = loopSeconds(s), sampleRate = SAMPLE_RATE): Pcm {
+function musicJob(s: SoundSpec, seconds: number, sr: number): Job | null {
+  if (s.kind === 'pad') {
+    const p = PADS[s.mood];
+    return padJob(p.hz.map((hz, k) => ({ hz, amp: p.amp[k], h2: p.h2[k], h3: p.h3[k] })), seconds, sr);
+  }
+  if (s.kind === 'tones') return tonesJob(s.hz, seconds, sr);
+  if (s.kind === 'bowls') return bowlsJob(BOWLS[s.mood], seconds, sr);
+  if (s.kind === 'chimes') return chimesJob(CHIMES[s.mood], seconds, sr, s.mood.length);
+  return null;
+}
+
+/** Like render, but a phone stays responsive while a musical layer is generated. */
+export async function renderAsync(s: SoundSpec, seconds = loopSeconds(s), sampleRate = rateFor(s)): Promise<Pcm> {
+  const job = musicJob(s, seconds, sampleRate);
+  return job ? runJobAsync(job) : render(s, seconds, sampleRate);
+}
+
+export function render(s: SoundSpec, seconds = loopSeconds(s), sampleRate = rateFor(s)): Pcm {
+  const job = musicJob(s, seconds, sampleRate);
+  if (job) return runJob(job);
   const n = Math.round(seconds * sampleRate);
   if (s.kind === 'binaural') {
     const left = new Float32Array(n);
@@ -113,8 +149,7 @@ export function render(s: SoundSpec, seconds = loopSeconds(s), sampleRate = SAMP
     }
     return { sampleRate, left, right };
   }
-  if (s.kind === 'pad') return renderPad(s.mood, n, sampleRate, seconds);
-  if (s.kind === 'tones') return renderTones(s.hz, n, sampleRate, seconds);
+  if (s.kind !== 'noise' && s.kind !== 'nature') throw new Error(`no renderer for ${s.kind}`);
   const fade = Math.round(0.5 * sampleRate);
   const total = n + fade;
   const L = channel(s, total, sampleRate, 1);
@@ -163,43 +198,6 @@ function noise(color: NoiseColor, n: number, rand: () => number): Float32Array {
   return out;
 }
 
-/** The pad: each voice swells slowly on its own (whole cycles per loop); the ears differ a little in timing for width. */
-function renderPad(mood: PadMood, n: number, sr: number, seconds: number): Pcm {
-  const { hz, amp } = PADS[mood];
-  const left = new Float32Array(n);
-  const right = new Float32Array(n);
-  hz.forEach((f, k) => {
-    const swells = 1 + (k % 3); // 1 to 3 slow swells per 20 s loop
-    for (let i = 0; i < n; i += 1) {
-      const t = i / sr;
-      const tone = Math.sin(2 * Math.PI * f * t) + 0.18 * Math.sin(2 * Math.PI * 2 * f * t);
-      const envL = 0.55 + 0.45 * Math.sin((2 * Math.PI * swells * t) / seconds + k * 1.3);
-      const envR = 0.55 + 0.45 * Math.sin((2 * Math.PI * swells * t) / seconds + k * 1.3 + 0.9);
-      left[i] += amp[k] * envL * tone;
-      right[i] += amp[k] * envR * tone;
-    }
-  });
-  return { sampleRate: sr, left, right };
-}
-
-/** Pure tones, the lowest a little louder; each swells on its own, whole cycles per loop. */
-function renderTones(hz: number[], n: number, sr: number, seconds: number): Pcm {
-  const left = new Float32Array(n);
-  const right = new Float32Array(n);
-  const sorted = [...hz].sort((a, b) => a - b);
-  sorted.forEach((f, k) => {
-    const amp = k === 0 ? 0.11 : 0.06;
-    const swells = 1 + k;
-    for (let i = 0; i < n; i += 1) {
-      const t = i / sr;
-      const tone = Math.sin(2 * Math.PI * f * t);
-      left[i] += amp * (0.65 + 0.35 * Math.sin((2 * Math.PI * swells * t) / seconds + k)) * tone;
-      right[i] += amp * (0.65 + 0.35 * Math.sin((2 * Math.PI * swells * t) / seconds + k + 0.7)) * tone;
-    }
-  });
-  return { sampleRate: sr, left, right };
-}
-
 /** One-pole low-pass (a: 0..1, smaller = darker). */
 function lowpass(x: Float32Array, a: number): Float32Array {
   const out = new Float32Array(x.length);
@@ -211,7 +209,7 @@ function lowpass(x: Float32Array, a: number): Float32Array {
   return out;
 }
 
-function channel(s: Exclude<SoundSpec, { kind: 'binaural' } | { kind: 'pad' } | { kind: 'tones' }>, n: number, sr: number, seed: number): Float32Array {
+function channel(s: Extract<SoundSpec, { kind: 'noise' } | { kind: 'nature' }>, n: number, sr: number, seed: number): Float32Array {
   const rand = rng(seed * 7919 + (s.kind === 'noise' ? s.color.length : s.scene.length * 31));
   if (s.kind === 'noise') return noise(s.color, n, rand);
   const period = n / sr;
@@ -309,7 +307,10 @@ export function encodeWav(samples: Int16Array, sampleRate: number, channels = 2)
   v.setUint16(34, 16, true);
   str(36, 'data');
   v.setUint32(40, dataBytes, true);
-  for (let i = 0; i < samples.length; i += 1) v.setInt16(44 + i * 2, samples[i], true);
+  // Phones and browsers are little-endian, like WAV: copy the samples in one go
+  // (a per-sample DataView call is slow without a JIT). Big-endian: byte by byte.
+  if (new Uint8Array(new Uint16Array([1]).buffer)[0] === 1) new Int16Array(buf, 44, samples.length).set(samples);
+  else for (let i = 0; i < samples.length; i += 1) v.setInt16(44 + i * 2, samples[i], true);
   return new Uint8Array(buf);
 }
 
@@ -364,21 +365,33 @@ export function mixGains(volumes: number[], master: number, ceiling = 1): number
 export const fadeAt = (from: number, to: number, elapsedMs: number, totalMs: number) => (totalMs <= 0 ? to : from + (to - from) * Math.min(1, Math.max(0, elapsedMs / totalMs)));
 
 /** Bytes → base64 (Hermes has no Buffer; chunked to stay fast on ~1 MB files). */
+let PAIRS: string[] | null = null;
 export function toBase64(bytes: Uint8Array): string {
   const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  const parts: string[] = [];
-  let chunk = '';
-  for (let i = 0; i < bytes.length; i += 3) {
-    const a = bytes[i];
-    const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
-    const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
-    const t = (a << 16) | (b << 8) | c;
-    chunk += A[(t >> 18) & 63] + A[(t >> 12) & 63] + (i + 1 < bytes.length ? A[(t >> 6) & 63] : '=') + (i + 2 < bytes.length ? A[t & 63] : '=');
-    if (chunk.length >= 32768) {
-      parts.push(chunk);
-      chunk = '';
-    }
+  // 12 bits → two characters from one table: half the lookups and concatenations.
+  if (!PAIRS) {
+    PAIRS = new Array(4096);
+    for (let i = 0; i < 4096; i += 1) PAIRS[i] = A[i >> 6] + A[i & 63];
   }
-  parts.push(chunk);
+  const P = PAIRS;
+  const parts: string[] = [];
+  const whole = bytes.length - (bytes.length % 3);
+  const CHUNK = 3 * 8192;
+  for (let start = 0; start < whole; start += CHUNK) {
+    const end = Math.min(whole, start + CHUNK);
+    const out: string[] = new Array((end - start) / 3);
+    for (let i = start, k = 0; i < end; i += 3, k += 1) {
+      const t = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+      out[k] = P[t >> 12] + P[t & 4095];
+    }
+    parts.push(out.join(''));
+  }
+  const rest = bytes.length - whole;
+  if (rest) {
+    const a = bytes[whole];
+    const b = rest === 2 ? bytes[whole + 1] : 0;
+    const t = (a << 16) | (b << 8);
+    parts.push(A[(t >> 18) & 63] + A[(t >> 12) & 63] + (rest === 2 ? A[(t >> 6) & 63] : '=') + '=');
+  }
   return parts.join('');
 }

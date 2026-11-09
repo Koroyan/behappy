@@ -62,11 +62,35 @@ what is already done or skipped, at most three Step reminders a day.
 
 ## Sound Lab
 
-All sounds are generated on the device (`lib/audio/synth.ts`): 24 kHz,
-16-bit stereo PCM, looping without clicks (tones complete whole cycles; noise
-is cross-faded). Phones play cached WAV files with expo-audio (background audio
-through the expo-audio config plugin; Expo Go has no lock-screen service, so
-it is skipped there); the web plays the same samples as Web Audio buffers.
+All sounds are generated on the device (`lib/audio/synth.ts`, music-like
+layers in `lib/audio/ambient.ts`): 16-bit stereo PCM (24 kHz; 16 kHz for the
+musical layers, which have nothing above ~4 kHz), looping without clicks (tones
+complete whole cycles; noise is cross-faded; struck sounds and the reverb wrap
+around the loop). Phones play cached WAV files with expo-audio (background audio
+through the expo-audio config plugin; Expo Go has no lock-screen service, so it
+is skipped there — detected with `isRunningInExpoGo()`, as
+`Constants.executionEnvironment` did not report Expo Go in SDK 58); the web plays
+the same samples as Web Audio buffers.
+
+**Sounding like relaxation tracks.** Pure sines on their own sound like test
+tones. The musical layers are built the way such tracks are usually produced:
+every chord note is three voices (centre, and 0.05–0.15 Hz detuned to the left
+and right: a slow shimmer, never a wobble) whose tone colour slowly opens and
+closes; everything sits in a long, dark reverb (8-line feedback delay network,
+T60 4–5.5 s, wet signal high-passed at 150 Hz); singing bowls (partials at
+1 : 2.83 : 5.42 : 8.77, each a close pair 0.7–2.9 Hz apart for the slow "wah",
+soft strikes) and sparse soft bells (a wandering melody 2.6–5.8 s apart) are
+tuned to each harmony with a roughness model (Sethares), and no layer puts a
+partial where it would beat against a tone. Listening demos (loudness-matched,
+with the previous version for comparison): `qa-shots/sound-demos/` (not in git).
+
+**Speed on phones.** Phones run JavaScript without a JIT. Generation runs in
+slices (the screen stays responsive), the reverb is unrolled and runs at half
+rate, and Sound Lab prepares the shown mix in the background while the person
+looks at it. Measured on the Android emulator (Expo Go 58), first time only:
+the 528 + 174 Hz mix (4 layers) was ready 7.8 s after tapping it (before these
+changes: ~19 s of rendering after Play); "Singing bowls & stream" 3.5 s. Files
+are cached; later plays start at once.
 
 - **Binaural:** left = base tone, right = base + beat (e.g. 200 Hz + 210 Hz =
   10 Hz beat), base 100–500 Hz, beat 0.5–30 Hz; presets Delta 2, Theta 6,
@@ -75,12 +99,19 @@ it is skipped there); the web plays the same samples as Web Audio buffers.
 - **Noise:** white, pink (−3 dB/oct), brown (−6 dB/oct). **Nature-like:** rain,
   ocean, wind, stream (synthesised; no recordings, nothing to license), softened
   (low-passed, slower swells) after a listening test found them harsh.
-- **Soft harmonies:** slowly breathing chords — warm (A major from 110 Hz), deep
-  (E from 82.4 Hz) and soft (only octaves of 174 and 528 Hz: 87, 132, 174, 264,
-  348 Hz). Sleep and Relax presets use one under nature and noise.
+- **Soft harmonies:** slowly breathing chords — warm (A major, open: 110, 165,
+  277.2, 330, 440 Hz; the 110 Hz note has no octave, so 175–250 Hz stays free for
+  the binaural tone), deep (E from 82.4 Hz) and soft (only octaves of 174 and
+  528 Hz: 87, 132, 174, 264, 348 Hz). **Singing bowls** and **soft bells** for
+  each. Presets: Relax = warm harmony + bells + ocean + binaural; Sleep = deep
+  harmony + rain + brown noise (no strikes: nothing to wake you); Mix = warm
+  harmony + bowls + rain.
+- **Ready mixes** (Relax and Mix): "528 + 174 Hz", "Singing bowls & stream",
+  "Rain & soft bells".
 - **Pure tones and the "528 + 174 Hz" ready mix** (Relax and Mix → Ready mixes),
   in the style of popular meditation tracks: 174 Hz and 528 Hz sine tones, the
-  same in both ears (not binaural), each swelling slowly, over the soft harmony.
+  same in both ears (not binaural), each swelling slowly, over the soft harmony
+  with bowls (264/174 Hz) and bells (264, 348, 396, 440, 528, 696 Hz).
   The soft harmony has no partial near either tone, so nothing beats (an earlier
   261 Hz note put 522 Hz beside 528 Hz: a 6 Hz wobble — now tested). Under the
   mix the app says they are simply musical tones and that there is no evidence
@@ -168,8 +199,8 @@ removes it, the sound files and the in-memory event cache.
 
 | Check | Result |
 |---|---|
-| `npm test` | 183/183 (incl. reflection 7, AI cost/budget, streamed tokens) |
-| `npm run test:unit` | 57/57 (events, Steps across DST, badges, challenges, memory, recap, synth 10 incl. 174 + 528 Hz tones and no beating, planner incl. Step/reflection/sleep reminders) |
+| `npm test` | 188/188 (incl. reflection 7, AI cost/budget, streamed tokens, synth) |
+| `npm run test:unit` | 62/62 (events, Steps across DST, badges, challenges, memory, recap, synth 14: 174 + 528 Hz tones and no beating, seamless loops for every musical layer, warm harmony clear of the binaural band, bowl partial pairs, bells only on their notes; planner incl. Step/reflection/sleep reminders) |
 | `npm run qa:wellbeing` (Chrome) | 14/14: Today, Tools, Steps auto-completion, undo/skip, badges, Calm now, Sound Lab measured 200/210 Hz, the 528 + 174 Hz mix measured 174 + 528 Hz in both ears, Sleep, reflection (live AI, checked), memory preview/switches, Insights, Arabic dark RTL, no page errors |
 | Android (Expo Go 58, emulator) | Steps (journal after save, breathing after finishing), reminders scheduled at the right local times, badges, reflection in Georgian (live), memory with Anulia (live), revocation |
 

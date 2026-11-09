@@ -50,7 +50,9 @@ export const wbPl = {
       "padWarm": "Łagodna harmonia (ciepła)",
       "padDeep": "Łagodna harmonia (głęboka)",
       "padSoft": "Łagodna harmonia (delikatna)",
-      "tones": "Czyste tony"
+      "tones": "Czyste tony",
+      "bowls": "Misy tybetańskie",
+      "chimes": "Delikatne dzwonki"
     },
     "binaural": {
       "title": "Ton binauralny",
@@ -68,6 +70,8 @@ export const wbPl = {
       "headphones": "Użyj słuchawek: bez nich oba tony mieszają się w powietrzu i nie słychać pulsowania.",
       "gotIt": "Rozumiem"
     },
+    "styleBowls": "Misy tybetańskie i strumień",
+    "styleRainBells": "Deszcz i delikatne dzwonki",
     "styleMixes": "Gotowe miksy",
     "tonesNote": "Czyste tony o częstotliwościach 174 Hz i 528 Hz na tle łagodnej harmonii, jak w popularnej muzyce do medytacji. To po prostu tony muzyczne, takie same w obu uszach: nie ma dowodów na to, że jakakolwiek częstotliwość leczy.",
     "honesty": "Te dźwięki mogą sprawić, że otoczenie wyda się spokojniejsze, lub pomóc w skupieniu. Nie leczą bólu głowy, problemów ze snem ani innych dolegliwości.",

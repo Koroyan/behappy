@@ -12,7 +12,8 @@
  * store build: Expo Go on Android no longer receives remote notifications.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { isRunningInExpoGo } from 'expo';
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
@@ -42,7 +43,7 @@ const projectId = (): string | null => {
 
 export function pushAvailability(): PushAvailability {
   if (Platform.OS === 'web') return 'web';
-  if (Platform.OS === 'android' && Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return 'expo-go-android';
+  if (Platform.OS === 'android' && isRunningInExpoGo()) return 'expo-go-android';
   if (!projectId()) return 'not-configured';
   return 'ok';
 }

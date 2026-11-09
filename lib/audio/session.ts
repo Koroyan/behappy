@@ -7,6 +7,8 @@
 import { useEffect, useState } from 'react';
 
 import { EngineState, soundEngine } from './engine';
+
+export { prepareSounds } from './engine';
 import { MixLayer, recordSession, SoundMode } from './soundStore';
 
 export interface SoundSessionState {

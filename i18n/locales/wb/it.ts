@@ -50,7 +50,9 @@ export const wbIt = {
       "padWarm": "Armonia soffusa (calda)",
       "padDeep": "Armonia soffusa (profonda)",
       "padSoft": "Armonia soffusa (delicata)",
-      "tones": "Toni puri"
+      "tones": "Toni puri",
+      "bowls": "Campane tibetane",
+      "chimes": "Campanelli delicati"
     },
     "binaural": {
       "title": "Tono binaurale",
@@ -68,6 +70,8 @@ export const wbIt = {
       "headphones": "Usa le cuffie: senza, i due toni si mescolano nell'aria e non si crea il battimento.",
       "gotIt": "Ho capito"
     },
+    "styleBowls": "Campane tibetane e ruscello",
+    "styleRainBells": "Pioggia e campanelli delicati",
     "styleMixes": "Mix pronti",
     "tonesNote": "Toni puri a 174 Hz e 528 Hz su un’armonia morbida, come nella musica per meditazione più diffusa. Sono semplicemente toni musicali, uguali in entrambe le orecchie: non ci sono prove che una qualsiasi frequenza guarisca.",
     "honesty": "Questi suoni possono rendere un ambiente più tranquillo o aiutarti a concentrarti. Non curano il mal di testa, i problemi di sonno o altri disturbi.",
