@@ -33,6 +33,10 @@ describe('Daily reflection: checks', () => {
     assert.ok(check({ reflection: 'Քայլելու պատճառով հանգստացար։' }).problems.includes('causal'));
     assert.ok(check({ reflection: 'This looks like depression.' }).problems.includes('clinical'));
     assert.ok(check({ reflection: 'You felt anxious today.' }).problems.includes('feelings'), 'no mood was recorded');
+    // The app's own labels are not feelings (a correct reflection was refused once).
+    const labelled = [...FACTS.slice(0, 1), { id: 'calm.practices', count: 1, minutes: 3, text: 'Calm practices: 1 · about 3 min' }, { id: 'challenges.calm14', challenge: 'calm14', progress: 0, target: 10, text: '14 days of calm: 0 of 10 days' }];
+    assert.deepEqual(check({ reflection: 'You did one calm practice for about 3 minutes and started 14 days of calm.', patterns: [] }, labelled).problems, []);
+    assert.ok(check({ reflection: 'You felt anxious today.', patterns: [] }, labelled).problems.includes('feelings'));
     const withMood = [...FACTS, { id: 'mood.checkins', count: 1, last: 1, feelings: 'anxious' }];
     assert.equal(check({ reflection: 'You checked in once and named feeling anxious.' }, withMood).problems.includes('feelings'), false);
   });

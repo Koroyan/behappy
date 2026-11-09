@@ -46,7 +46,11 @@ export const wbTr = {
       "ocean": "Okyanus",
       "wind": "Rüzgâr",
       "stream": "Dere",
-      "binaural": "Binaural ton"
+      "binaural": "Binaural ton",
+      "padWarm": "Yumuşak armoni (sıcak)",
+      "padDeep": "Yumuşak armoni (derin)",
+      "padSoft": "Yumuşak armoni (nazik)",
+      "tones": "Saf tonlar"
     },
     "binaural": {
       "title": "Binaural ton",
@@ -64,6 +68,8 @@ export const wbTr = {
       "headphones": "Kulaklık kullan: kulaklık olmadan iki ton havada karışır ve vuruş oluşmaz.",
       "gotIt": "Anladım"
     },
+    "styleMixes": "Hazır miksler",
+    "tonesNote": "Popüler meditasyon müziklerinde olduğu gibi, yumuşak bir armoni üzerinde 174 Hz ve 528 Hz saf tonlar. Bunlar yalnızca müzikal tonlardır ve her iki kulakta da aynıdır: herhangi bir frekansın iyileştirici olduğuna dair kanıt yoktur.",
     "honesty": "Bu sesler bulunduğun ortamı daha sakin hissettirebilir veya odaklanmana yardımcı olabilir. Baş ağrısını, uyku sorunlarını ya da başka bir durumu tedavi etmez.",
     "headache": {
       "dim": "Ekranı karart",

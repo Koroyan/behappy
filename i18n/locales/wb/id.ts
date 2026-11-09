@@ -46,7 +46,11 @@ export const wbId = {
       "ocean": "Laut",
       "wind": "Angin",
       "stream": "Aliran sungai",
-      "binaural": "Nada binaural"
+      "binaural": "Nada binaural",
+      "padWarm": "Harmoni lembut (hangat)",
+      "padDeep": "Harmoni lembut (dalam)",
+      "padSoft": "Harmoni lembut (halus)",
+      "tones": "Nada murni"
     },
     "binaural": {
       "title": "Nada binaural",
@@ -64,6 +68,8 @@ export const wbId = {
       "headphones": "Gunakan headphone: tanpanya, kedua nada bercampur di udara dan tidak ada denyut.",
       "gotIt": "Mengerti"
     },
+    "styleMixes": "Campuran siap pakai",
+    "tonesNote": "Nada murni pada 174 Hz dan 528 Hz di atas harmoni lembut, seperti dalam musik meditasi populer. Ini hanyalah nada musik, sama di kedua telinga: tidak ada bukti bahwa frekuensi apa pun dapat menyembuhkan.",
     "honesty": "Suara ini bisa membuat suasana terasa lebih tenang atau membantu kamu fokus. Suara ini tidak mengobati sakit kepala, masalah tidur, atau kondisi lainnya.",
     "headache": {
       "dim": "Redupkan layar",

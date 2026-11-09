@@ -46,7 +46,11 @@ export const wbAz = {
       "ocean": "Okean",
       "wind": "Külək",
       "stream": "Axar su",
-      "binaural": "Binaural ton"
+      "binaural": "Binaural ton",
+      "padWarm": "Yumşaq harmoniya (isti)",
+      "padDeep": "Yumşaq harmoniya (dərin)",
+      "padSoft": "Yumşaq harmoniya (zərif)",
+      "tones": "Saf tonlar"
     },
     "binaural": {
       "title": "Binaural ton",
@@ -64,6 +68,8 @@ export const wbAz = {
       "headphones": "Qulaqlıqdan istifadə edin: onsuz iki ton havada qarışır və ritm yaranmır.",
       "gotIt": "Aydındır"
     },
+    "styleMixes": "Hazır mikslər",
+    "tonesNote": "Populyar meditasiya musiqisində olduğu kimi, yumşaq harmoniya fonunda 174 Hz və 528 Hz tezlikli saf tonlar. Bunlar sadəcə musiqi tonlarıdır və hər iki qulaqda eynidir: hər hansı tezliyin sağaltdığına dair sübut yoxdur.",
     "honesty": "Bu səslər mühiti daha sakit hiss etməyə və ya diqqətinizi toplamağa kömək edə bilər. Baş ağrısını, yuxu problemlərini və ya başqa bir halı müalicə etmir.",
     "headache": {
       "dim": "Ekranı tutqunlaşdır",

@@ -46,7 +46,11 @@ export const wbIt = {
       "ocean": "Oceano",
       "wind": "Vento",
       "stream": "Ruscello",
-      "binaural": "Tono binaurale"
+      "binaural": "Tono binaurale",
+      "padWarm": "Armonia soffusa (calda)",
+      "padDeep": "Armonia soffusa (profonda)",
+      "padSoft": "Armonia soffusa (delicata)",
+      "tones": "Toni puri"
     },
     "binaural": {
       "title": "Tono binaurale",
@@ -64,6 +68,8 @@ export const wbIt = {
       "headphones": "Usa le cuffie: senza, i due toni si mescolano nell'aria e non si crea il battimento.",
       "gotIt": "Ho capito"
     },
+    "styleMixes": "Mix pronti",
+    "tonesNote": "Toni puri a 174 Hz e 528 Hz su un’armonia morbida, come nella musica per meditazione più diffusa. Sono semplicemente toni musicali, uguali in entrambe le orecchie: non ci sono prove che una qualsiasi frequenza guarisca.",
     "honesty": "Questi suoni possono rendere un ambiente più tranquillo o aiutarti a concentrarti. Non curano il mal di testa, i problemi di sonno o altri disturbi.",
     "headache": {
       "dim": "Attenua lo schermo",

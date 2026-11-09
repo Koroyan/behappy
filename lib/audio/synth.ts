@@ -16,7 +16,37 @@ export const SAMPLE_RATE = 24000;
 
 export type NoiseColor = 'white' | 'pink' | 'brown';
 export type NatureScene = 'rain' | 'ocean' | 'wind' | 'stream';
-export type SoundSpec = { kind: 'binaural'; leftHz: number; rightHz: number } | { kind: 'noise'; color: NoiseColor } | { kind: 'nature'; scene: NatureScene };
+export type PadMood = 'warm' | 'deep' | 'soft';
+export type SoundSpec = { kind: 'binaural'; leftHz: number; rightHz: number } | { kind: 'noise'; color: NoiseColor } | { kind: 'nature'; scene: NatureScene } | { kind: 'pad'; mood: PadMood } | { kind: 'tones'; hz: number[] };
+
+/**
+ * A soft, slowly breathing chord to listen to (and to carry a binaural tone, as
+ * relaxing tracks usually do). Every frequency is a multiple of 0.05 Hz, so it
+ * completes whole cycles in its 20 s loop. Pure musical tones: no claim about
+ * any frequency doing anything.
+ */
+export const PADS: Record<PadMood, { hz: number[]; amp: number[] }> = {
+  // A major: A2 E3 A3 C#4 E4
+  warm: { hz: [110, 165, 220, 277.2, 330], amp: [0.1, 0.07, 0.06, 0.035, 0.03] },
+  // E major, lower: E2 B2 E3 G#3 B3
+  deep: { hz: [82.4, 123.5, 164.8, 207.65, 247], amp: [0.11, 0.07, 0.055, 0.03, 0.025] },
+  // Only octaves of 174 and 528 Hz (87, 174, 348 / 132, 264), each with its own
+  // octave: no partial lands near a tone of the 174 + 528 Hz mix, so nothing beats
+  // (an earlier 261 Hz note put 522 Hz next to 528 Hz: a 6 Hz wobble).
+  soft: { hz: [87, 132, 174, 264, 348], amp: [0.09, 0.06, 0.05, 0.035, 0.025] },
+};
+
+/**
+ * Pure tones like those in popular meditation tracks (e.g. 528 Hz + 174 Hz):
+ * the same in both ears (not binaural), each swelling slowly. Musical tones
+ * only: the app makes no claim that any frequency heals (docs/ETHICS.md).
+ */
+export const TONE_RANGE = { min: 40, max: 1000 };
+export function tones(hz: number[]): SoundSpec {
+  const list = hz.map((f) => Math.round(f * 20) / 20);
+  if (!list.length || list.length > 4 || list.some((f) => !(f >= TONE_RANGE.min && f <= TONE_RANGE.max))) throw new RangeError('tones: 1–4 frequencies, 40–1000 Hz');
+  return { kind: 'tones', hz: list };
+}
 
 export const BEAT_BANDS = {
   delta: { min: 0.5, max: 4, preset: 2 },
@@ -38,7 +68,7 @@ export function binaural(carrierHz: number, beatHz: number): SoundSpec {
   return { kind: 'binaural', leftHz: c, rightHz: Math.round((c + b) * 10) / 10 };
 }
 
-export const specKey = (s: SoundSpec) => (s.kind === 'binaural' ? `bin-${s.leftHz}-${s.rightHz}` : s.kind === 'noise' ? `noise-${s.color}` : `nature-${s.scene}`);
+export const specKey = (s: SoundSpec) => (s.kind === 'binaural' ? `bin-${s.leftHz}-${s.rightHz}` : s.kind === 'noise' ? `noise-${s.color}` : s.kind === 'pad' ? `pad-${s.mood}-v${s.mood === 'soft' ? 2 : 1}` : s.kind === 'tones' ? `tones-${s.hz.join('-')}-v1` : `nature-${s.scene}-v2`);
 
 /** Loop length: tones need whole cycles of both frequencies (0.1 Hz resolution → 10 s). */
 export function loopSeconds(s: SoundSpec): number {
@@ -46,6 +76,7 @@ export function loopSeconds(s: SoundSpec): number {
     for (const L of [10, 20, 30, 40, 50, 60]) if (isWhole(s.leftHz * L) && isWhole(s.rightHz * L)) return L;
     return 10;
   }
+  if (s.kind === 'pad' || s.kind === 'tones') return 20;
   if (s.kind === 'nature' && s.scene === 'ocean') return 24;
   return 12;
 }
@@ -73,7 +104,8 @@ export function render(s: SoundSpec, seconds = loopSeconds(s), sampleRate = SAMP
   if (s.kind === 'binaural') {
     const left = new Float32Array(n);
     const right = new Float32Array(n);
-    const amp = 0.3;
+    // Quiet and pure: meant to sit under a pad, music or nature sounds.
+    const amp = 0.22;
     for (let i = 0; i < n; i += 1) {
       const t = i / sampleRate;
       left[i] = amp * Math.sin(2 * Math.PI * s.leftHz * t);
@@ -81,6 +113,8 @@ export function render(s: SoundSpec, seconds = loopSeconds(s), sampleRate = SAMP
     }
     return { sampleRate, left, right };
   }
+  if (s.kind === 'pad') return renderPad(s.mood, n, sampleRate, seconds);
+  if (s.kind === 'tones') return renderTones(s.hz, n, sampleRate, seconds);
   const fade = Math.round(0.5 * sampleRate);
   const total = n + fade;
   const L = channel(s, total, sampleRate, 1);
@@ -129,21 +163,74 @@ function noise(color: NoiseColor, n: number, rand: () => number): Float32Array {
   return out;
 }
 
-function channel(s: Exclude<SoundSpec, { kind: 'binaural' }>, n: number, sr: number, seed: number): Float32Array {
+/** The pad: each voice swells slowly on its own (whole cycles per loop); the ears differ a little in timing for width. */
+function renderPad(mood: PadMood, n: number, sr: number, seconds: number): Pcm {
+  const { hz, amp } = PADS[mood];
+  const left = new Float32Array(n);
+  const right = new Float32Array(n);
+  hz.forEach((f, k) => {
+    const swells = 1 + (k % 3); // 1 to 3 slow swells per 20 s loop
+    for (let i = 0; i < n; i += 1) {
+      const t = i / sr;
+      const tone = Math.sin(2 * Math.PI * f * t) + 0.18 * Math.sin(2 * Math.PI * 2 * f * t);
+      const envL = 0.55 + 0.45 * Math.sin((2 * Math.PI * swells * t) / seconds + k * 1.3);
+      const envR = 0.55 + 0.45 * Math.sin((2 * Math.PI * swells * t) / seconds + k * 1.3 + 0.9);
+      left[i] += amp[k] * envL * tone;
+      right[i] += amp[k] * envR * tone;
+    }
+  });
+  return { sampleRate: sr, left, right };
+}
+
+/** Pure tones, the lowest a little louder; each swells on its own, whole cycles per loop. */
+function renderTones(hz: number[], n: number, sr: number, seconds: number): Pcm {
+  const left = new Float32Array(n);
+  const right = new Float32Array(n);
+  const sorted = [...hz].sort((a, b) => a - b);
+  sorted.forEach((f, k) => {
+    const amp = k === 0 ? 0.11 : 0.06;
+    const swells = 1 + k;
+    for (let i = 0; i < n; i += 1) {
+      const t = i / sr;
+      const tone = Math.sin(2 * Math.PI * f * t);
+      left[i] += amp * (0.65 + 0.35 * Math.sin((2 * Math.PI * swells * t) / seconds + k)) * tone;
+      right[i] += amp * (0.65 + 0.35 * Math.sin((2 * Math.PI * swells * t) / seconds + k + 0.7)) * tone;
+    }
+  });
+  return { sampleRate: sr, left, right };
+}
+
+/** One-pole low-pass (a: 0..1, smaller = darker). */
+function lowpass(x: Float32Array, a: number): Float32Array {
+  const out = new Float32Array(x.length);
+  let y = 0;
+  for (let i = 0; i < x.length; i += 1) {
+    y += a * (x[i] - y);
+    out[i] = y;
+  }
+  return out;
+}
+
+function channel(s: Exclude<SoundSpec, { kind: 'binaural' } | { kind: 'pad' } | { kind: 'tones' }>, n: number, sr: number, seed: number): Float32Array {
   const rand = rng(seed * 7919 + (s.kind === 'noise' ? s.color.length : s.scene.length * 31));
   if (s.kind === 'noise') return noise(s.color, n, rand);
   const period = n / sr;
   switch (s.scene) {
     case 'ocean': {
-      // Brown noise swelling like waves: three per 24 s loop, a little offset per ear.
-      const base = noise('brown', n, rand);
+      // Waves: a deep brown bed plus a pink "wash" that brightens at each crest
+      // and softens as the water draws back; three waves per 24 s loop.
+      const deep = noise('brown', n, rand);
+      const wash = noise('pink', n, rand);
+      const out = new Float32Array(n);
       const waves = 3;
+      let y = 0;
       for (let i = 0; i < n; i += 1) {
         const phase = (i / sr / period) * waves * 2 * Math.PI + seed * 0.6;
-        const env = 0.25 + 0.75 * Math.pow(0.5 - 0.5 * Math.cos(phase), 1.6);
-        base[i] *= env;
+        const env = Math.pow(0.5 - 0.5 * Math.cos(phase), 1.6);
+        y += (0.02 + 0.18 * env) * (wash[i] - y);
+        out[i] = deep[i] * (0.35 + 0.5 * env) + y * 1.6 * env;
       }
-      return base;
+      return out;
     }
     case 'wind': {
       // Pink noise through a slowly moving low-pass: gusts.
@@ -159,31 +246,31 @@ function channel(s: Exclude<SoundSpec, { kind: 'binaural' }>, n: number, sr: num
       return out;
     }
     case 'stream': {
-      // Brighter noise with a fast, uneven flutter.
-      const src = noise('white', n, rand);
+      // Running water: pink noise, gently filtered, with a soft uneven babble.
+      const src = lowpass(noise('pink', n, rand), 0.45);
       const out = new Float32Array(n);
-      let lp = 0;
-      let hp = 0;
       for (let i = 0; i < n; i += 1) {
-        lp += 0.35 * (src[i] - lp);
-        hp = lp - hp * 0.6;
-        const flutter = 0.6 + 0.4 * Math.sin((i / n) * 2 * Math.PI * 37 + seed) * Math.sin((i / n) * 2 * Math.PI * 11);
-        out[i] = hp * 0.8 * flutter;
+        const babble = 0.75 + 0.25 * Math.sin((i / n) * 2 * Math.PI * 37 + seed) * Math.sin((i / n) * 2 * Math.PI * 11);
+        out[i] = src[i] * 1.8 * babble;
       }
       return out;
     }
     case 'rain':
     default: {
-      // Soft pink bed plus scattered drops (short decaying bursts).
-      const out = noise('pink', n, rand);
-      for (let i = 0; i < n; i += 1) out[i] *= 0.6;
-      const drops = Math.round(period * 18);
-      for (let d = 0; d < drops; d += 1) {
+      // Steady rain: a muffled pink bed (no hiss) plus many small, soft drops:
+      // short bursts smoothed by a low-pass so they patter instead of crackle.
+      const bed = lowpass(noise('pink', n, rand), 0.35);
+      const drops = new Float32Array(n);
+      const count = Math.round(period * 40);
+      for (let d = 0; d < count; d += 1) {
         const start = Math.floor(((rand() + 1) / 2) * (n - sr * 0.05));
-        const len = Math.floor(sr * (0.01 + 0.02 * ((rand() + 1) / 2)));
-        const amp = 0.05 + 0.08 * ((rand() + 1) / 2);
-        for (let k = 0; k < len; k += 1) out[start + k] += rand() * amp * Math.exp((-6 * k) / len);
+        const len = Math.floor(sr * (0.006 + 0.012 * ((rand() + 1) / 2)));
+        const amp = 0.02 + 0.04 * ((rand() + 1) / 2);
+        for (let k = 0; k < len; k += 1) drops[start + k] += rand() * amp * Math.exp((-5 * k) / len);
       }
+      const soft = lowpass(drops, 0.5);
+      const out = new Float32Array(n);
+      for (let i = 0; i < n; i += 1) out[i] = bed[i] * 0.9 + soft[i] * 1.4;
       return out;
     }
   }

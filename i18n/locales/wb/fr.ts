@@ -46,7 +46,11 @@ export const wbFr = {
       "ocean": "Océan",
       "wind": "Vent",
       "stream": "Ruisseau",
-      "binaural": "Son binaural"
+      "binaural": "Son binaural",
+      "padWarm": "Harmonie douce (chaleureuse)",
+      "padDeep": "Harmonie douce (profonde)",
+      "padSoft": "Harmonie douce (délicate)",
+      "tones": "Sons purs"
     },
     "binaural": {
       "title": "Son binaural",
@@ -64,6 +68,8 @@ export const wbFr = {
       "headphones": "Utilisez un casque : sans lui, les deux sons se mélangent dans l’air et il n’y a pas de battement.",
       "gotIt": "Compris"
     },
+    "styleMixes": "Mix prêts à l’emploi",
+    "tonesNote": "Des sons purs à 174 Hz et 528 Hz sur une harmonie douce, comme dans les musiques de méditation populaires. Ce sont simplement des sons musicaux, identiques dans les deux oreilles : rien ne prouve qu’une quelconque fréquence ait un pouvoir de guérison.",
     "honesty": "Ces sons peuvent rendre un lieu plus calme ou vous aider à vous concentrer. Ils ne traitent ni les maux de tête, ni les troubles du sommeil, ni aucun autre problème.",
     "headache": {
       "dim": "Tamiser l’écran",

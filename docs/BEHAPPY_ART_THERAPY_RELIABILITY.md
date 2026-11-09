@@ -138,6 +138,28 @@ sentences ("приятное напряжение", "центр стал ярч�
   `json_object` output), so a request never depends on the client's text.
 - Upstream 4xx are logged with OpenAI's error type, code and parameter only.
 
+### 6. A changed drawing called "unchanged" (9 November, prompt set 3.3.0)
+
+A person uploaded a second drawing with thin new strokes; the app said it had
+not changed. Causes and fixes:
+
+- The image comparison measured coarse ink cells only, so thin lines on an
+  untouched frame fell under its thresholds. `server/art/imageCompare.mjs` now
+  also looks for fine marks (log-domain residual minus a 7×7 local median):
+  the real pair is reported `different`, identical and re-encoded copies stay
+  `likely_same`.
+- The model saw only the newest image. A changed drawing is now sent together
+  with the first one, labelled "first — before" and "changed — after"
+  (`services/artTherapyService.ts`, `server/art/turn.mjs`), so it can compare
+  for itself.
+- `art.md`: when the comparison says it changed, the reply starts by naming one
+  concrete difference (what and where, neutrally), then asks what the change
+  means; a slower pace (look first, then feelings, then what they would change;
+  no early close). Phases 0→1→2, the 43 sessions, the questions and completion
+  are unchanged.
+- Live evaluation (`node scripts/qa/art-model-eval.mjs`, strokes scenario included): changes
+  named, nothing invented, identical drawings answered honestly.
+
 ## Privacy of AI sessions
 
 | Setting | What OpenAI keeps | Trade-off |

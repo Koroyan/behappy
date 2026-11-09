@@ -70,7 +70,7 @@ export async function saveFavorite(name: string, mode: SoundMode, layers: MixLay
 
 export const removeFavorite = (id: string) => update((d) => ({ ...d, favorites: d.favorites.filter((f) => f.id !== id) }));
 
-const layerKey = (l: MixLayer) => (l.spec.kind === 'binaural' ? `binaural-${l.spec.leftHz}/${l.spec.rightHz}` : l.spec.kind === 'noise' ? `noise-${l.spec.color}` : `nature-${l.spec.scene}`);
+const layerKey = (l: MixLayer) => (l.spec.kind === 'binaural' ? `binaural-${l.spec.leftHz}/${l.spec.rightHz}` : l.spec.kind === 'noise' ? `noise-${l.spec.color}` : l.spec.kind === 'pad' ? `pad-${l.spec.mood}` : l.spec.kind === 'tones' ? `tones-${l.spec.hz.join('+')}` : `nature-${l.spec.scene}`);
 
 /**
  * A finished listening session (stopped by the person or by its timer).

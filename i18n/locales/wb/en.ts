@@ -36,7 +36,7 @@ export const wbEn = {
     louder: 'Louder',
     quieter: 'Quieter',
     level: 'Level {n} of 10',
-    names: { pink: 'Pink noise', brown: 'Brown noise', white: 'White noise', rain: 'Rain', ocean: 'Ocean', wind: 'Wind', stream: 'Stream', binaural: 'Binaural tone' },
+    names: { pink: 'Pink noise', brown: 'Brown noise', white: 'White noise', rain: 'Rain', ocean: 'Ocean', wind: 'Wind', stream: 'Stream', binaural: 'Binaural tone', padWarm: 'Soft harmony (warm)', padSoft: 'Soft harmony (gentle)', tones: 'Pure tones', padDeep: 'Soft harmony (deep)' },
     binaural: {
       title: 'Binaural tone',
       explain: 'Two pure tones, one in each ear. With headphones the small difference between them is heard as a slow beat. That is all it is: not a treatment.',
@@ -48,6 +48,8 @@ export const wbEn = {
       headphones: 'Use headphones: without them both tones mix in the air and there is no beat.',
       gotIt: 'Understood',
     },
+    styleMixes: 'Ready mixes',
+    tonesNote: 'Pure tones at 174 Hz and 528 Hz over a soft harmony, as in popular meditation music. They are simply musical tones, the same in both ears: there is no evidence that any frequency heals.',
     honesty: 'These sounds can make a space feel calmer or help you focus. They don’t treat headaches, sleep problems or anything else.',
     headache: {
       dim: 'Dim the screen',

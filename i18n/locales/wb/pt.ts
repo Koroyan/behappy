@@ -46,7 +46,11 @@ export const wbPt = {
       "ocean": "Oceano",
       "wind": "Vento",
       "stream": "Riacho",
-      "binaural": "Tom binaural"
+      "binaural": "Tom binaural",
+      "padWarm": "Harmonia suave (quente)",
+      "padDeep": "Harmonia suave (profunda)",
+      "padSoft": "Harmonia suave (delicada)",
+      "tones": "Tons puros"
     },
     "binaural": {
       "title": "Tom binaural",
@@ -64,6 +68,8 @@ export const wbPt = {
       "headphones": "Usa auscultadores: sem eles, os dois tons misturam-se no ar e não há pulsação.",
       "gotIt": "Entendido"
     },
+    "styleMixes": "Misturas prontas",
+    "tonesNote": "Tons puros a 174 Hz e 528 Hz sobre uma harmonia suave, como na música de meditação popular. São apenas tons musicais, iguais nos dois ouvidos: não há provas de que qualquer frequência cure.",
     "honesty": "Estes sons podem tornar um espaço mais tranquilo ou ajudar na concentração. Não tratam dores de cabeça, problemas de sono nem outras condições.",
     "headache": {
       "dim": "Escurecer o ecrã",

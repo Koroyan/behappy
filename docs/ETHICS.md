@@ -33,7 +33,7 @@ The pre-2.0 version of this document described hidden "patient" risk analysis sh
 
 - No fabricated numbers: insights only show what the person recorded. No predictions about someone's mental health, no "wellness scores".
 - No streaks, guilt, loss-framing or nagging. Missing a day is not a failure. My Steps shows gentle consistency ("5 of 7 planned"), skipped days are neutral, badges are permanent and never compared. The only exception: the owner may switch on `features.classicStreak` (owner-only, off by default), and even then a person sees a streak count only if they opt in; skipped days don't break it.
-- Sounds make no health claims: binaural tones are described as two tones and a perceived beat, nothing more — no "entrainment", no 432/528 Hz healing, no cures or guaranteed sleep.
+- Sounds make no health claims: binaural tones are described as two tones and a perceived beat, nothing more — no "entrainment", no 432/528 Hz healing, no cures or guaranteed sleep. The "528 + 174 Hz" ready mix exists because people like that style of music; the app calls them musical tones and says plainly that there is no evidence any frequency heals.
 - Money: one exact price in GEL. No fake "regular" prices, countdowns or scarcity. Passes never renew by themselves. Limits are shown before buying and exist to keep costs and pace sustainable, not to pressure upgrades.
 - No control is decorative. If something cannot work yet, it is not shown.
 

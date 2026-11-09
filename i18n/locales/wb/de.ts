@@ -46,7 +46,11 @@ export const wbDe = {
       "ocean": "Meer",
       "wind": "Wind",
       "stream": "Bach",
-      "binaural": "Binauraler Ton"
+      "binaural": "Binauraler Ton",
+      "padWarm": "Sanfte Harmonie (warm)",
+      "padDeep": "Sanfte Harmonie (tief)",
+      "padSoft": "Sanfte Harmonie (zart)",
+      "tones": "Reine Töne"
     },
     "binaural": {
       "title": "Binauraler Ton",
@@ -64,6 +68,8 @@ export const wbDe = {
       "headphones": "Nutze Kopfhörer: Ohne sie mischen sich beide Töne in der Luft, und die binaurale Schwebung entsteht nicht.",
       "gotIt": "Verstanden"
     },
+    "styleMixes": "Fertige Mixe",
+    "tonesNote": "Reine Töne mit 174 Hz und 528 Hz über einer sanften Harmonie, wie in beliebter Meditationsmusik. Es sind einfach musikalische Töne, die auf beiden Ohren gleich sind: Es gibt keine Belege dafür, dass irgendeine Frequenz heilt.",
     "honesty": "Diese Klänge können eine ruhigere Atmosphäre schaffen oder dir helfen, dich zu konzentrieren. Sie behandeln keine Kopfschmerzen, Schlafprobleme oder andere Beschwerden.",
     "headache": {
       "dim": "Bildschirm abdunkeln",

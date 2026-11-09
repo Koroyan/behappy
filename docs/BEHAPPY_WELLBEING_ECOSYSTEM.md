@@ -73,7 +73,18 @@ it is skipped there); the web plays the same samples as Web Audio buffers.
   Alpha 10, Beta 15 Hz. The app says headphones are needed and describes it as
   two tones and a heard beat — nothing more.
 - **Noise:** white, pink (−3 dB/oct), brown (−6 dB/oct). **Nature-like:** rain,
-  ocean, wind, stream (synthesised; no recordings, nothing to license).
+  ocean, wind, stream (synthesised; no recordings, nothing to license), softened
+  (low-passed, slower swells) after a listening test found them harsh.
+- **Soft harmonies:** slowly breathing chords — warm (A major from 110 Hz), deep
+  (E from 82.4 Hz) and soft (only octaves of 174 and 528 Hz: 87, 132, 174, 264,
+  348 Hz). Sleep and Relax presets use one under nature and noise.
+- **Pure tones and the "528 + 174 Hz" ready mix** (Relax and Mix → Ready mixes),
+  in the style of popular meditation tracks: 174 Hz and 528 Hz sine tones, the
+  same in both ears (not binaural), each swelling slowly, over the soft harmony.
+  The soft harmony has no partial near either tone, so nothing beats (an earlier
+  261 Hz note put 522 Hz beside 528 Hz: a 6 Hz wobble — now tested). Under the
+  mix the app says they are simply musical tones and that there is no evidence
+  any frequency heals.
 - **Safety:** layer gains are scaled so their sum never exceeds full scale;
   master capped at 0.8; Headache comfort starts in silence with a dim screen and
   caps sound at 0.15.
@@ -157,9 +168,9 @@ removes it, the sound files and the in-memory event cache.
 
 | Check | Result |
 |---|---|
-| `npm test` | all pass (incl. reflection 7, AI cost/budget, streamed tokens) |
-| `npm run test:unit` | all pass (events, Steps across DST, badges, challenges, memory, recap, synth 6, planner incl. Step/reflection/sleep reminders) |
-| `npm run qa:wellbeing` (Chrome) | 13/13: Today, Tools, Steps auto-completion, undo/skip, badges, Calm now, Sound Lab measured 200/210 Hz, Sleep, reflection (live AI), memory preview/switches, Insights, Arabic dark RTL, no page errors |
+| `npm test` | 183/183 (incl. reflection 7, AI cost/budget, streamed tokens) |
+| `npm run test:unit` | 57/57 (events, Steps across DST, badges, challenges, memory, recap, synth 10 incl. 174 + 528 Hz tones and no beating, planner incl. Step/reflection/sleep reminders) |
+| `npm run qa:wellbeing` (Chrome) | 14/14: Today, Tools, Steps auto-completion, undo/skip, badges, Calm now, Sound Lab measured 200/210 Hz, the 528 + 174 Hz mix measured 174 + 528 Hz in both ears, Sleep, reflection (live AI, checked), memory preview/switches, Insights, Arabic dark RTL, no page errors |
 | Android (Expo Go 58, emulator) | Steps (journal after save, breathing after finishing), reminders scheduled at the right local times, badges, reflection in Georgian (live), memory with Anulia (live), revocation |
 
 Not tested: iOS (no Mac here), native store builds, audio interruptions by a

@@ -59,7 +59,11 @@ export function verifyReflection(draft, facts, { day } = {}) {
   if (texts.some((t) => clinicalClaims(t).length)) problems.push('clinical');
   if (CAUSAL.some((re) => re.test(all))) problems.push('causal');
   const moodRecorded = facts.some((f) => String(f.id).startsWith('mood.'));
-  if (!moodRecorded && extractFacts(all).feelings.length) problems.push('feelings');
+  // Words the facts themselves use are labels, not feelings ("calm practices",
+  // "14 days of calm"): only feelings beyond them count.
+  const labels = new Set(extractFacts(facts.map((f) => f.text || '').join('. ')).feelings.map((f) => String(f.term).toLowerCase()));
+  const named = extractFacts(all).feelings.filter((f) => !labels.has(String(f.term).toLowerCase()));
+  if (!moodRecorded && named.length) problems.push('feelings');
   return { ok: problems.length === 0, problems: [...new Set(problems)] };
 }
 

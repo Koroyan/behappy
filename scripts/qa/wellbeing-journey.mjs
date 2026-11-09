@@ -212,6 +212,49 @@ await step('Sound Lab: binaural 200/210 Hz measured in the playing buffers; band
   return `left ${m.left} Hz, right ${m.right} Hz, ${m.layers} layers, context ${m.state}`;
 });
 
+await step('Sound Lab: ready mix 528 + 174 Hz plays both tones, same in both ears, with the honest note', async () => {
+  await P.go('/sound?mode=relax');
+  await P.click('sound-style-tones528-174', 30000);
+  await P.text('there is no evidence that any frequency heals');
+  await P.click('sound-play');
+  await P.wait('sound-now', 30000);
+  await P.page.waitForTimeout(2000);
+  const m = await P.page.evaluate(() => {
+    const power = (x, sr, f) => {
+      const c = 2 * Math.cos((2 * Math.PI * f) / sr);
+      let s1 = 0;
+      let s2 = 0;
+      for (let i = 0; i < sr * 2; i += 1) {
+        const s0 = x[i] + c * s1 - s2;
+        s2 = s1;
+        s1 = s0;
+      }
+      return s1 * s1 + s2 * s2 - c * s1 * s2;
+    };
+    const peak = (x, sr, lo, hi) => {
+      let best = 0;
+      let bf = 0;
+      for (let f = lo; f <= hi; f += 0.5) {
+        const p = power(x, sr, f);
+        if (p > best) [best, bf] = [p, f];
+      }
+      return bf;
+    };
+    // The tones layer: a 20 s buffer that is mostly 528 Hz with almost no 87 Hz
+    // (the soft pad underneath is mostly 87 Hz).
+    const tones = window.__buffers.find((b) => b.length === b.sampleRate * 20 && power(b.getChannelData(0), b.sampleRate, 528) > 10 * power(b.getChannelData(0), b.sampleRate, 87));
+    if (!tones) return { missing: true, layers: window.__buffers.length };
+    const sr = tones.sampleRate;
+    const [l, r] = [tones.getChannelData(0), tones.getChannelData(1)];
+    return { low: [peak(l, sr, 160, 190), peak(r, sr, 160, 190)], high: [peak(l, sr, 510, 545), peak(r, sr, 510, 545)] };
+  });
+  if (m.missing) throw new Error(`no tones buffer (${m.layers} buffers)`);
+  if (m.low.join() !== '174,174' || m.high.join() !== '528,528') throw new Error(`measured ${m.low} / ${m.high} Hz`);
+  await P.shot('5b-sound-tones');
+  await P.click('sound-stop');
+  return `left and right: ${m.low[0]} Hz + ${m.high[0]} Hz`;
+});
+
 await step('Sleep companion: morning self-report saved', async () => {
   await P.go('/sleep?morning=1');
   await P.click('sleep-quality-4');

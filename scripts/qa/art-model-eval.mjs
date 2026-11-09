@@ -104,6 +104,8 @@ async function runScenario(t, artTurns, accountId, name, sc, runId) {
     const HERE = { [RU]: turnSpec.v2 ? 'Вот изменённый рисунок на бумаге.' : 'Вот мой рисунок цветными карандашами на бумаге.', [KA]: 'აი ჩემი ნახატი ფერადი ფანქრებით ქაღალდზე.', [EN]: 'Here is my drawing with coloured pencils on paper.' };
     const text = turnSpec.text || (turnSpec.image ? HERE[sc.lang] : '');
     const content = [{ type: 'input_text', text: text + contextBlock(sc.lang, phase, turnSpec.closes) }];
+    // As the app does: a changed drawing goes with the first one, labelled, side by side.
+    if (turnSpec.image && turnSpec.v2) content.push({ type: 'input_text', text: '[First drawing — before the change:]' }, { type: 'input_image', image_url: sc.turns[0].image, detail: 'high' }, { type: 'input_text', text: '[Changed drawing — after the change:]' });
     if (turnSpec.image) content.push({ type: 'input_image', image_url: turnSpec.image, detail: 'high' });
     const clean = { input: [{ role: 'user', content }], instructions: SERVER_PROMPTS.art.instructions, ...(prev ? { previous_response_id: prev } : {}) };
     const out = await artTurns.run({ accountId, artSessionId: 1, runIdHeader: runId, clean });

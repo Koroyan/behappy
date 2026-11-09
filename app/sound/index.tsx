@@ -9,7 +9,7 @@ import { Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { AppText, Banner, Button, Card, Chip, Icon, IconButton, ProgressBar, Screen, SectionHeader, Sheet, space, TextField, ToggleRow, useFeedback } from '@/design';
 import { useT } from '@/i18n';
-import { bandOf, binauralLayer, HEADACHE_MAX_VOLUME, layerFor, LIBRARY, nameKey, noiseLayer, PRESETS } from '@/lib/audio/presets';
+import { bandOf, binauralLayer, HEADACHE_MAX_VOLUME, layerFor, LIBRARY, nameKey, noiseLayer, PRESETS, STYLE_MIXES } from '@/lib/audio/presets';
 import { lastFinished, pauseSound, resumeSound, setLayerVolume, setMasterVolume, startSound, stopSound, updateLayers, useSoundSession } from '@/lib/audio/session';
 import { loadSound, MixLayer, removeFavorite, saveFavorite, setSoundPrefs, SOUND_TOPIC, SoundMode } from '@/lib/audio/soundStore';
 import { BEAT_BANDS, BeatBand, binaural, CARRIER } from '@/lib/audio/synth';
@@ -129,6 +129,24 @@ export default function SoundLabScreen() {
         {t(`wb.sound.modeHints.${mode}`)}
       </AppText>
 
+      {mode === 'relax' || mode === 'mix' ? (
+        <View style={{ gap: 6, marginBottom: space[3] }}>
+          <AppText variant="smallStrong" color="textSecondary">
+            {t('wb.sound.styleMixes')}
+          </AppText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {STYLE_MIXES.map((m) => (
+              <Chip key={m.id} label={m.label} icon="musical-notes-outline" selected={shown.some((l) => l.id === 'tones')} onPress={() => change(m.layers())} testID={`sound-style-${m.id}`} />
+            ))}
+          </View>
+          {shown.some((l) => l.id === 'tones') ? (
+            <AppText variant="caption" color="textTertiary">
+              {t('wb.sound.tonesNote')}
+            </AppText>
+          ) : null}
+        </View>
+      ) : null}
+
       {focusDone ? <Banner tone="success" icon="checkmark-circle-outline" body={t('wb.sound.focusDone')} /> : null}
       {mode === 'headache' ? <Banner tone="info" icon="moon-outline" body={t('wb.sound.headache.silenceNote')} /> : null}
 
@@ -178,7 +196,7 @@ export default function SoundLabScreen() {
           {shown.map((l) => (
             <Card key={l.id} padding={16} testID={`sound-layer-${l.id}`}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                <Icon name={l.spec.kind === 'binaural' ? 'headset-outline' : l.spec.kind === 'noise' ? 'radio-outline' : 'rainy-outline'} size={20} color="textSecondary" />
+                <Icon name={l.spec.kind === 'binaural' ? 'headset-outline' : l.spec.kind === 'noise' ? 'radio-outline' : l.spec.kind === 'pad' || l.spec.kind === 'tones' ? 'musical-note-outline' : 'rainy-outline'} size={20} color="textSecondary" />
                 <AppText variant="bodyStrong" style={{ flex: 1 }}>
                   {t(`wb.sound.names.${nameKey(l.spec)}`)}
                 </AppText>
