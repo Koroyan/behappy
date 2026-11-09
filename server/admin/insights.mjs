@@ -340,7 +340,7 @@ export function mountInsights(app, deps) {
   r.get('/ai/prompts', ...can('ai.view'), handle((req) => i.prompts(req.account)));
   // AI switches, budget and prices: the AI lead changes them (with a fresh confirmation), audited like any setting.
   r.put('/ai/settings/:key', ...can('ai.manage', { stepUp: true }), handle((req) => {
-    if (!['ai.features', 'ai.dailyBudgetUsd', 'ai.pricing'].includes(req.params.key)) fail(404, 'unknown_setting');
+    if (!['ai.features', 'ai.dailyBudgetUsd', 'ai.featureBudgetsUsd', 'ai.pricing'].includes(req.params.key)) fail(404, 'unknown_setting');
     return settings.set(req.account, req.params.key, req.body?.value, req.body?.reason);
   }));
   r.get('/security', ...can('security.view'), handle((req) => i.security(req.account)));

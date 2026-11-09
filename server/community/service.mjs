@@ -10,6 +10,7 @@
 import crypto from 'node:crypto';
 
 import { ms, ts } from '../db/index.mjs';
+import { createLimiter } from '../rateLimit.mjs';
 import { notify } from '../notify/notifications.mjs';
 import { isRoomId, REACTIONS, REPORT_REASONS, TOPICS } from './constants.mjs';
 import { analyzeMessage, mentionedPseudonyms, mentionsAnulia, normalizePseudonym, pseudonymProblem } from './text.mjs';
@@ -44,25 +45,6 @@ export function createBus() {
       }
     },
   };
-}
-
-class Window {
-  constructor(limit, windowMs) {
-    this.limit = limit;
-    this.windowMs = windowMs;
-    this.map = new Map();
-  }
-
-  allow(key, now) {
-    const list = (this.map.get(key) || []).filter((t) => now - t < this.windowMs);
-    if (list.length >= this.limit) {
-      this.map.set(key, list);
-      return false;
-    }
-    list.push(now);
-    this.map.set(key, list);
-    return true;
-  }
 }
 
 const newRef = () => `m_${crypto.randomBytes(8).toString('hex')}`;
@@ -145,7 +127,7 @@ export function messageForViewer(row, viewer, reactions) {
     roomId: row.room_id,
     author: {
       kind: row.author_kind,
-      pseudonym: row.author_kind === 'anulia' ? 'Anulia' : formerMember ? null : row.current_pseudonym || row.author_pseudonym,
+      pseudonym: row.author_kind === 'anulia' ? 'Bea' : formerMember ? null : row.current_pseudonym || row.author_pseudonym,
       ref: row.author_kind === 'member' && !formerMember ? row.author_ref : null,
       avatarSeed: row.avatar_seed ?? 0,
       isMe: mine,
@@ -155,7 +137,7 @@ export function messageForViewer(row, viewer, reactions) {
     status: row.status,
     heldReason: row.status === 'held' ? row.flags?.hold || 'review' : null,
     replyTo: row.reply_to_id
-      ? { id: row.reply_to_id, kind: row.reply_kind, pseudonym: row.reply_kind === 'anulia' ? 'Anulia' : row.reply_pseudonym || null, snippet: replyHidden ? '' : snippet(row.reply_body), hidden: replyHidden }
+      ? { id: row.reply_to_id, kind: row.reply_kind, pseudonym: row.reply_kind === 'anulia' ? 'Bea' : row.reply_pseudonym || null, snippet: replyHidden ? '' : snippet(row.reply_body), hidden: replyHidden }
       : null,
     asksAnulia: row.asks_anulia,
     createdAt: ms(row.created_at),
@@ -166,9 +148,10 @@ export function messageForViewer(row, viewer, reactions) {
 }
 
 export function createCommunity({ db, clock = { now: () => Date.now() }, bus = createBus() }) {
-  const burst = new Window(5, 30 * 1000);
-  const hourly = new Window(60, 60 * MINUTE);
-  const reports = new Window(20, 60 * MINUTE);
+  // Shared by every server instance (table rate_counters).
+  const burst = createLimiter(db, { name: 'community-burst', limit: 5, windowMs: 30 * 1000 });
+  const hourly = createLimiter(db, { name: 'community-hourly', limit: 60, windowMs: 60 * MINUTE });
+  const reports = createLimiter(db, { name: 'community-reports', limit: 20, windowMs: 60 * MINUTE });
   let anuliaHandler = null;
 
   const fail = (status, code, extra) => {
@@ -389,7 +372,7 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
         if (existing.rowCount) return { id: existing.rows[0].id, duplicate: true };
       }
       // Limits are checked after the nonce, so a retried send is never refused.
-      if (!burst.allow(account.id, now) || !hourly.allow(account.id, now)) fail(429, 'slow_down');
+      if (!(await burst.allow(account.id, now, t)) || !(await hourly.allow(account.id, now, t))) fail(429, 'slow_down');
       const dup = await t.query("select 1 from community_messages where author_account_id = $1 and room_id = $2 and body = $3 and created_at > $4 and status <> 'deleted'", [account.id, roomId, text, ts(now - 2 * MINUTE)]);
       if (dup.rowCount) fail(409, 'duplicate_message');
 
@@ -562,7 +545,7 @@ export function createCommunity({ db, clock = { now: () => Date.now() }, bus = c
     if (!account?.registered) fail(403, 'registration_required');
     if (!REPORT_REASONS.includes(reason)) fail(400, 'bad_reason');
     const now = clock.now();
-    if (!reports.allow(account.id, now)) fail(429, 'slow_down');
+    if (!(await reports.allow(account.id, now))) fail(429, 'slow_down');
     const note = details ? String(details).slice(0, 1000) : null;
     let target;
     if (messageId) {

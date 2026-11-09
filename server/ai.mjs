@@ -8,21 +8,24 @@
 // conversation.
 
 import express from 'express';
-import { overridePrice, spendOf } from './aiPricing.mjs';
+import { callCostUsd, RESERVE_USD, speechCostUsd, transcribeCostUsd } from './aiPricing.mjs';
 import { createArtTurns } from './art/turn.mjs';
 import { cleanReflectionInput, createReflection } from './reflection/run.mjs';
 import { requireAccount } from './auth.mjs';
 import { entitlementsForAccount } from './entitlements.mjs';
-import { CHAT_PREAMBLE, LEGACY_PROMPT_IDS, SERVER_PROMPTS } from './prompts/index.mjs';
-import { checkAndRecord } from './quota.mjs';
+import { CHAT_PREAMBLE, CHAT_PROMPTS, LEGACY_PROMPT_IDS, SERVER_PROMPTS } from './prompts/index.mjs';
+import { checkAndRecord, releaseReservation, spentUsd } from './quota.mjs';
+import { createLimiter } from './rateLimit.mjs';
 
-const DEFAULT_MODELS = { anulia: 'gpt-5.4-mini', art: 'gpt-6.1-sol', cards: 'gpt-5.4-mini' };
-const CHAT_MODELS = new Set(['gpt-4o', 'gpt-4o-mini', 'gpt-4.1-mini', 'gpt-5.4-mini']);
+// The server decides which model each feature uses (config.ai.models overrides);
+// a model a client names is ignored.
+const DEFAULT_MODELS = { anulia: 'gpt-5.4-mini', art: 'gpt-6.1-sol', cards: 'gpt-5.4-mini', journal: 'gpt-4.1-mini', summary: 'gpt-5.4-mini', motivation: 'gpt-4.1-mini' };
 // Reasoning models: the server sets their output budget and effort (the client can't).
-const REASONING_CHAT_MODELS = new Set(['gpt-5.4-mini']);
+const REASONING_CHAT_MODELS = new Set(['gpt-5.4-mini', 'gpt-5.4', 'gpt-6.1-sol', 'gpt-6.1-terra']);
 // `prompt` is still accepted from app builds before 3.0, then replaced (see below).
 const RESPONSES_FIELDS = new Set(['input', 'prompt', 'model', 'max_output_tokens', 'stream', 'store', 'previous_response_id', 'text', 'temperature']);
-const CHAT_FIELDS = new Set(['model', 'messages', 'max_tokens', 'temperature', 'response_format']);
+// `model` is still accepted from older app builds and ignored; `language` names the reply language.
+const CHAT_FIELDS = new Set(['model', 'messages', 'max_tokens', 'temperature', 'response_format', 'language']);
 const VOICES = new Set(['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar']);
 const FEATURES = new Set(['anulia', 'art', 'cards', 'journal', 'summary', 'motivation', 'transcribe', 'speech', 'reflection']);
 
@@ -30,25 +33,6 @@ const MAX_OUTPUT_TOKENS = 2048;
 const MAX_CHAT_TOKENS = 2000;
 const MAX_TTS_CHARS = 2000;
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
-
-class SlidingWindow {
-  constructor(limit, windowMs) {
-    this.limit = limit;
-    this.windowMs = windowMs;
-    this.hits = new Map();
-  }
-
-  allow(key, now = Date.now()) {
-    const list = (this.hits.get(key) || []).filter((t) => now - t < this.windowMs);
-    if (list.length >= this.limit) {
-      this.hits.set(key, list);
-      return false;
-    }
-    list.push(now);
-    this.hits.set(key, list);
-    return true;
-  }
-}
 
 const bad = (res, status, error, message) => res.status(status).json({ error, message });
 
@@ -63,10 +47,25 @@ export function isConversationTurn(item) {
   return Array.isArray(item.content) && item.content.every((p) => p && typeof p === 'object' && PART_TYPES.has(p.type));
 }
 
-/** Chat-completions messages from clients: user/assistant/system text only (the server's preamble is prepended). */
-function isChatMessage(m) {
-  return m && typeof m === 'object' && ['system', 'user', 'assistant'].includes(m.role) && (typeof m.content === 'string' || Array.isArray(m.content));
+/**
+ * Chat-completions messages from clients: user and assistant turns only. A
+ * client's `system` messages (older app builds sent their own instructions)
+ * are dropped — the server's instructions replace them; any other role
+ * (`developer`, `tool`, ...) refuses the request.
+ */
+export function cleanChatMessages(messages) {
+  const out = [];
+  for (const m of messages) {
+    if (!m || typeof m !== 'object' || !(typeof m.content === 'string' || Array.isArray(m.content))) return null;
+    if (m.role === 'system') continue;
+    if (m.role !== 'user' && m.role !== 'assistant') return null;
+    if (Array.isArray(m.content) && !m.content.every((p) => p && typeof p === 'object' && ['text', 'image_url'].includes(p.type))) return null;
+    out.push({ role: m.role, content: m.content });
+  }
+  return out.length ? out : null;
 }
+
+const LANGUAGE = /^[A-Za-z][A-Za-z ()-]{1,38}$/;
 
 function readContext(req) {
   return {
@@ -76,12 +75,13 @@ function readContext(req) {
   };
 }
 
-/** Token counts reported by OpenAI (Responses or Chat Completions shape). */
+/** Token counts reported by OpenAI (Responses or Chat Completions shape), with cached input. */
 export function readUsage(usage) {
   if (!usage || typeof usage !== 'object') return null;
   const input = Number(usage.input_tokens ?? usage.prompt_tokens ?? 0) || 0;
   const output = Number(usage.output_tokens ?? usage.completion_tokens ?? 0) || 0;
-  return input || output ? { input, output } : null;
+  const cached = Number(usage.input_tokens_details?.cached_tokens ?? usage.prompt_tokens_details?.cached_tokens ?? 0) || 0;
+  return input || output ? { input, output, cached: Math.min(cached, input) } : null;
 }
 
 /**
@@ -127,16 +127,25 @@ export function streamUsage() {
   };
 }
 
-/** Records token counts, outcome and latency only (never content) for the admin AI report. */
-export async function recordAiUsage(db, { accountId, feature, model, usage, latencyMs = null, status = 'ok', errorCode = null }) {
-  const u = readUsage(usage) || { input: 0, output: 0 };
+/**
+ * Records token counts, the cost in USD, outcome and latency (never content)
+ * for the admin AI report, the allowances and the budgets. `costUsd` replaces
+ * the token-based cost where tokens aren't reported (speech, transcription) or
+ * a call failed after the provider may already have billed it (a timeout).
+ * `reservationId` releases the request's reservation in the same step.
+ */
+export async function recordAiUsage(db, { accountId, feature, model, usage, latencyMs = null, status = 'ok', errorCode = null, costUsd = null, reservationId = null }) {
+  const u = readUsage(usage) || { input: 0, output: 0, cached: 0 };
+  const cost = costUsd !== null ? costUsd : callCostUsd({ model, input: u.input, output: u.output, cached: u.cached });
   try {
-    await db.query('insert into ai_usage (account_id, feature, model, input_tokens, output_tokens, status, latency_ms, error_code) values ($1, $2, $3, $4, $5, $6, $7, $8)', [
+    await db.query('insert into ai_usage (account_id, feature, model, input_tokens, output_tokens, cached_tokens, cost_usd, status, latency_ms, error_code) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [
       accountId || null,
       feature,
       model,
       u.input,
       u.output,
+      u.cached || 0,
+      Math.round(cost * 1e6) / 1e6,
       status,
       latencyMs === null ? null : Math.round(latencyMs),
       errorCode,
@@ -144,6 +153,7 @@ export async function recordAiUsage(db, { accountId, feature, model, usage, late
   } catch {
     // Cost reporting must never break a reply.
   }
+  if (reservationId) await releaseReservation(db, reservationId);
 }
 
 // Which staff switch (settings ai.features) covers each request feature.
@@ -154,16 +164,21 @@ const SWITCH_FOR = { anulia: 'anulia', summary: 'anulia', motivation: 'anulia', 
  * daily budget, answers 503 before anything reaches the AI provider. Safety
  * resources never depend on AI.
  */
+/** Today's AI spend in USD (UTC day), in total and per feature, from recorded costs (reservations included). */
+export async function spendToday(db, now = Date.now()) {
+  const start = new Date(new Date(now).toISOString().slice(0, 10) + 'T00:00:00Z');
+  const s = await spentUsd(db, "created_at >= $1 and status in ('ok', 'error', 'reserved')", [start]);
+  return { total: s.total, byFeature: s.byFeature };
+}
+
 export function createAiControls({ db, settings, clock = { now: () => Date.now() } }) {
-  let cache = { at: 0, usd: 0 };
-  async function spentTodayUsd() {
+  let cache = { at: 0, spend: { total: 0, byFeature: {} } };
+  async function spent() {
     const now = clock.now();
-    if (now - cache.at < 60 * 1000) return cache.usd;
-    const override = overridePrice(await settings.get('ai.pricing'));
-    const start = new Date(new Date(now).toISOString().slice(0, 10) + 'T00:00:00Z');
-    const r = await db.query('select model, coalesce(sum(input_tokens), 0)::bigint as input, coalesce(sum(output_tokens), 0)::bigint as output from ai_usage where created_at >= $1 group by model', [start]);
-    cache = { at: now, usd: spendOf(r.rows, override) };
-    return cache.usd;
+    // Short cache: budgets are checked on every request across instances.
+    if (now - cache.at < 15 * 1000) return cache.spend;
+    cache = { at: now, spend: await spendToday(db, now) };
+    return cache.spend;
   }
   /** null when allowed, otherwise the refusal code. */
   return async function check(feature) {
@@ -171,20 +186,27 @@ export function createAiControls({ db, settings, clock = { now: () => Date.now()
     const switches = await settings.get('ai.features');
     const key = SWITCH_FOR[feature];
     if (switches && key && switches[key] === false) return 'ai_paused';
-    const budget = await settings.get('ai.dailyBudgetUsd');
-    if (budget && (await spentTodayUsd()) >= budget) return 'ai_budget_reached';
+    const budget = Number(await settings.get('ai.dailyBudgetUsd')) || 0;
+    const featureBudgets = (await settings.get('ai.featureBudgetsUsd')) || {};
+    if (!budget && !Object.keys(featureBudgets).length) return null;
+    const s = await spent();
+    // Cost-based: the next request's worst case must still fit.
+    const next = RESERVE_USD[feature] ?? 0.05;
+    if (budget && s.total + next > budget) return 'ai_budget_reached';
+    const fb = Number(featureBudgets[feature]) || 0;
+    if (fb && (s.byFeature[feature] || 0) + next > fb) return 'ai_budget_reached';
     return null;
   };
 }
 
 export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock = { now: () => Date.now() }, settings = null }) {
   const router = express.Router();
-  const perAccount = new SlidingWindow(40, 60 * 1000);
+  // Shared by every server instance (table rate_counters).
+  const perAccount = createLimiter(db, { name: 'ai-account', limit: 40, windowMs: 60 * 1000 });
+  const globalDaily = createLimiter(db, { name: 'ai-global', limit: config.openai.globalDailyRequestCap, windowMs: 24 * 60 * 60 * 1000 });
   const controls = createAiControls({ db, settings, clock });
   const artTurns = createArtTurns({ db, config, fetchImpl, clock });
   const reflection = createReflection({ config, fetchImpl });
-  let globalDay = '';
-  let globalCount = 0;
 
   const openaiHeaders = (extra = {}) => ({ Authorization: `Bearer ${config.openai.apiKey}`, ...extra });
 
@@ -197,13 +219,8 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
       if (!FEATURES.has(ctx.feature) || (expectedFeatures && !expectedFeatures.includes(ctx.feature))) {
         return bad(res, 400, 'bad_feature', 'Unknown or missing X-BeHappy-Feature header.');
       }
-      if (!perAccount.allow(req.account.id)) return bad(res, 429, 'rate_limited', 'Too many requests. Please slow down.');
-      const today = new Date().toISOString().slice(0, 10);
-      if (today !== globalDay) {
-        globalDay = today;
-        globalCount = 0;
-      }
-      if (globalCount >= config.openai.globalDailyRequestCap) {
+      if (!(await perAccount.allow(req.account.id, clock.now()))) return bad(res, 429, 'rate_limited', 'Too many requests. Please slow down.');
+      if ((await globalDaily.count('all', clock.now())) >= config.openai.globalDailyRequestCap) {
         return bad(res, 503, 'ai_busy', 'AI is temporarily unavailable. Please try again later.');
       }
       try {
@@ -226,7 +243,10 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
       res.status(decision.status || 402).json(decision);
       return null;
     }
-    globalCount += 1;
+    await globalDaily.allow('all', clock.now());
+    req.reservationId = decision.reservationId || null;
+    // A path that ends without recording (a client gone mid-stream) still releases it.
+    if (req.reservationId) res.on('close', () => setTimeout(() => releaseReservation(db, req.reservationId), 30 * 1000).unref?.());
     res.setHeader('X-BeHappy-Tier', decision.tier || 'free');
     if (decision.remaining !== undefined) res.setHeader('X-BeHappy-Remaining', String(decision.remaining));
     if (decision.grace) res.setHeader('X-BeHappy-Grace', String(decision.graceLeft ?? 0));
@@ -296,6 +316,9 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
         console.error('[art] turn failed', e?.message);
         if (!res.headersSent) return bad(res, 502, 'ai_upstream_error', 'The AI service returned an error.');
         return res.end();
+      } finally {
+        // Art records each call's real cost itself; the reservation ends with the turn.
+        await releaseReservation(db, req.reservationId);
       }
     }
 
@@ -307,12 +330,12 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
         body: JSON.stringify(clean),
       });
     } catch {
-      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: 'unreachable', latencyMs: Date.now() - req.aiStartedAt });
+      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: 'unreachable', latencyMs: Date.now() - req.aiStartedAt, reservationId: req.reservationId });
       return bad(res, 502, 'ai_upstream_unreachable', 'Could not reach the AI service.');
     }
 
     if (!upstream.ok) {
-      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt });
+      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt, reservationId: req.reservationId });
       const text = await upstream.text().catch(() => '');
       if (upstream.status === 429) {
         if (/insufficient_quota|credit_balance/i.test(text)) console.warn('[ai] OpenAI reports no credits left (insufficient_quota): AI features are unavailable until credits are added.');
@@ -329,7 +352,7 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     if (!clean.stream) {
       const data = await upstream.json();
       await rememberResponse(data?.id, req.account.id);
-      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: data?.usage, latencyMs: Date.now() - req.aiStartedAt });
+      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: data?.usage, latencyMs: Date.now() - req.aiStartedAt, reservationId: req.reservationId });
       return res.json(data);
     }
 
@@ -364,8 +387,19 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     } catch {
       // Client or upstream disconnected; nothing else to do.
     }
+    // Recorded before the stream ends, so the next request sees this cost.
+    const finalUsage = usage.result();
+    await recordAiUsage(db, {
+      accountId: req.account.id,
+      feature,
+      model: clean.model,
+      usage: finalUsage,
+      latencyMs: Date.now() - req.aiStartedAt,
+      // A stream cut before OpenAI reported usage may still be billed: count the reservation.
+      ...(finalUsage ? {} : { status: 'error', errorCode: 'stream_no_usage', costUsd: RESERVE_USD[feature] ?? 0.05 }),
+      reservationId: req.reservationId,
+    });
     res.end();
-    await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage: usage.result(), latencyMs: Date.now() - req.aiStartedAt });
   });
 
   // ---------- Chat Completions (vision turns, summaries, journal, motivation) ----------
@@ -374,16 +408,24 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     for (const key of Object.keys(body)) {
       if (!CHAT_FIELDS.has(key)) return bad(res, 400, 'bad_field', `Field "${key}" is not allowed.`);
     }
-    if (!CHAT_MODELS.has(body.model)) return bad(res, 400, 'bad_model', 'Model not allowed.');
     if (!Array.isArray(body.messages) || body.messages.length === 0 || body.messages.length > 60) {
       return bad(res, 400, 'bad_messages', 'messages must be a non-empty array of at most 60 items.');
     }
-    // The server's preamble always comes first, whatever the client wrote.
-    const reasoning = REASONING_CHAT_MODELS.has(body.model);
+    const messages = cleanChatMessages(body.messages);
+    if (!messages) return bad(res, 400, 'bad_messages', 'messages may contain only user and assistant turns.');
+    if (body.response_format !== undefined && !(body.response_format && ['json_object', 'text'].includes(body.response_format.type) && Object.keys(body.response_format).length === 1)) {
+      return bad(res, 400, 'bad_response_format', 'Only text or JSON object output is allowed.');
+    }
+    const feature = req.aiContext.feature;
+    const language = typeof body.language === 'string' && LANGUAGE.test(body.language) ? body.language : 'English';
+    // The server chooses the model and writes every instruction.
+    const model = config.ai?.models?.[feature] || DEFAULT_MODELS[feature];
+    const reasoning = REASONING_CHAT_MODELS.has(model);
     const outputCap = Math.min(Number(body.max_tokens) || 800, MAX_CHAT_TOKENS);
+    const instructions = `${CHAT_PREAMBLE}\n\n${CHAT_PROMPTS[feature] ? CHAT_PROMPTS[feature](language) : ''}`.trim();
     const clean = {
-      model: body.model,
-      messages: [{ role: 'system', content: CHAT_PREAMBLE }, ...body.messages.filter(isChatMessage)],
+      model,
+      messages: [{ role: 'system', content: instructions }, ...messages],
       // GPT-5 models take max_completion_tokens (reasoning counts toward it) and no temperature.
       ...(reasoning
         ? { max_completion_tokens: outputCap + 1500, reasoning_effort: 'low' }
@@ -401,16 +443,19 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
       });
       const text = await upstream.text();
       if (!upstream.ok) {
-        await recordAiUsage(db, { accountId: req.account.id, feature: req.aiContext.feature, model: clean.model, status: 'error', errorCode: `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt });
+        await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt, reservationId: req.reservationId });
         return res.status(upstream.status >= 500 ? 502 : 400).json({ error: 'ai_upstream_error', message: 'The AI service returned an error.', upstreamStatus: upstream.status });
       }
+      let usage = null;
       try {
-        await recordAiUsage(db, { accountId: req.account.id, feature: req.aiContext.feature, model: clean.model, usage: JSON.parse(text)?.usage, latencyMs: Date.now() - req.aiStartedAt });
+        usage = JSON.parse(text)?.usage || null;
       } catch {
-        // not JSON: nothing to record
+        // not JSON
       }
+      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, usage, latencyMs: Date.now() - req.aiStartedAt, ...(usage ? {} : { status: 'error', errorCode: 'no_usage', costUsd: RESERVE_USD[feature] ?? 0.02 }), reservationId: req.reservationId });
       res.type('application/json').send(text);
     } catch {
+      await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: 'unreachable', latencyMs: Date.now() - req.aiStartedAt, reservationId: req.reservationId });
       bad(res, 502, 'ai_upstream_unreachable', 'Could not reach the AI service.');
     }
   });
@@ -425,9 +470,10 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     if (!(await meter(req, res))) return;
     try {
       const r = await reflection.run(cleaned.input);
-      await recordAiUsage(db, { accountId: req.account.id, feature: 'reflection', model: r.model, usage: r.usage, latencyMs: Date.now() - req.aiStartedAt, status: r.status === 200 ? 'ok' : 'error', errorCode: r.status === 200 ? null : r.body.error });
+      await recordAiUsage(db, { accountId: req.account.id, feature: 'reflection', model: r.model, usage: r.usage, latencyMs: Date.now() - req.aiStartedAt, status: r.status === 200 ? 'ok' : 'error', errorCode: r.status === 200 ? null : r.body.error, reservationId: req.reservationId });
       res.status(r.status).json(r.body);
     } catch {
+      await recordAiUsage(db, { accountId: req.account.id, feature: 'reflection', model: config.ai?.models?.reflection || 'gpt-5.4-mini', status: 'error', errorCode: 'unreachable', reservationId: req.reservationId });
       bad(res, 502, 'ai_upstream_unreachable', 'Could not reach the AI service.');
     }
   });
@@ -453,9 +499,12 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
         body: form,
       });
       const text = await upstream.text();
+      // Transcription returns no token counts here: its cost is estimated from the audio size.
+      await recordAiUsage(db, { accountId: req.account.id, feature: 'transcribe', model: 'gpt-4o-mini-transcribe', costUsd: upstream.ok ? transcribeCostUsd(bytes.length) : 0, status: upstream.ok ? 'ok' : 'error', errorCode: upstream.ok ? null : `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt, reservationId: req.reservationId });
       if (!upstream.ok) return res.status(502).json({ error: 'ai_upstream_error', upstreamStatus: upstream.status });
       res.json({ text: text.trim() });
     } catch {
+      await recordAiUsage(db, { accountId: req.account.id, feature: 'transcribe', model: 'gpt-4o-mini-transcribe', costUsd: 0, status: 'error', errorCode: 'unreachable', reservationId: req.reservationId });
       bad(res, 502, 'ai_upstream_unreachable', 'Could not reach the AI service.');
     }
   });
@@ -475,10 +524,13 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
         headers: openaiHeaders({ 'Content-Type': 'application/json', Accept: 'audio/mpeg' }),
         body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice, input, format: 'mp3' }),
       });
+      // Speech returns audio, not token counts: its cost is estimated from the text length.
+      await recordAiUsage(db, { accountId: req.account.id, feature: 'speech', model: 'gpt-4o-mini-tts', costUsd: upstream.ok ? speechCostUsd(input.length) : 0, status: upstream.ok ? 'ok' : 'error', errorCode: upstream.ok ? null : `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt, reservationId: req.reservationId });
       if (!upstream.ok) return res.status(502).json({ error: 'ai_upstream_error', upstreamStatus: upstream.status });
       const audio = Buffer.from(await upstream.arrayBuffer());
       res.type('audio/mpeg').send(audio);
     } catch {
+      await recordAiUsage(db, { accountId: req.account.id, feature: 'speech', model: 'gpt-4o-mini-tts', costUsd: 0, status: 'error', errorCode: 'unreachable', reservationId: req.reservationId });
       bad(res, 502, 'ai_upstream_unreachable', 'Could not reach the AI service.');
     }
   });

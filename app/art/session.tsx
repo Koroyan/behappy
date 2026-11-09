@@ -505,7 +505,7 @@ export default function ArtSessionScreen() {
                 {limit ? (
                   <LimitNotice
                     title={t('anulia.limitDailyTitle')}
-                    body={t(limit.reason === 'session_message_limit' ? 'art.workspace.sessionLimit' : 'art.workspace.dailyLimit')}
+                    body={limit.reason === 'ai_allowance' ? t('wb.money.allowanceReached', { date: limit.resetAt ? new Date(limit.resetAt).toLocaleDateString() : '' }) : t(limit.reason === 'session_message_limit' ? 'art.workspace.sessionLimit' : 'art.workspace.dailyLimit')}
                     resetAt={limit.resetAt}
                     showUpgrade={!entitlements.plus.active}
                   />

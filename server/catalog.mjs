@@ -5,91 +5,25 @@
 // Amounts are in minor units (tetri for GEL: 100 tetri = 1 GEL), which is what
 // Flitt's `amount` field expects ("Order amount in cents without separator").
 //
-// IMPORTANT: every price below is a TEST value while Flitt runs in sandbox
-// mode. "current" mirrors the prices that were configured in the app before
-// the 2.0 rebuild (including the 50 GEL Art Therapy price). "proposal" is the
-// recommendation from docs/BEHAPPY_PRICING_STRATEGY.md. Neither is a final
-// business decision; switch with BEHAPPY_CATALOG=current|proposal.
+// Prices come from the economics model (server/finance/model.mjs,
+// docs/BEHAPPY_FINANCE.md): each is the lowest round price that leaves at
+// least 15 GEL per 30 days after every cost in the worst usage the server
+// allows, in the conservative tax case (18% VAT inside the price + 3% of
+// turnover) — the CI test server/test/finance.test.mjs fails otherwise.
+// "current" is active. "affordable" is only safe once an accountant confirms
+// the 1% small-business status without VAT (BEHAPPY_CATALOG=affordable and
+// FINANCE_TAX_SCENARIO=small_business_1). Flitt runs in TEST mode.
 
 const DAY = 24 * 60 * 60 * 1000;
 
 const PLUS_FEATURES = ['anulia_plus', 'cards', 'art_program', 'journal_reflections_plus'];
 
+const plus = (id, amountMinor, durationDays, highlight = false) => ({ id, kind: 'plus', amountMinor, currency: 'GEL', durationDays, recurring: false, grants: PLUS_FEATURES, highlight });
+const art = (amountMinor) => ({ id: 'art_program', kind: 'art', amountMinor, currency: 'GEL', durationDays: null, recurring: false, grants: ['art_program'], highlight: false });
+
 const CATALOGS = {
-  current: [
-    {
-      id: 'plus_30',
-      kind: 'plus',
-      amountMinor: 5100,
-      currency: 'GEL',
-      durationDays: 30,
-      recurring: false,
-      grants: PLUS_FEATURES,
-      highlight: false,
-    },
-    {
-      id: 'plus_90',
-      kind: 'plus',
-      amountMinor: 14200,
-      currency: 'GEL',
-      durationDays: 90,
-      recurring: false,
-      grants: PLUS_FEATURES,
-      highlight: true,
-    },
-    {
-      id: 'plus_365',
-      kind: 'plus',
-      amountMinor: 51900,
-      currency: 'GEL',
-      durationDays: 365,
-      recurring: false,
-      grants: PLUS_FEATURES,
-      highlight: false,
-    },
-    {
-      id: 'art_program',
-      kind: 'art',
-      amountMinor: 5000,
-      currency: 'GEL',
-      durationDays: null, // lifetime access to the 43-session program
-      recurring: false,
-      grants: ['art_program'],
-      highlight: false,
-    },
-  ],
-  proposal: [
-    {
-      id: 'plus_30',
-      kind: 'plus',
-      amountMinor: 2900,
-      currency: 'GEL',
-      durationDays: 30,
-      recurring: false,
-      grants: PLUS_FEATURES,
-      highlight: false,
-    },
-    {
-      id: 'plus_365',
-      kind: 'plus',
-      amountMinor: 24900,
-      currency: 'GEL',
-      durationDays: 365,
-      recurring: false,
-      grants: PLUS_FEATURES,
-      highlight: true,
-    },
-    {
-      id: 'art_program',
-      kind: 'art',
-      amountMinor: 5000,
-      currency: 'GEL',
-      durationDays: null,
-      recurring: false,
-      grants: ['art_program'],
-      highlight: false,
-    },
-  ],
+  current: [plus('plus_30', 4900, 30), plus('plus_90', 13500, 90, true), plus('plus_365', 54900, 365), art(10500)],
+  affordable: [plus('plus_30', 3900, 30), plus('plus_90', 10900, 90, true), plus('plus_365', 44900, 365), art(8500)],
 };
 
 export function getCatalog(name = 'current') {

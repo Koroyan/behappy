@@ -57,7 +57,7 @@ export function MessageRow({ message: m, myName, time, grouped, onReply, onMore,
   // An official notice written by the BeHappy team (staff tools).
   const official = m.author.kind === 'system';
   const hidden = m.status === 'removed' || m.status === 'deleted';
-  const name = mine ? myName || t('community.room.you') : ai ? 'Anulia' : official ? 'BeHappy' : m.author.formerMember ? t('community.room.formerMember') : m.author.pseudonym || '';
+  const name = mine ? myName || t('community.room.you') : ai ? 'Bea' : official ? 'BeHappy' : m.author.formerMember ? t('community.room.formerMember') : m.author.pseudonym || '';
 
   if (m.mutedAuthor && !showMuted && !hidden) {
     return (
@@ -208,7 +208,7 @@ export function MessageMenu({
   const canModerateOwn = m.author.isMe && (m.status === 'visible' || m.status === 'held');
   const isMember = m.author.kind === 'member' && Boolean(m.author.ref) && !m.author.isMe;
   return (
-    <Sheet visible onClose={onClose} title={m.author.isMe ? t('community.room.you') : m.author.kind === 'anulia' ? 'Anulia' : name} testID="message-menu">
+    <Sheet visible onClose={onClose} title={m.author.isMe ? t('community.room.you') : m.author.kind === 'anulia' ? 'Bea' : name} testID="message-menu">
       {m.status === 'visible' ? (
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: space[2] }}>
           {REACTIONS.map((r) => {

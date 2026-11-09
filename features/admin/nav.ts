@@ -46,7 +46,13 @@ export const ADMIN_NAV: { key: string; items: AdminNavItem[] }[] = [
     ],
   },
   { key: 'ai', items: [{ key: 'ai', href: '/admin/ai', icon: 'sparkles-outline', perm: 'ai.view', range: true }] },
-  { key: 'finance', items: [{ key: 'finance', href: '/admin/finance', icon: 'card-outline', perm: 'finance.view', range: true }] },
+  {
+    key: 'finance',
+    items: [
+      { key: 'finance', href: '/admin/finance', icon: 'card-outline', perm: 'finance.view', range: true },
+      { key: 'economics', href: '/admin/economics', icon: 'calculator-outline', perm: 'finance.economics' },
+    ],
+  },
   {
     key: 'system',
     items: [

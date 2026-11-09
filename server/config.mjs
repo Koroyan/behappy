@@ -178,7 +178,18 @@ export const config = {
   // the app before the 2.0 rebuild; "proposal" is the recommended structure
   // from docs/BEHAPPY_PRICING_STRATEGY.md. Both are TEST values until the
   // business approves them.
-  catalog: env.BEHAPPY_CATALOG === 'proposal' ? 'proposal' : 'current',
+  // Shared rate limits (server/rateLimit.mjs, stored in the database, so a
+  // restart doesn't reset them). Local QA servers (--dev-tools) allow more.
+  limits: { accountsPerHourPerIp: int(env.ACCOUNTS_PER_HOUR_PER_IP, DEV_TOOLS ? 1000 : 20) },
+  catalog: env.BEHAPPY_CATALOG === 'affordable' ? 'affordable' : 'current',
+  // Which tax case the economics guard uses (server/finance/assumptions.mjs).
+  // Leave worst_case until an accountant confirms the business's tax status.
+  finance: {
+    taxScenario: ['worst_case', 'small_business_1', 'small_business_3', 'small_business_vat', 'llc_vat', 'international'].includes(env.FINANCE_TAX_SCENARIO) ? env.FINANCE_TAX_SCENARIO : 'worst_case',
+    cacGel: env.FINANCE_CAC_GEL === undefined || env.FINANCE_CAC_GEL === '' ? null : Number(env.FINANCE_CAC_GEL),
+    // Staff are alerted when a product's modelled contribution is within this of the minimum.
+    alertMarginGel: Number(env.FINANCE_ALERT_MARGIN_GEL || 5),
+  },
 };
 
 export const FLITT_TEST_MERCHANT_ID = 1549901;

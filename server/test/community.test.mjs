@@ -276,7 +276,7 @@ describe('Community', () => {
     const ask = await say(nino, 'panic:en', '@Anulia my heart races at night, what can I do?');
     assert.equal(ask.json.message.asksAnulia, true);
     const reply = await waitFor(async () => (await read(mari, 'panic:en')).json.messages.find((m) => m.author.kind === 'anulia' && m.replyTo?.id === ask.json.message.id));
-    assert.equal(reply.author.pseudonym, 'Anulia');
+    assert.equal(reply.author.pseudonym, 'Bea');
     assert.equal(reply.author.ref, null);
     assert.doesNotMatch(reply.body, /https?:\/\//, 'no links from the AI in public rooms');
     assert.equal(anuliaCalls, before + 1);

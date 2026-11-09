@@ -55,6 +55,8 @@ export function publicOrder(order) {
     productKind: order.productKind,
     durationDays: order.durationDays,
     amountMinor: order.amountMinor,
+    listAmountMinor: order.listAmountMinor ?? order.amountMinor,
+    discountMinor: order.discountMinor || 0,
     currency: order.currency,
     status: order.status,
     mode: order.mode,
@@ -78,7 +80,11 @@ const historyEntry = (at, status, via, note) => JSON.stringify([{ at, status, vi
  * `returnUrl` must already be validated by the caller. `professionalId` ties a
  * membership order to a professional profile (checked by the caller).
  */
-export async function createCheckout({ db, config, flitt, accountId, productId, lang, returnUrl, professionalId = null, now = Date.now(), audience = 'consumer', apiBase = config.publicApiUrl }) {
+/**
+ * `pricing` comes from the promotions guard (server/promotions.mjs): the final
+ * amount, already held to the safe floor. Without it, the catalog price.
+ */
+export async function createCheckout({ db, config, flitt, accountId, productId, lang, returnUrl, professionalId = null, now = Date.now(), audience = 'consumer', apiBase = config.publicApiUrl, pricing = null }) {
   const product = findProduct(config.catalog, productId, { audience, professional: config.professional });
   if (!product) {
     const err = new Error('Unknown product');
@@ -94,16 +100,18 @@ export async function createCheckout({ db, config, flitt, accountId, productId, 
   }
 
   const orderId = newOrderId();
+  const amountMinor = pricing && pricing.productId === product.id && pricing.finalMinor > 0 && pricing.finalMinor <= product.amountMinor ? pricing.finalMinor : product.amountMinor;
+  const discounted = amountMinor < product.amountMinor;
   await db.query(
-    `insert into orders (id, account_id, professional_id, product_id, product_kind, duration_days, amount_minor, currency, mode, status, created_at, updated_at, return_url, history)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, 'test', 'created', $9, $9, $10, $11::jsonb)`,
-    [orderId, accountId, professionalId, product.id, product.kind, product.durationDays, product.amountMinor, product.currency, ts(now), returnUrl, historyEntry(now, 'created', 'server')]
+    `insert into orders (id, account_id, professional_id, product_id, product_kind, duration_days, amount_minor, currency, mode, status, created_at, updated_at, return_url, history, list_amount_minor, promotion_id, discount_minor)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, 'test', 'created', $9, $9, $10, $11::jsonb, $12, $13, $14)`,
+    [orderId, accountId, professionalId, product.id, product.kind, product.durationDays, amountMinor, product.currency, ts(now), returnUrl, historyEntry(now, 'created', 'server'), product.amountMinor, discounted ? pricing.promotionId || null : null, product.amountMinor - amountMinor]
   );
 
   try {
     const response = await flitt.createCheckout({
       orderId,
-      amountMinor: product.amountMinor,
+      amountMinor,
       currency: product.currency,
       description: orderDescription(product),
       responseUrl: `${apiBase}/api/payments/flitt/return?orderId=${encodeURIComponent(orderId)}`,

@@ -33,6 +33,34 @@ export default function PricingScreen() {
   const fillPlus = (s: string) => s.replace('{anulia}', String(limits?.plus.anuliaMessages ?? '…')).replace('{cards}', String(limits?.plus.cardConversationsPerDay ?? '…')).replace('{journal}', String(limits?.plus.journalReflectionsPerDay ?? '…'));
 
   const buy = (p: Product) => router.push(`/checkout?product=${p.id}`);
+  const offer = (p: Product) => catalog?.offers?.[p.id] ?? null;
+
+  /** Regular price, the offer price, the saving and when it ends — only when an offer really applies. */
+  const priceBlock = (p: Product, size = 34) => {
+    const o = offer(p);
+    return (
+      <View style={{ gap: 2 }} testID={`price-${p.id}`}>
+        {o ? (
+          <AppText variant="small" color="textTertiary" style={{ textDecorationLine: 'line-through' }} accessibilityLabel={`${t('wb.money.regularPrice')}: ${formatPrice(o.listMinor, p.currency)}`}>
+            {formatPrice(o.listMinor, p.currency)}
+          </AppText>
+        ) : null}
+        <AppText variant="display" style={{ fontSize: size, lineHeight: size + 6 }}>
+          {formatPrice(o ? o.finalMinor : p.amountMinor, p.currency)}
+        </AppText>
+        {o ? (
+          <View style={{ gap: 2 }}>
+            <AppText variant="caption" color="success">
+              {t('wb.money.youSave', { amount: formatPrice(o.savingMinor, p.currency) })}
+              {o.name ? ` · ${o.name}` : ''}
+            </AppText>
+            {o.endsAt ? <AppText variant="caption" color="textSecondary">{t('wb.money.offerEnds', { date: formatDate(o.endsAt, { day: 'numeric', month: 'long' }) })}</AppText> : null}
+            {o.firstPurchaseOnly ? <AppText variant="caption" color="textSecondary">{t('wb.money.firstPurchase')}</AppText> : null}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
   const check = (text: string) => (
     <View key={text} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
@@ -50,9 +78,7 @@ export default function PricingScreen() {
         <View style={{ gap: 6 }}>
           {p.highlight ? <Badge label={t('pricing.recommended')} tone="primary" /> : <View style={{ height: 22 }} />}
           <AppText variant="title3">{t('pricing.passDays', { days: p.durationDays ?? 0 })}</AppText>
-          <AppText variant="display" style={{ fontSize: 34, lineHeight: 40 }}>
-            {formatPrice(p.amountMinor, p.currency)}
-          </AppText>
+          {priceBlock(p)}
           {perMonth ? (
             <AppText variant="caption" color="textSecondary">
               {t('pricing.perMonth', { price: perMonth })}
@@ -112,9 +138,7 @@ export default function PricingScreen() {
                 <View style={{ gap: 8, marginTop: space[2] }}>{tl('pricing.artItems').map(check)}</View>
               </View>
               <View style={{ gap: 6, minWidth: 220 }}>
-                <AppText variant="display" style={{ fontSize: 34, lineHeight: 40 }}>
-                  {formatPrice(art.amountMinor, art.currency)}
-                </AppText>
+                {priceBlock(art)}
                 <AppText variant="caption" color="textSecondary">
                   {t('pricing.oneTime')} · {t('pricing.lifetime')}
                 </AppText>
@@ -130,9 +154,18 @@ export default function PricingScreen() {
 
         {error ? <Banner tone="warning" body={t('checkout.offline')} /> : null}
 
-        <AppText variant="caption" color="textTertiary">
-          {t('pricing.limitsNote')}
-        </AppText>
+        <Card padding={18} tone="muted" testID="pricing-limits">
+          <View style={{ gap: 8 }}>
+            <AppText variant="bodyStrong">{t('wb.money.limitsTitle')}</AppText>
+            {limits?.plus.artMessagesPerSession ? check(t('wb.money.artSessionLimit', { n: limits.plus.artMessagesPerSession })) : null}
+            {check(t('wb.money.fairUse'))}
+            {check(t('wb.money.safetyNeverLimited'))}
+            {check(t('pricing.noRenewal'))}
+            <AppText variant="caption" color="textTertiary">
+              {t('pricing.limitsNote')}
+            </AppText>
+          </View>
+        </Card>
 
         <View>
           <SectionHeader title={t('pricing.faqTitle')} />

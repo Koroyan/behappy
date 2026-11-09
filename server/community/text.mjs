@@ -8,6 +8,8 @@
 import { mentionsSelfHarm } from '../../lib/safety/riskLanguage.ts';
 
 const RESERVED = /anulia|ანულია|анулия|անուլիա|behappy|admin|moderator|moderation|support|official|system|staff/i;
+// The companion's name, exactly ("Beatrice" or "Beach" stay free).
+const COMPANION = /^(bea|ბეა|беа|բեա)[\d._-]*$/iu;
 
 // Professional titles in the app languages. Community names must not
 // present anyone as a professional (verified specialists are listed under
@@ -40,7 +42,7 @@ export function pseudonymProblem(value) {
   if (!PSEUDONYM_CHARS.test(name)) return 'pseudonym_characters';
   if (/\d{6,}/.test(name.replace(/[ ._-]/g, ''))) return 'pseudonym_contact';
   if (/(https?|www|\.com|\.ge|\.ru|\.org|\.net)/i.test(name)) return 'pseudonym_contact';
-  if (RESERVED.test(name)) return 'pseudonym_reserved';
+  if (RESERVED.test(name) || COMPANION.test(name)) return 'pseudonym_reserved';
   const lower = name.toLowerCase();
   const tokens = lower.split(/[ ._-]+/).filter(Boolean);
   if (tokens.some((tok) => TITLE_TOKENS.has(tok)) || TITLE_PARTS.some((p) => lower.includes(p))) return 'pseudonym_title';
@@ -57,7 +59,8 @@ const HANDLE_RE = /(telegram|whatsapp|viber|signal|instagram|insta|tiktok|snapch
 const PRO_CLAIM_RE =
   /\b(i'?m|i am|as an?|speaking as an?)\s+(licensed\s+|clinical\s+)?(psychologist|therapist|psychiatrist|psychotherapist|counsel+or|doctor)\b|я\s+(психолог|психотерапевт|психиатр|врач)|как\s+(психолог|психотерапевт|психиатр|врач)|(ფსიქოლოგი|ფსიქოთერაპევტი|ფსიქიატრი|ექიმი)\s+ვარ|როგორც\s+(ფსიქოლოგი|ფსიქოთერაპევტი|ფსიქიატრი|ექიმი)|ich bin\s+(psychologin|psychologe|therapeutin|therapeut|ärztin|arzt)|soy\s+(psicólog[oa]|terapeuta|psiquiatra|médic[oa])|je suis\s+(psychologue|thérapeute|psychiatre|médecin)|ben\s+(psikolog|terapist|doktor)um/i;
 
-const MENTION_RE = /(^|[\s(])@(anulia|ანულია|анулия|անուլիա)(?![\p{L}\p{N}])/iu;
+// The companion is called Bea (renamed from Anulia; the old name still works).
+const MENTION_RE = /(^|[\s(])@(bea|ბეა|беа|բեա|anulia|ანულია|анулия|անուլիա)(?![\p{L}\p{N}])/iu;
 
 export const mentionsAnulia = (body) => MENTION_RE.test(String(body || ''));
 

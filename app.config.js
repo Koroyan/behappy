@@ -38,7 +38,8 @@ module.exports = {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
-        backgroundColor: '#F7F8F5',
+        // The new logo's teal (the foreground is the transparent artwork).
+        backgroundColor: '#3A7D73',
       },
       // Edge-to-edge is always on from Expo SDK 55.
       permissions: ['RECORD_AUDIO', 'CAMERA'],

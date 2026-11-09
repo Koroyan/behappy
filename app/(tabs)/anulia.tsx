@@ -317,8 +317,14 @@ export default function AnuliaScreen() {
         {graceLeft !== null && !limit ? <Banner tone="info" body={t('anulia.graceNote')} /> : null}
         {limit ? (
           <LimitNotice
-            title={limit.reason === 'daily_limit' ? t('anulia.limitDailyTitle') : t('anulia.limitTitle')}
-            body={limit.reason === 'daily_limit' ? t('anulia.limitDailyBody') : t('anulia.limitBody', { date: limit.resetAt ? formatDate(limit.resetAt, { day: 'numeric', month: 'long' }) : '' })}
+            title={limit.reason === 'daily_limit' ? t('anulia.limitDailyTitle') : limit.reason === 'ai_allowance' ? t('wb.money.allowanceTitle') : t('anulia.limitTitle')}
+            body={
+              limit.reason === 'daily_limit'
+                ? t('anulia.limitDailyBody')
+                : limit.reason === 'ai_allowance'
+                  ? t('wb.money.allowanceReached', { date: limit.resetAt ? formatDate(limit.resetAt, { day: 'numeric', month: 'long' }) : '' })
+                  : t('anulia.limitBody', { date: limit.resetAt ? formatDate(limit.resetAt, { day: 'numeric', month: 'long' }) : '' })
+            }
             resetAt={limit.resetAt}
             showUpgrade={limit.tier !== 'plus'}
           />

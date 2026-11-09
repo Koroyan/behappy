@@ -28,7 +28,7 @@ try {
   console.log('1. Anulia');
   await page.goto(`${app}/anulia`, { waitUntil: 'load', timeout: 90000 });
   await page.waitForSelector('[data-testid="composer-input"]', { timeout: 60000 });
-  await page.fill('[data-testid="composer-input"]', 'Hi Anulia. Today I felt a bit tense at work. Who are you, briefly?');
+  await page.fill('[data-testid="composer-input"]', 'Hi Bea. Today I felt a bit tense at work. Who are you, briefly?');
   await page.click('[data-testid="composer-send"]');
   await page.waitForSelector('[data-testid="consent-sheet"]', { timeout: 20000 });
   await page.screenshot({ path: path.join(out, 'ai-1-consent.png') });

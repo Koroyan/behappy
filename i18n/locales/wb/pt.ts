@@ -1,5 +1,25 @@
 /** Well-being ecosystem (`wb`), Portuguese. Machine-translated from en.ts (scripts/i18n/translate-wb.mjs); native review recommended. */
 export const wbPt = {
+  "money": {
+    "regularPrice": "Preço normal",
+    "youSave": "Você economiza {amount}",
+    "offerEnds": "A oferta termina em {date}",
+    "firstPurchase": "Na sua primeira compra",
+    "discount": "Desconto",
+    "adjusted": "O desconto foi ajustado para o menor preço que podemos oferecer.",
+    "promoCode": "Código promocional",
+    "apply": "Aplicar",
+    "codeApplied": "Código aplicado: {name}",
+    "codeInvalid": "Este código não é válido para esta compra.",
+    "codeNotBetter": "Você já tem um preço melhor do que o oferecido por este código.",
+    "limitsTitle": "Limites com clareza",
+    "artSessionLimit": "Até {n} mensagens em cada sessão de arte (uma sessão costuma ter de 8 a 15 mensagens).",
+    "fairUse": "Uso justo: os recursos de AI têm uma cota mensal por conta. Você pode acompanhar o uso e ver quando a cota é renovada; a maioria das pessoas não chega ao limite.",
+    "safetyNeverLimited": "Os recursos de ajuda e segurança nunca são limitados.",
+    "allowanceTitle": "Sua cota mensal de AI foi utilizada por completo",
+    "allowanceReached": "Os recursos de AI ficam em pausa até {date}. Seu diário, suas ferramentas e seus recursos de ajuda continuam funcionando normalmente.",
+    "allowanceUsed": "Cota de AI utilizada: {percent}%"
+  },
   "sound": {
     "title": "Laboratório de sons",
     "subtitle": "Sons para concentração, descanso e sono, criados no teu telemóvel. Funciona sem internet.",
@@ -458,9 +478,9 @@ export const wbPt = {
     }
   },
   "memory": {
-    "title": "O que a Anulia pode lembrar",
-    "subtitle": "Escolhe o que a Anulia pode usar dos teus registos. Tudo fica desativado até ativares.",
-    "intro": "Aceitar usar AI não partilha o teu histórico. Cada opção abaixo é independente e podes desativá-la quando quiseres: a Anulia começa então uma nova conversa sem essa informação.",
+    "title": "O que a Bea pode lembrar",
+    "subtitle": "Escolhe o que a Bea pode usar dos teus registos. Tudo fica desativado até ativares.",
+    "intro": "Aceitar usar AI não partilha o teu histórico. Cada opção abaixo é independente e podes desativá-la quando quiseres: a Bea começa então uma nova conversa sem essa informação.",
     "categories": {
       "profile": "Perfil (nome, faixa etária, o que te trouxe aqui)",
       "steps": "Passos e objetivos pessoais",
@@ -468,13 +488,13 @@ export const wbPt = {
       "activity": "Contagens de atividade (Diário, práticas, Arteterapia, Cartas de reflexão)",
       "sound": "Sons e sessões de concentração",
       "sleep": "Registos de sono",
-      "priorChats": "Resumos de conversas anteriores com a Anulia",
+      "priorChats": "Resumos de conversas anteriores com a Bea",
       "journalText": "Texto completo do Diário",
       "artSummaries": "Resumos das sessões de Arteterapia",
       "assessments": "Resultados das autoavaliações"
     },
     "hints": {
-      "profile": "Ajuda a Anulia a falar contigo da forma que preferes.",
+      "profile": "Ajuda a Bea a falar contigo da forma que preferes.",
       "steps": "Os passos de hoje e a contagem desta semana.",
       "mood": "As tuas avaliações e os sentimentos que registaste.",
       "activity": "Apenas números, nunca o conteúdo.",
@@ -485,9 +505,9 @@ export const wbPt = {
       "artSummaries": "Os resumos finais das tuas sessões de Arteterapia.",
       "assessments": "As tuas pontuações de autoavaliação mais recentes. Não são um diagnóstico."
     },
-    "never": "Nunca são partilhadas com a Anulia: mensagens da comunidade e mensagens com psicólogos.",
-    "preview": "O que a Anulia veria agora",
-    "previewEmpty": "Nada. A Anulia não sabe nada do teu histórico.",
+    "never": "Nunca são partilhadas com a Bea: mensagens da comunidade e mensagens com psicólogos.",
+    "preview": "O que a Bea veria agora",
+    "previewEmpty": "Nada. A Bea não sabe nada do teu histórico.",
     "previewNote": "Este é o texto exato adicionado à tua próxima mensagem.",
     "exclude": "Excluir",
     "include": "Voltar a incluir",
@@ -495,14 +515,14 @@ export const wbPt = {
     "journalItems": "Entradas do Diário",
     "chatItems": "Conversas anteriores",
     "notes": "Coisas a ter em conta",
-    "notesHint": "Notas curtas que escreves para a Anulia, por exemplo: «Prefiro respostas curtas».",
+    "notesHint": "Notas curtas que escreves para a Bea, por exemplo: «Prefiro respostas curtas».",
     "addNote": "Adicionar",
-    "notePlaceholder": "Uma nota para a Anulia…",
+    "notePlaceholder": "Uma nota para a Bea…",
     "forgetAll": "Esquecer tudo",
-    "forgetConfirm": "Desativar tudo e eliminar as tuas notas? A Anulia começa do zero na tua próxima mensagem.",
-    "forgotten": "Feito. A Anulia já não se lembra de nada do teu histórico.",
+    "forgetConfirm": "Desativar tudo e eliminar as tuas notas? A Bea começa do zero na tua próxima mensagem.",
+    "forgotten": "Feito. A Bea já não se lembra de nada do teu histórico.",
     "transfer": "Como funciona",
-    "transferBody": "Tudo fica neste telemóvel. Quando envias uma mensagem à Anulia, apenas as partes ativadas são adicionadas à mensagem e enviadas à OpenAI através do servidor do BeHappy para escrever a resposta. A OpenAI guarda os dados da API durante até 30 dias para detetar abusos e não os usa para treinar modelos; o servidor do BeHappy não os guarda.",
+    "transferBody": "Tudo fica neste telemóvel. Quando envias uma mensagem à Bea, apenas as partes ativadas são adicionadas à mensagem e enviadas à OpenAI através do servidor do BeHappy para escrever a resposta. A OpenAI guarda os dados da API durante até 30 dias para detetar abusos e não os usa para treinar modelos; o servidor do BeHappy não os guarda.",
     "sources": "Fontes: {n}"
   },
   "sleep": {
@@ -555,7 +575,7 @@ export const wbPt = {
       "subtitle": "Abranda à noite, regista de manhã"
     },
     "memory": {
-      "title": "O que a Anulia lembra",
+      "title": "O que a Bea lembra",
       "subtitle": "As tuas opções de memória"
     }
   },

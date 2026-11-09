@@ -3,6 +3,7 @@
 
 import { mountAppointmentsAdmin } from './admin/appointments.mjs';
 import { mountCommunityAdmin } from './admin/community.mjs';
+import { mountEconomics } from './admin/economics.mjs';
 import { mountInsights } from './admin/insights.mjs';
 import { mountModerationCenter } from './admin/moderation-center.mjs';
 import { mountProsAdmin } from './admin/professionals.mjs';
@@ -33,6 +34,7 @@ export const FEATURE_MODULES = [
   mountSafety,
   mountSensitive,
   mountInsights,
+  mountEconomics,
 ];
 
 export const SERVICES = [startCommunityRealtime, startScheduler, startPushService];

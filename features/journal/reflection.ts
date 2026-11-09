@@ -3,7 +3,6 @@ import { aiChat } from '@/lib/api/ai';
 import type { JournalEntry } from '@/lib/storage/journal';
 import { latinToGeorgian, looksLikeGeorgianLatin } from '@/lib/text/georgianLatin';
 
-import { ANULIA_PERSONA_CONTEXT } from '../anulia/persona';
 
 const NAMES: Record<string, string> = {
   en: 'English', ka: 'Georgian', ru: 'Russian', hy: 'Armenian', tr: 'Turkish', az: 'Azerbaijani', es: 'Spanish', de: 'German', fr: 'French',
@@ -77,29 +76,13 @@ function userMessage(entry: JournalEntry, promptText?: string): string {
  */
 export async function requestReflection(entry: JournalEntry, language: AppLanguage, promptText?: string): Promise<string> {
   const appLanguage = NAMES[language] || 'English';
+  // The server writes the instructions and chooses the model (server/prompts CHAT_PROMPTS.journal).
   const data = await aiChat(
     {
-      // gpt-4.1-mini writes noticeably better Georgian, Russian and Armenian than 4o-mini.
-      model: 'gpt-4.1-mini',
       max_tokens: 380,
       temperature: 0.6,
-      messages: [
-        {
-          role: 'system',
-          content:
-            `${ANULIA_PERSONA_CONTEXT}\n` +
-            'You are writing a short reflection on a private journal entry the person chose to share. This is NOT a chat: the person cannot reply, so do not ask any questions at all, not even at the end.\n' +
-            'Language: reply in the language the entry is written in. If the entry is Georgian, Russian or Armenian typed in Latin letters, reply in that language in its own script (Georgian: ქართული). ' +
-            `If the language is unclear, reply in ${appLanguage}.\n` +
-            'Write 3–5 warm, plain sentences as a statement: reflect back what you notice in their own words, acknowledge the feeling without judging it, and name one strength or need you hear. ' +
-            'You may end with one small, optional idea phrased as an invitation (for example a breath, a short walk, or writing a little more), never as an instruction and never as a question.\n' +
-            'No advice lists, no diagnosis, no clinical terms, no promises. If the entry suggests they may be unsafe, say kindly that they deserve support now and suggest the app\'s "Get help now" screen or local emergency services.',
-        },
-        {
-          role: 'user',
-          content: userMessage(entry, promptText),
-        },
-      ],
+      language: appLanguage,
+      messages: [{ role: 'user', content: userMessage(entry, promptText) }],
     },
     { feature: 'journal' }
   );

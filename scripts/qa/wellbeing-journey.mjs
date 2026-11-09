@@ -369,11 +369,11 @@ await step('Daily reflection: facts first; categories respected; checked AI text
   return outcome === 'ai' ? 'checked AI reflection shown' : 'factual recap with a reason';
 });
 
-await step('What Anulia can remember: off by default, exact preview, switches', async () => {
+await step('What Bea can remember: off by default, exact preview, switches', async () => {
   await P.go('/anulia/memory');
   await P.wait('memory-preview', 30000);
   await P.click('memory-preview');
-  await P.text('Nothing. Anulia doesn’t know anything from your history.');
+  await P.text('Nothing. Bea doesn’t know anything from your history.');
   await P.page.locator('[data-testid="memory-steps"]').filter({ visible: true }).first().click();
   await P.click('memory-preview');
   await P.text('Steps and goals');

@@ -1,5 +1,25 @@
 /** Well-being ecosystem (`wb`), Turkish. Machine-translated from en.ts (scripts/i18n/translate-wb.mjs); native review recommended. */
 export const wbTr = {
+  "money": {
+    "regularPrice": "Normal fiyat",
+    "youSave": "{amount} tasarruf edersiniz",
+    "offerEnds": "Teklifin bitiş tarihi: {date}",
+    "firstPurchase": "İlk alışverişiniz için",
+    "discount": "İndirim",
+    "adjusted": "İndirim, sunabileceğimiz en düşük fiyata göre düzenlendi.",
+    "promoCode": "İndirim kodu",
+    "apply": "Uygula",
+    "codeApplied": "Kod uygulandı: {name}",
+    "codeInvalid": "Bu kod bu alışveriş için geçerli değil.",
+    "codeNotBetter": "Mevcut fiyatınız, bu kodun sağladığı fiyattan daha uygun.",
+    "limitsTitle": "Kullanım sınırları, açıkça",
+    "artSessionLimit": "Her sanat seansında en fazla {n} mesaj (bir seans genellikle 8–15 mesaj sürer).",
+    "fairUse": "Adil kullanım: AI özellikleri için hesap başına aylık bir kullanım hakkı vardır. Ne kadarını kullandığınızı ve ne zaman yenileneceğini görebilirsiniz; çoğu kişi bu sınıra ulaşmaz.",
+    "safetyNeverLimited": "Yardım ve güvenlik kaynaklarına erişim hiçbir zaman sınırlanmaz.",
+    "allowanceTitle": "Aylık AI kullanım hakkınız doldu",
+    "allowanceReached": "AI özellikleri {date} tarihine kadar molada. Günlüğünüz, araçlarınız ve yardım kaynaklarınız her zamanki gibi çalışmaya devam eder.",
+    "allowanceUsed": "Kullanılan AI hakkı: %{percent}"
+  },
   "sound": {
     "title": "Ses Atölyesi",
     "subtitle": "Odaklanmak, dinlenmek ve uyumak için telefonunda üretilen sesler. Çevrimdışı çalışır.",
@@ -458,9 +478,9 @@ export const wbTr = {
     }
   },
   "memory": {
-    "title": "Anulia neleri hatırlayabilir?",
-    "subtitle": "Anulia'nın kayıtlarından neleri kullanabileceğini seç. Sen açana kadar her şey kapalı.",
-    "intro": "AI kullanımına onay vermen geçmişini paylaşmaz. Aşağıdaki her seçenek bağımsızdır ve istediğin zaman kapatabilirsin. Anulia o bilgi olmadan yeni bir sohbete başlar.",
+    "title": "Bea neleri hatırlayabilir?",
+    "subtitle": "Bea'nın kayıtlarından neleri kullanabileceğini seç. Sen açana kadar her şey kapalı.",
+    "intro": "AI kullanımına onay vermen geçmişini paylaşmaz. Aşağıdaki her seçenek bağımsızdır ve istediğin zaman kapatabilirsin. Bea o bilgi olmadan yeni bir sohbete başlar.",
     "categories": {
       "profile": "Profil (adın, yaş aralığın, seni buraya getiren şey)",
       "steps": "Adımlar ve kişisel hedefler",
@@ -468,13 +488,13 @@ export const wbTr = {
       "activity": "Etkinlik sayıları (günlük, çalışmalar, sanat terapisi, düşünme kartları)",
       "sound": "Sesler ve odaklanma seansları",
       "sleep": "Uyku kayıtları",
-      "priorChats": "Anulia ile önceki sohbetlerin özetleri",
+      "priorChats": "Bea ile önceki sohbetlerin özetleri",
       "journalText": "Günlük metinlerinin tamamı",
       "artSummaries": "Sanat terapisi seans özetleri",
       "assessments": "Kendini değerlendirme sonuçları"
     },
     "hints": {
-      "profile": "Anulia'nın seninle tercih ettiğin şekilde konuşmasına yardımcı olur.",
+      "profile": "Bea'nın seninle tercih ettiğin şekilde konuşmasına yardımcı olur.",
       "steps": "Bugünkü adımların ve bu haftaki sayıları.",
       "mood": "Durum kayıtlarındaki kendi puanların ve duyguların.",
       "activity": "Yalnızca sayılar, içerik asla paylaşılmaz.",
@@ -485,9 +505,9 @@ export const wbTr = {
       "artSummaries": "Sanat terapisi seanslarının kapanış özetleri.",
       "assessments": "Son kendini değerlendirme puanların. Bunlar bir tanı değil."
     },
-    "never": "Anulia ile asla paylaşılmaz: topluluk mesajları ve psikologlarla mesajlaşmalar.",
-    "preview": "Anulia şu an neleri görür?",
-    "previewEmpty": "Hiçbir şey. Anulia geçmişinden hiçbir şey bilmiyor.",
+    "never": "Bea ile asla paylaşılmaz: topluluk mesajları ve psikologlarla mesajlaşmalar.",
+    "preview": "Bea şu an neleri görür?",
+    "previewEmpty": "Hiçbir şey. Bea geçmişinden hiçbir şey bilmiyor.",
     "previewNote": "Bir sonraki mesajına eklenecek metin tam olarak bu.",
     "exclude": "Dahil etme",
     "include": "Yeniden dahil et",
@@ -495,14 +515,14 @@ export const wbTr = {
     "journalItems": "Günlük yazıları",
     "chatItems": "Önceki sohbetler",
     "notes": "Aklında tutmasını istediklerin",
-    "notesHint": "Anulia için yazdığın kısa notlar, ör. “Lütfen kısa yanıtlar ver”.",
+    "notesHint": "Bea için yazdığın kısa notlar, ör. “Lütfen kısa yanıtlar ver”.",
     "addNote": "Ekle",
-    "notePlaceholder": "Anulia için bir not…",
+    "notePlaceholder": "Bea için bir not…",
     "forgetAll": "Her şeyi unut",
-    "forgetConfirm": "Her şey kapatılsın ve notların silinsin mi? Anulia bir sonraki mesajında sıfırdan başlar.",
-    "forgotten": "Tamam. Anulia artık geçmişinden hiçbir şey hatırlamıyor.",
+    "forgetConfirm": "Her şey kapatılsın ve notların silinsin mi? Bea bir sonraki mesajında sıfırdan başlar.",
+    "forgotten": "Tamam. Bea artık geçmişinden hiçbir şey hatırlamıyor.",
     "transfer": "Nasıl çalışır?",
-    "transferBody": "Her şey bu telefonda kalır. Anulia'ya mesaj gönderdiğinde yalnızca açık olan bölümler mesaja eklenir ve yanıt yazılması için BeHappy sunucusu üzerinden OpenAI'a gönderilir. OpenAI, kötüye kullanımı tespit etmek için API verilerini en fazla 30 gün saklar ve model eğitmek için kullanmaz; BeHappy sunucusu bu verileri saklamaz.",
+    "transferBody": "Her şey bu telefonda kalır. Bea'ya mesaj gönderdiğinde yalnızca açık olan bölümler mesaja eklenir ve yanıt yazılması için BeHappy sunucusu üzerinden OpenAI'a gönderilir. OpenAI, kötüye kullanımı tespit etmek için API verilerini en fazla 30 gün saklar ve model eğitmek için kullanmaz; BeHappy sunucusu bu verileri saklamaz.",
     "sources": "Kaynaklar: {n}"
   },
   "sleep": {
@@ -555,7 +575,7 @@ export const wbTr = {
       "subtitle": "Günü yavaşça kapat, sabah nasıl uyuduğuna bak"
     },
     "memory": {
-      "title": "Anulia neleri hatırlıyor?",
+      "title": "Bea neleri hatırlıyor?",
       "subtitle": "Hatırlama tercihlerin"
     }
   },

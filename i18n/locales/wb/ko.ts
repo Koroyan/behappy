@@ -1,5 +1,25 @@
 /** Well-being ecosystem (`wb`), Korean. Machine-translated from en.ts (scripts/i18n/translate-wb.mjs); native review recommended. */
 export const wbKo = {
+  "money": {
+    "regularPrice": "정상가",
+    "youSave": "{amount} 할인",
+    "offerEnds": "할인 종료일: {date}",
+    "firstPurchase": "첫 구매 시 적용",
+    "discount": "할인",
+    "adjusted": "제공 가능한 최저가에 맞춰 할인 금액이 조정되었어요.",
+    "promoCode": "프로모션 코드",
+    "apply": "적용",
+    "codeApplied": "적용된 코드: {name}",
+    "codeInvalid": "이 구매에는 사용할 수 없는 코드예요.",
+    "codeNotBetter": "이미 이 코드보다 더 낮은 가격이 적용되어 있어요.",
+    "limitsTitle": "이용 한도 안내",
+    "artSessionLimit": "아트 세션당 최대 {n}개의 메시지를 보낼 수 있어요. 보통 한 세션에는 메시지 8~15개가 오가요.",
+    "fairUse": "공정한 이용을 위해 AI 기능에는 계정별 월간 이용 한도가 있어요. 사용량과 한도가 갱신되는 날짜를 확인할 수 있으며, 대부분은 한도에 도달하지 않아요.",
+    "safetyNeverLimited": "도움말과 안전 관련 자료는 언제든 제한 없이 이용할 수 있어요.",
+    "allowanceTitle": "이번 달 AI 이용 한도를 모두 사용했어요",
+    "allowanceReached": "AI 기능은 {date}까지 쉬어 가요. 일기, 도구, 도움말 자료는 평소처럼 이용할 수 있어요.",
+    "allowanceUsed": "AI 이용량: {percent}%"
+  },
   "sound": {
     "title": "사운드 랩",
     "subtitle": "집중, 휴식, 수면을 위한 소리를 휴대폰에서 만들어요. 오프라인에서도 사용할 수 있어요.",
@@ -458,9 +478,9 @@ export const wbKo = {
     }
   },
   "memory": {
-    "title": "Anulia가 기억할 수 있는 것",
-    "subtitle": "Anulia가 사용할 수 있는 기록을 골라주세요. 직접 켜기 전에는 모두 꺼져 있어요.",
-    "intro": "AI 사용에 동의해도 이전 기록이 공유되지는 않아요. 아래 항목은 각각 따로 설정하며 언제든 끌 수 있어요. 끄면 Anulia는 그 기록 없이 새 대화를 시작해요.",
+    "title": "Bea가 기억할 수 있는 것",
+    "subtitle": "Bea가 사용할 수 있는 기록을 골라주세요. 직접 켜기 전에는 모두 꺼져 있어요.",
+    "intro": "AI 사용에 동의해도 이전 기록이 공유되지는 않아요. 아래 항목은 각각 따로 설정하며 언제든 끌 수 있어요. 끄면 Bea는 그 기록 없이 새 대화를 시작해요.",
     "categories": {
       "profile": "프로필 (이름, 연령대, 찾아온 이유)",
       "steps": "작은 실천과 나의 목표",
@@ -468,13 +488,13 @@ export const wbKo = {
       "activity": "활동 횟수 (일기, 연습, 미술 치료, 성찰 카드)",
       "sound": "소리와 집중 시간",
       "sleep": "수면 기록",
-      "priorChats": "Anulia와 나눈 이전 대화 요약",
+      "priorChats": "Bea와 나눈 이전 대화 요약",
       "journalText": "일기 전체 내용",
       "artSummaries": "미술 치료 활동 요약",
       "assessments": "자가 점검 결과"
     },
     "hints": {
-      "profile": "Anulia가 원하는 방식으로 이야기하는 데 도움이 돼요.",
+      "profile": "Bea가 원하는 방식으로 이야기하는 데 도움이 돼요.",
       "steps": "오늘의 실천과 이번 주 실천 횟수예요.",
       "mood": "마음 확인에서 직접 남긴 점수와 감정이에요.",
       "activity": "내용은 제외하고 횟수만 사용해요.",
@@ -485,9 +505,9 @@ export const wbKo = {
       "artSummaries": "미술 치료 활동을 마칠 때의 요약이에요.",
       "assessments": "최근 자가 점검 점수예요. 진단은 아니에요."
     },
-    "never": "커뮤니티 메시지와 심리 전문가와 나눈 메시지는 Anulia에게 공유하지 않아요.",
-    "preview": "지금 Anulia에게 보이는 내용",
-    "previewEmpty": "아무것도 없어요. Anulia는 이전 기록을 전혀 알지 못해요.",
+    "never": "커뮤니티 메시지와 심리 전문가와 나눈 메시지는 Bea에게 공유하지 않아요.",
+    "preview": "지금 Bea에게 보이는 내용",
+    "previewEmpty": "아무것도 없어요. Bea는 이전 기록을 전혀 알지 못해요.",
     "previewNote": "다음 메시지에 이 내용이 그대로 추가돼요.",
     "exclude": "제외",
     "include": "다시 포함",
@@ -495,14 +515,14 @@ export const wbKo = {
     "journalItems": "일기",
     "chatItems": "이전 대화",
     "notes": "기억해둘 내용",
-    "notesHint": "Anulia에게 짧은 메모를 남겨보세요. 예: “답변은 짧게 해주세요.”",
+    "notesHint": "Bea에게 짧은 메모를 남겨보세요. 예: “답변은 짧게 해주세요.”",
     "addNote": "추가",
-    "notePlaceholder": "Anulia에게 남길 메모…",
+    "notePlaceholder": "Bea에게 남길 메모…",
     "forgetAll": "모두 잊기",
-    "forgetConfirm": "모든 항목을 끄고 메모를 삭제할까요? 다음 메시지부터 Anulia가 새롭게 시작해요.",
-    "forgotten": "완료했어요. 이제 Anulia는 이전 기록을 전혀 기억하지 않아요.",
+    "forgetConfirm": "모든 항목을 끄고 메모를 삭제할까요? 다음 메시지부터 Bea가 새롭게 시작해요.",
+    "forgotten": "완료했어요. 이제 Bea는 이전 기록을 전혀 기억하지 않아요.",
     "transfer": "작동 방식",
-    "transferBody": "모든 기록은 이 휴대폰에 보관돼요. Anulia에게 메시지를 보내면 켜둔 항목만 메시지에 추가되고, 답변 작성을 위해 BeHappy 서버를 거쳐 OpenAI로 전송돼요. OpenAI는 악용 탐지를 위해 API 데이터를 최대 30일간 보관하며 모델 학습에는 사용하지 않아요. BeHappy 서버에는 저장하지 않아요.",
+    "transferBody": "모든 기록은 이 휴대폰에 보관돼요. Bea에게 메시지를 보내면 켜둔 항목만 메시지에 추가되고, 답변 작성을 위해 BeHappy 서버를 거쳐 OpenAI로 전송돼요. OpenAI는 악용 탐지를 위해 API 데이터를 최대 30일간 보관하며 모델 학습에는 사용하지 않아요. BeHappy 서버에는 저장하지 않아요.",
     "sources": "출처: {n}개"
   },
   "sleep": {
@@ -555,7 +575,7 @@ export const wbKo = {
       "subtitle": "잠들 준비와 아침의 수면 기록"
     },
     "memory": {
-      "title": "Anulia가 기억하는 것",
+      "title": "Bea가 기억하는 것",
       "subtitle": "기억할 항목 설정"
     }
   },

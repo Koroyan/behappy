@@ -30,9 +30,34 @@ export interface Catalog {
   catalog: string;
   products: Product[];
   limits?: {
-    free: { anuliaMessages: number; anuliaPeriod: string; journalReflectionsPerDay: number; cardConversations: number; freeArtSessions: number };
-    plus: { anuliaMessages: number; anuliaPeriod: string; journalReflectionsPerDay: number; cardConversationsPerDay: number; newArtSessionsPerDay: number };
+    free: { anuliaMessages: number; anuliaPeriod: string; journalReflectionsPerDay: number; cardConversations: number; freeArtSessions: number; artMessagesPerSession?: number };
+    plus: { anuliaMessages: number; anuliaPeriod: string; journalReflectionsPerDay: number; cardConversationsPerDay: number; newArtSessionsPerDay: number; artMessagesPerSession?: number };
+    allowances?: { plusUsdPer30Days: number; freeUsdPer30Days: number; artProgramUsd: number };
   };
+  /** Automatic offers anyone gets now, decided on the server (the reference is the regular price). */
+  offers?: Record<string, Offer>;
+  renewal?: 'manual';
+}
+
+export interface Offer {
+  listMinor: number;
+  finalMinor: number;
+  savingMinor: number;
+  endsAt: number | null;
+  name: string | null;
+  firstPurchaseOnly: boolean;
+}
+
+/** What this account would pay now, with an optional promo code (the server decides). */
+export interface Quote {
+  productId: string;
+  listMinor: number;
+  finalMinor: number;
+  discountMinor: number;
+  promotion: { id: string; name: string; endsAt: number | null } | null;
+  clamped: boolean;
+  codeNotBetter: boolean;
+  currency: string;
 }
 
 export type OrderStatus = 'created' | 'processing' | 'approved' | 'declined' | 'expired' | 'reversed' | 'partially_reversed' | 'error';
@@ -43,6 +68,9 @@ export interface Order {
   productKind: ProductKind;
   durationDays: number | null;
   amountMinor: number;
+  /** The regular price and the discount, when a promotion applied. */
+  listAmountMinor?: number;
+  discountMinor?: number;
   currency: string;
   status: OrderStatus;
   mode: 'test';
@@ -66,12 +94,16 @@ export function getCatalog(): Promise<Catalog> {
   return apiJson<Catalog>('/api/catalog', { anonymous: true });
 }
 
-export async function startCheckout(productId: string, lang: string): Promise<{ order: Order; checkoutUrl: string; product: Product }> {
+export function getQuote(productId: string, promoCode?: string): Promise<Quote> {
+  return apiJson<Quote>('/api/payments/quote', { method: 'POST', body: { productId, ...(promoCode ? { promoCode } : {}) } });
+}
+
+export async function startCheckout(productId: string, lang: string, promoCode?: string): Promise<{ order: Order; checkoutUrl: string; product: Product }> {
   const returnTo =
     Platform.OS === 'web' && typeof window !== 'undefined'
       ? { platform: 'web', origin: window.location.origin, path: '/checkout/result' }
       : { platform: 'native' };
-  const out = await apiJson<{ order: Order; checkoutUrl: string; product: Product }>('/api/payments/checkout', { method: 'POST', body: { productId, lang, returnTo } });
+  const out = await apiJson<{ order: Order; checkoutUrl: string; product: Product }>('/api/payments/checkout', { method: 'POST', body: { productId, lang, returnTo, ...(promoCode ? { promoCode } : {}) } });
   trackAction('membership', 'checkout_started');
   return out;
 }

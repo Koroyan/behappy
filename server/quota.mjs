@@ -12,12 +12,33 @@
 //  - Each decision runs in one transaction with the account row locked, so
 //    two simultaneous requests can't both spend the last message.
 
+import { callCostUsd, priceFor, RESERVE_USD } from './aiPricing.mjs';
+
+/**
+ * AI allowances in USD — what guarantees the economics (server/finance/model.mjs):
+ * whatever the token counts, caching or retries, one account's AI can't cost
+ * more than this. Every request reserves its worst-case cost first
+ * (RESERVE_USD), inside the same locked transaction, so parallel requests can't
+ * overrun it. People see it as a fair-use allowance (percent used, reset date).
+ *  - plus: per rolling 30 days, all features;
+ *  - free: per rolling 30 days, every feature except Art;
+ *  - freeArt: lifetime, the free first Art session;
+ *  - artProgram: lifetime, the 43-session program bought on its own.
+ */
+export const AI_ALLOWANCES = {
+  plus: { usd: 3.5, windowDays: 30 },
+  free: { usd: 0.1, windowDays: 30 },
+  // Room for a whole first session (~17 turns even with no prompt caching) plus one turn's reservation.
+  freeArt: { usd: 0.8, windowDays: null },
+  artProgram: { usd: 12.4, windowDays: null },
+};
+
 export const LIMITS = {
   free: {
-    anulia: { messages: 20, period: 'month', graceMessages: 3 },
+    anulia: { messages: 20, period: 'month', graceMessages: 3, gracePerPeriod: 3 },
     journal: { reflections: 1, period: 'day' },
     cards: { conversations: 1, period: 'lifetime', messagesPerConversation: 40 },
-    art: { freeSessionIds: [1], newSessions: 1, period: 'day', messagesPerSession: 60 },
+    art: { freeSessionIds: [1], newSessions: 1, period: 'day', messagesPerSession: 24 },
     summary: { count: 3, period: 'day' },
     motivation: { count: 2, period: 'day' },
     transcribe: { count: 5, period: 'day' },
@@ -27,10 +48,13 @@ export const LIMITS = {
     reflection: { count: 1, period: 'day' },
   },
   plus: {
-    anulia: { messages: 40, period: 'day', graceMessages: 3 },
+    // gracePerPeriod: grace messages in all conversations together (before, each
+    // new conversation got its own three: 40 one-message conversations made 160).
+    anulia: { messages: 40, period: 'day', graceMessages: 3, gracePerPeriod: 6 },
     journal: { reflections: 3, period: 'day' },
     cards: { conversations: 2, period: 'day', messagesPerConversation: 60 },
-    art: { newSessions: 1, period: 'day', messagesPerSession: 80 },
+    // 24 messages: a session is 8-15 turns through its three phases; 80 was a cost risk, not a need.
+    art: { newSessions: 1, period: 'day', messagesPerSession: 24 },
     summary: { count: 10, period: 'day' },
     motivation: { count: 2, period: 'day' },
     transcribe: { count: 30, period: 'day' },
@@ -39,7 +63,7 @@ export const LIMITS = {
     reflection: { count: 3, period: 'day' },
   },
   // Art-program owners without Plus: full program, normal Anulia free tier.
-  art: { newSessions: 1, period: 'day', messagesPerSession: 80 },
+  art: { newSessions: 1, period: 'day', messagesPerSession: 24 },
 };
 
 const dayKey = (now) => new Date(now).toISOString().slice(0, 10);
@@ -87,8 +111,87 @@ async function writeConversation(q, accountId, key, count, grace) {
 export async function checkAndRecord({ db, accountId, entitlements, ctx, now = Date.now() }) {
   return db.tx(async (t) => {
     await t.query('select id from accounts where id = $1 for update', [accountId]);
-    return decide(t, { accountId, entitlements, ctx, now });
+    const allowance = await allowanceFor(t, { accountId, entitlements, feature: ctx.feature, now });
+    const reserve = RESERVE_USD[ctx.feature] ?? 0.05;
+    if (allowance && allowance.spentUsd + reserve > allowance.usd + 1e-9) {
+      const tier = entitlements.plus.active ? 'plus' : 'free';
+      return { allowed: false, status: 402, error: 'quota_exceeded', feature: ctx.feature, reason: 'ai_allowance', tier, resetAt: allowance.resetAt, allowanceUsd: allowance.usd, spentUsd: Math.round(allowance.spentUsd * 100) / 100 };
+    }
+    const decision = await decide(t, { accountId, entitlements, ctx, now });
+    if (decision.allowed && allowance) {
+      const r = await t.query("insert into ai_usage (account_id, feature, model, status, cost_usd, created_at) values ($1, $2, 'reservation', 'reserved', $3, $4) returning id", [accountId, ctx.feature, reserve, new Date(now).toISOString()]);
+      decision.reservationId = Number(r.rows[0].id);
+    }
+    return decision;
   });
+}
+
+/** Releases a reservation (idempotent); the call's real cost is recorded separately. */
+export async function releaseReservation(db, id) {
+  if (!id) return;
+  await db.query("update ai_usage set status = 'released', cost_usd = 0 where id = $1 and status = 'reserved'", [id]).catch(() => {});
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const COUNTED = "status in ('ok', 'error', 'reserved')";
+
+/**
+ * Spend in USD of the ai_usage rows matching `where` (SQL after "where").
+ * Rows recorded before costs were stored (cost_usd = 0 but tokens > 0) are
+ * priced from their tokens, so history before the upgrade still counts.
+ */
+export async function spentUsd(q, where, params = []) {
+  const r = await q.query(
+    `select model, feature, coalesce(sum(cost_usd), 0)::float8 as cost,
+            coalesce(sum(input_tokens) filter (where cost_usd = 0), 0)::float8 as input,
+            coalesce(sum(output_tokens) filter (where cost_usd = 0), 0)::float8 as output,
+            coalesce(sum(cached_tokens) filter (where cost_usd = 0), 0)::float8 as cached,
+            min(created_at) as oldest
+       from ai_usage where ${where} group by model, feature`,
+    params
+  );
+  let total = 0;
+  const byFeature = {};
+  let oldest = null;
+  for (const row of r.rows) {
+    const legacy = row.input || row.output ? (priceFor(row.model) ? callCostUsd({ model: row.model, input: row.input, output: row.output, cached: row.cached }) : 0) : 0;
+    const usd = Number(row.cost) + legacy;
+    total += usd;
+    byFeature[row.feature] = (byFeature[row.feature] || 0) + usd;
+    const o = row.oldest ? new Date(row.oldest).getTime() : null;
+    if (o && (!oldest || o < oldest)) oldest = o;
+  }
+  return { total, byFeature, oldest };
+}
+
+/**
+ * The allowance that applies to this request and what has been spent (USD).
+ * Rolling windows: spend in the last 30 days; the reset date is when the
+ * oldest counted spend leaves the window.
+ */
+export async function allowanceFor(q, { accountId, entitlements, feature, now = Date.now() }) {
+  const plus = entitlements?.plus?.active;
+  let a;
+  let where;
+  const params = [accountId];
+  if (plus) {
+    a = AI_ALLOWANCES.plus;
+    where = '';
+  } else if (feature === 'art') {
+    a = entitlements?.artProgram?.active ? AI_ALLOWANCES.artProgram : AI_ALLOWANCES.freeArt;
+    where = " and feature = 'art'";
+  } else {
+    a = AI_ALLOWANCES.free;
+    where = " and feature <> 'art'";
+  }
+  let since = null;
+  if (a.windowDays) {
+    since = new Date(now - a.windowDays * DAY_MS).toISOString();
+    params.push(since);
+  }
+  const s = await spentUsd(q, `account_id = $1 and ${COUNTED}${where}${since ? ' and created_at > $2' : ''}`, params);
+  const oldest = s.oldest;
+  return { usd: a.usd, spentUsd: s.total, windowDays: a.windowDays, resetAt: a.windowDays && oldest ? oldest + a.windowDays * DAY_MS : null, kind: plus ? 'plus' : feature === 'art' ? (entitlements?.artProgram?.active ? 'artProgram' : 'freeArt') : 'free' };
 }
 
 async function decide(t, { accountId, entitlements, ctx, now }) {
@@ -118,9 +221,12 @@ async function decide(t, { accountId, entitlements, ctx, now }) {
       await bump(t, accountId, 'anulia', rule.period, now);
       return { allowed: true, remaining: rule.messages - used - 1, tier };
     }
-    // Gentle landing: an ongoing conversation may finish with a few extra turns.
-    if (convRow.count > 0 && convRow.grace < rule.graceMessages) {
+    // Gentle landing: an ongoing conversation may finish with a few extra turns
+    // (at most gracePerPeriod across all conversations).
+    const graceUsed = await readCounter(t, accountId, 'anulia_grace', rule.period, now);
+    if (convRow.count > 0 && convRow.grace < rule.graceMessages && graceUsed < (rule.gracePerPeriod ?? rule.graceMessages)) {
       await writeConversation(t, accountId, convKey, convRow.count + 1, convRow.grace + 1);
+      await bump(t, accountId, 'anulia_grace', rule.period, now);
       return { allowed: true, remaining: 0, grace: true, graceLeft: rule.graceMessages - convRow.grace - 1, tier };
     }
     return deny(tier === 'plus' ? 'daily_limit' : 'free_limit', rule.period);
@@ -226,5 +332,10 @@ export async function usageSummary({ db, accountId, entitlements, now = Date.now
       limit: limits.community.count,
       period: limits.community.period,
     },
+    // The fair-use AI allowance (shown as a share, with the reset date).
+    allowance: await (async () => {
+      const a = await allowanceFor(db, { accountId, entitlements, feature: 'anulia', now });
+      return { kind: a.kind, usedShare: Math.min(1, a.spentUsd / a.usd), windowDays: a.windowDays, resetAt: a.resetAt };
+    })(),
   };
 }

@@ -1,20 +1,44 @@
 import React from 'react';
 import { View } from 'react-native';
-import Svg, { Circle, G, Path } from 'react-native-svg';
+import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { useTheme } from '../ThemeProvider';
 import { AppText } from './AppText';
 
-/** BeHappy mark: a calm sunrise over still water. */
+/**
+ * BeHappy mark: a sun rising over a smile-shaped horizon, soft rays, still
+ * water, on deep teal (the app icon's artwork: scripts/brand/logo.mjs).
+ */
 export function BrandMark({ size = 32 }: { size?: number }) {
-  const { colors, isDark } = useTheme();
-  const ivory = isDark ? '#E8EFEC' : '#F7F8F5';
+  const { isDark } = useTheme();
+  const id = React.useId().replace(/[^A-Za-z0-9]/g, '');
+  const ivory = '#FBF8F1';
+  const rays = [-62, -31, 0, 31, 62].map((deg) => {
+    const a = ((deg - 90) * Math.PI) / 180;
+    const r1 = 9.4;
+    const r2 = deg === 0 ? 11.6 : 11.1;
+    return { x1: 16 + r1 * Math.cos(a), y1: 18.8 + r1 * Math.sin(a), x2: 16 + r2 * Math.cos(a), y2: 18.8 + r2 * Math.sin(a), key: deg };
+  });
   return (
     <Svg width={size} height={size} viewBox="0 0 32 32" accessibilityLabel="BeHappy">
-      <Circle cx={16} cy={16} r={16} fill={colors.brand} />
-      <Path d="M8.6 19.6a7.4 7.4 0 0 1 14.8 0z" fill={isDark ? '#F0BFAE' : '#F6C9B8'} />
-      <Path d="M5.2 21.6c3.5-1.5 7.1-2.2 10.8-2.2s7.3.7 10.8 2.2" stroke={ivory} strokeWidth={1.8} strokeLinecap="round" fill="none" />
-      <Path d="M7.8 25.1c2.7-.9 5.4-1.3 8.2-1.3s5.5.4 8.2 1.3" stroke={ivory} strokeOpacity={0.65} strokeWidth={1.6} strokeLinecap="round" fill="none" />
+      <Defs>
+        <LinearGradient id={`bg${id}`} x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor={isDark ? '#6FB8AC' : '#5FAE9F'} />
+          <Stop offset="0.55" stopColor="#3A7D73" />
+          <Stop offset="1" stopColor="#285D55" />
+        </LinearGradient>
+        <LinearGradient id={`sun${id}`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FFE2A8" />
+          <Stop offset="1" stopColor="#F6A98E" />
+        </LinearGradient>
+      </Defs>
+      <Circle cx={16} cy={16} r={16} fill={`url(#bg${id})`} />
+      {rays.map((r) => (
+        <Line key={r.key} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke={ivory} strokeOpacity={0.9} strokeWidth={1.1} strokeLinecap="round" />
+      ))}
+      <Path d="M8.75 18.9a7.25 7.25 0 0 1 14.5 0z" fill={`url(#sun${id})`} />
+      <Path d="M6.7 19.1Q16 25.4 25.3 19.1" stroke={ivory} strokeWidth={1.7} strokeLinecap="round" fill="none" />
+      <Path d="M10.3 24.7Q16 27.2 21.7 24.7" stroke={ivory} strokeOpacity={0.55} strokeWidth={1} strokeLinecap="round" fill="none" />
     </Svg>
   );
 }
@@ -34,7 +58,7 @@ export function BrandLockup({ size = 30 }: { size?: number }) {
 export function AnuliaMark({ size = 40 }: { size?: number }) {
   const { colors } = useTheme();
   return (
-    <Svg width={size} height={size} viewBox="0 0 40 40" accessibilityLabel="Anulia">
+    <Svg width={size} height={size} viewBox="0 0 40 40" accessibilityLabel="Bea">
       <Circle cx={20} cy={20} r={20} fill={colors.primarySoft} />
       <G>
         <Path d="M20 29V18" stroke={colors.primary} strokeWidth={2} strokeLinecap="round" />

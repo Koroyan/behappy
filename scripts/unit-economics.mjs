@@ -1,229 +1,154 @@
-// BeHappy unit economics: what one user costs per month, and what each plan
-// earns after payment fees, for several usage profiles.
+// BeHappy unit economics report, from the one model the server uses
+// (server/finance/model.mjs). Every number is computed; assumptions and their
+// sources are in server/finance/assumptions.mjs.
 //
-//   node scripts/unit-economics.mjs                 # Markdown tables
-//   node scripts/unit-economics.mjs --json          # raw numbers
-//   node scripts/unit-economics.mjs --assumptions my.json   # deep-merged overrides
+//   node scripts/unit-economics.mjs            # Markdown report (tables A-D)
+//   node scripts/unit-economics.mjs --json     # raw numbers
+//   node scripts/unit-economics.mjs --check    # exit 1 if any product breaks the 15 GEL minimum
 //
-// Every number below is an ASSUMPTION unless marked as a quoted price. Check
-// quoted prices before relying on them; they change.
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+// Before this version the script priced Art with gpt-5.4-mini rates, assumed 8
+// turns per Art session (the server allowed 80) and a flat $0.05 per user for
+// hosting; it showed a profitable 50 GEL Art program that in fact lost money.
+import { RESERVE_USD } from '../server/aiPricing.mjs';
+import { getCatalog, getProfessionalCatalog } from '../server/catalog.mjs';
+import { ASSUMPTIONS, SOURCES } from '../server/finance/assumptions.mjs';
+import { assumptions, breakEven, checkInvariant, contribution, forecast, infraMonthlyUsd, maxSafeDiscount, minSafePrice, profileCosts, requiredGel, supportedChannels, unitCosts } from '../server/finance/model.mjs';
+import { AI_ALLOWANCES, LIMITS } from '../server/quota.mjs';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
-const opt = (n) => (args.includes(`--${n}`) ? args[args.indexOf(`--${n}`) + 1] : undefined);
+const A = ASSUMPTIONS;
+const fx = A.fx.usdGel;
+// The prices before this change (git history), for comparison only.
+const OLD_PRICES = { plus_30: 51, plus_90: 142, plus_365: 519, art_program: 50, professional_30d: 79 };
+const products = [...getCatalog('current'), ...getProfessionalCatalog()];
+const affordable = Object.fromEntries(getCatalog('affordable').map((p) => [p.id, p.amountMinor / 100]));
 
-export const DEFAULTS = {
-  asOf: '2026-11',
-  // Quoted: NBG official rate was about 2.62 GEL per USD in Aug 2026. Rounded up to be conservative.
-  usdToGel: 2.65,
-  // Quoted: Flitt lists 2.5% for international cards (0-50k GEL monthly volume). The
-  // domestic-card rate is not published; 2.5% is used for every payment.
-  paymentFee: 0.025,
-  // Georgian VAT is 18% once the business is VAT-registered. Prices shown are final,
-  // so VAT would come out of them. 0 = not registered.
-  vatRate: 0,
-  // Hosting, storage and monitoring per active user per month (assumption).
-  infraUsdPerActiveUser: 0.05,
-  // Quoted: gpt-5.4-mini, USD per 1M tokens (OpenAI model page, Nov 2026).
-  model: { inputPerM: 0.75, cachedInputPerM: 0.075, outputPerM: 4.5 },
-  // Share of the repeated prompt/history prefix billed at the cached rate.
-  cacheShare: 0.5,
-  // Quoted (third-party, launch pricing): gpt-4o-mini-transcribe and gpt-4o-mini-tts.
-  transcribeUsdPerMin: 0.003,
-  ttsUsdPerMin: 0.015,
-  // Token sizes per turn (assumptions, measured roughly from the hosted prompts).
-  features: {
-    anulia: { promptTokens: 3000, userTokens: 90, outputTokens: 230, reasoningTokens: 150, turnsPerConversation: 10, summaryOutputTokens: 300 },
-    art: { promptTokens: 6500, userTokens: 70, outputTokens: 320, reasoningTokens: 200, turnsPerSession: 8, imageTokens: 1500, imagesPerSession: 2 },
-    cards: { promptTokens: 3500, userTokens: 60, outputTokens: 240, reasoningTokens: 150, turnsPerConversation: 8, imageTokens: 1500, imagesPerConversation: 1 },
-    journal: { promptTokens: 500, entryTokens: 350, outputTokens: 260, reasoningTokens: 100 },
-    voice: { minutesPerClip: 0.5, minutesPerListen: 1.1 },
-  },
-  // Monthly usage per profile. "cap" = every daily limit used every day (worst case).
-  profiles: {
-    free: { anuliaMessages: 23, artSessions: 1, cardConversations: 1, journalReflections: 8, voiceClips: 4, listens: 4 },
-    light: { anuliaMessages: 60, artSessions: 4, cardConversations: 2, journalReflections: 8, voiceClips: 10, listens: 5 },
-    typical: { anuliaMessages: 250, artSessions: 10, cardConversations: 8, journalReflections: 20, voiceClips: 40, listens: 20 },
-    heavy: { anuliaMessages: 700, artSessions: 22, cardConversations: 30, journalReflections: 60, voiceClips: 150, listens: 90 },
-  },
-  plans: {
-    current: [
-      { id: 'plus_30', label: 'Plus 30 days', priceGel: 51, months: 1 },
-      { id: 'plus_90', label: 'Plus 90 days', priceGel: 142, months: 3 },
-      { id: 'plus_365', label: 'Plus 365 days', priceGel: 519, months: 12 },
-    ],
-    proposal: [
-      { id: 'plus_30', label: 'Plus 30 days', priceGel: 29, months: 1 },
-      { id: 'plus_365', label: 'Plus 365 days', priceGel: 249, months: 12 },
-    ],
-  },
-  artProgram: { priceGel: 50, sessions: 43 },
-};
+const usd = (x) => (x < 0.01 ? `$${x.toFixed(4)}` : `$${x.toFixed(3)}`);
+const gel = (x) => `${x.toFixed(2)}`;
+const worstOf = (p, opts = {}) => Math.min(...supportedChannels(opts.A || A).map((channel) => contribution(p, { channel, ...opts }).contributionGel));
+const worstRow = (p, opts = {}) => supportedChannels(opts.A || A).map((channel) => contribution(p, { channel, ...opts })).reduce((m, r) => (r.contributionGel < m.contributionGel ? r : m));
 
-const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
-const merge = (a, b) => {
-  if (!isObj(b)) return b === undefined ? a : b;
-  const out = { ...a };
-  for (const [k, v] of Object.entries(b)) out[k] = isObj(v) && isObj(a?.[k]) ? merge(a[k], v) : v;
-  return out;
-};
-
-/** Monthly worst case taken from the server's real daily limits. */
-async function capProfile() {
-  const { LIMITS } = await import(path.join(root, 'server/quota.mjs').replace(/\\/g, '/').replace(/^([A-Za-z]):/, 'file:///$1:'));
-  const p = LIMITS.plus;
-  const days = 30;
-  return {
-    anuliaMessages: p.anulia.messages * days,
-    artSessions: p.art.newSessions * days,
-    cardConversations: p.cards.conversations * days,
-    journalReflections: p.journal.reflections * days,
-    voiceClips: p.transcribe.count * days,
-    listens: p.speech.count * days,
-  };
-}
-
-export function unitCosts(A) {
-  const { inputPerM, cachedInputPerM, outputPerM } = A.model;
-  const inRate = ((1 - A.cacheShare) * inputPerM + A.cacheShare * cachedInputPerM) / 1e6;
-  const outRate = outputPerM / 1e6;
-
-  // A chained conversation re-sends the prompt and the history on every turn.
-  const conversation = ({ promptTokens: P, userTokens: u, outputTokens: o, reasoningTokens: r = 0 }, turns, images = 0, imageTokens = 0) => {
-    let input = 0;
-    for (let k = 1; k <= turns; k += 1) input += P + (k - 1) * (u + o) + u;
-    for (let i = 0; i < images; i += 1) {
-      const uploadedAt = 1 + Math.floor((i * turns) / Math.max(images, 1));
-      input += imageTokens * (turns - uploadedAt + 1);
-    }
-    const output = turns * (o + r);
-    return { input, output, usd: input * inRate + output * outRate };
-  };
-
-  const f = A.features;
-  const anuliaConv = conversation(f.anulia, f.anulia.turnsPerConversation);
-  const summaryUsd = (f.anulia.turnsPerConversation * (f.anulia.userTokens + f.anulia.outputTokens) + 400) * inRate + f.anulia.summaryOutputTokens * outRate;
-  const art = conversation(f.art, f.art.turnsPerSession, f.art.imagesPerSession, f.art.imageTokens);
-  const cards = conversation(f.cards, f.cards.turnsPerConversation, f.cards.imagesPerConversation, f.cards.imageTokens);
-  const journalUsd = (f.journal.promptTokens + f.journal.entryTokens) * inRate + (f.journal.outputTokens + f.journal.reasoningTokens) * outRate;
-  return {
-    anuliaMessage: (anuliaConv.usd + summaryUsd) / f.anulia.turnsPerConversation,
-    artSession: art.usd,
-    cardConversation: cards.usd,
-    journalReflection: journalUsd,
-    voiceClip: f.voice.minutesPerClip * A.transcribeUsdPerMin,
-    listen: f.voice.minutesPerListen * A.ttsUsdPerMin,
-  };
-}
-
-export function monthlyCost(A, unit, usage) {
-  const parts = {
-    anulia: usage.anuliaMessages * unit.anuliaMessage,
-    art: usage.artSessions * unit.artSession,
-    cards: usage.cardConversations * unit.cardConversation,
-    journal: usage.journalReflections * unit.journalReflection,
-    voice: usage.voiceClips * unit.voiceClip + usage.listens * unit.listen,
-    infra: A.infraUsdPerActiveUser,
-  };
-  return { ...parts, total: Object.values(parts).reduce((s, x) => s + x, 0) };
-}
-
-const netMonthlyGel = (A, plan) => (plan.priceGel / plan.months) * (1 - A.paymentFee) / (1 + A.vatRate);
-
-export async function run(overrides = {}) {
-  const A = merge(DEFAULTS, overrides);
-  const profiles = { ...A.profiles, cap: A.profiles.cap ?? (await capProfile()) };
-  const unit = unitCosts(A);
-  const costs = Object.fromEntries(Object.entries(profiles).map(([k, u]) => [k, monthlyCost(A, unit, u)]));
-  const plans = {};
-  for (const [catalog, list] of Object.entries(A.plans)) {
-    plans[catalog] = list.map((plan) => {
-      const net = netMonthlyGel(A, plan);
-      const margins = Object.fromEntries(
-        ['light', 'typical', 'heavy', 'cap'].map((k) => {
-          const costGel = costs[k].total * A.usdToGel;
-          return [k, { costGel, marginGel: net - costGel, marginPct: (net - costGel) / net }];
-        })
-      );
-      return { ...plan, netMonthlyGel: net, margins };
-    });
-  }
-  const freeGel = costs.free.total * A.usdToGel;
-  const typicalPlusMargin = plans.current[0].margins.typical.marginGel;
-  const art = {
-    priceGel: A.artProgram.priceGel,
-    netGel: A.artProgram.priceGel * (1 - A.paymentFee) / (1 + A.vatRate),
-    costGel: A.artProgram.sessions * unit.artSession * A.usdToGel,
-  };
-  return {
-    assumptions: A,
-    unit,
-    costs,
-    plans,
-    free: { monthlyGel: freeGel, breakEvenConversion: freeGel / (freeGel + typicalPlusMargin) },
-    art: { ...art, marginGel: art.netGel - art.costGel },
-  };
-}
-
-const usd = (x) => `$${x < 0.1 ? x.toFixed(4) : x.toFixed(2)}`;
-const gel = (x) => `${x.toFixed(2)} GEL`;
-const pct = (x) => `${Number((x * 100).toFixed(1))}%`;
-
-function markdown(r) {
-  const L = [];
-  L.push(`Assumptions as of ${r.assumptions.asOf}: 1 USD = ${r.assumptions.usdToGel} GEL, payment fee ${pct(r.assumptions.paymentFee)}, VAT ${pct(r.assumptions.vatRate)}, cache share ${pct(r.assumptions.cacheShare)}.`, '');
-  L.push('| Unit | Cost |', '|---|---|');
-  L.push(`| Anulia message (incl. share of summary) | ${usd(r.unit.anuliaMessage)} |`);
-  L.push(`| Art session (${r.assumptions.features.art.turnsPerSession} turns, ${r.assumptions.features.art.imagesPerSession} photos) | ${usd(r.unit.artSession)} |`);
-  L.push(`| Card reflection (${r.assumptions.features.cards.turnsPerConversation} turns) | ${usd(r.unit.cardConversation)} |`);
-  L.push(`| Journal reflection | ${usd(r.unit.journalReflection)} |`);
-  L.push(`| Voice message transcribed | ${usd(r.unit.voiceClip)} |`);
-  L.push(`| Message read aloud | ${usd(r.unit.listen)} |`, '');
-  L.push('| Profile | Anulia | Art | Cards | Journal | Voice | Infra | Total / month |', '|---|---|---|---|---|---|---|---|');
-  for (const [k, c] of Object.entries(r.costs)) {
-    L.push(`| ${k} | ${usd(c.anulia)} | ${usd(c.art)} | ${usd(c.cards)} | ${usd(c.journal)} | ${usd(c.voice)} | ${usd(c.infra)} | ${usd(c.total)} (${gel(c.total * r.assumptions.usdToGel)}) |`);
-  }
-  for (const [catalog, list] of Object.entries(r.plans)) {
-    L.push('', `**${catalog === 'current' ? 'Current prices (active)' : 'Proposal (not active)'}**: net revenue per month after fees, and margin by profile.`, '');
-    L.push('| Plan | Price | Net / month | Light | Typical | Heavy | Cap (every limit, every day) |', '|---|---|---|---|---|---|---|');
-    for (const p of list) {
-      const m = p.margins;
-      const cell = (x) => `${gel(x.marginGel)} (${pct(x.marginPct)})`;
-      L.push(`| ${p.label} | ${p.priceGel} GEL | ${gel(p.netMonthlyGel)} | ${cell(m.light)} | ${cell(m.typical)} | ${cell(m.heavy)} | ${cell(m.cap)} |`);
-    }
-  }
-  L.push('', `Free user: ${gel(r.free.monthlyGel)} per month. Break-even conversion to Plus 30 at typical use: ${(r.free.breakEvenConversion * 100).toFixed(2)}%.`);
-  L.push(`Art program: ${r.art.priceGel} GEL, net ${gel(r.art.netGel)}, AI cost for all ${r.assumptions.artProgram.sessions} sessions ${gel(r.art.costGel)}, margin ${gel(r.art.marginGel)}.`);
-  return L.join('\n');
-}
-
-async function sensitivity() {
-  const cases = [
-    ['Base', {}],
-    ['No prompt caching', { cacheShare: 0 }],
-    ['Model price x2', { model: { inputPerM: 1.5, cachedInputPerM: 0.15, outputPerM: 9 } }],
-    ['Longer prompts (+50%)', { features: { anulia: { promptTokens: 4500 }, art: { promptTokens: 9750 }, cards: { promptTokens: 5250 } } }],
-    ['VAT-registered (18%)', { vatRate: 0.18 }],
-    ['GEL weakens to 3.00/USD', { usdToGel: 3.0 }],
+function costTable() {
+  const base = unitCosts(A);
+  const nocache = unitCosts(A, { cacheShare: 0 });
+  const heavy = unitCosts(A, { cacheShare: 0, percentile: 'p95', contextGrowth: 1.5 });
+  const rows = [
+    ['Anulia: one message', 'anuliaMessage'],
+    ['Anulia: 10-message conversation', 'anulia10'],
+    ['Anulia: 20-message conversation', 'anulia20'],
+    ['Anulia: 40-message conversation', 'anulia40'],
+    ['Anulia memory block (per message, max 4,500 chars)', 'memoryBlockPerMessage'],
+    ['Conversation summary', 'summary'],
+    ['Daily reflection', 'reflection'],
+    ['Daily reflection with its correction round', 'reflectionWithCorrection'],
+    ['Art: one turn (gpt-6.1-sol, all calls)', 'artTurn'],
+    [`Art: one session (${A.artTurnsPerSession} turns)`, 'artSession'],
+    [`Art: session at the cap (${LIMITS.plus.art.messagesPerSession} turns, every turn retried twice)`, 'artSessionMax'],
+    [`Art: full program, 43 sessions x ${A.artTurnsPerSession} turns`, 'artProgram43'],
+    ['Reflection cards: one message', 'cardMessage'],
+    ['Reflection cards: 8-message conversation', 'cardConversation'],
+    ['Journal reflection (gpt-4.1-mini)', 'journalReflection'],
+    ['Community companion reply', 'communityReply'],
+    ['Speech-to-text, 1 minute', 'transcribeMinute'],
+    ['Text-to-speech, 1,000 characters', 'speech1000Chars'],
   ];
-  const L = ['', '**Sensitivity** (margin of Plus 30 at current price; proposal Plus 365 in brackets):', '', '| Scenario | Typical | Heavy | Cap |', '|---|---|---|---|'];
-  for (const [name, o] of cases) {
-    const r = await run(o);
-    const cur = r.plans.current.find((p) => p.id === 'plus_30').margins;
-    const pro = r.plans.proposal.find((p) => p.id === 'plus_365').margins;
-    const cell = (a, b) => `${gel(a.marginGel)} [${gel(b.marginGel)}]`;
-    L.push(`| ${name} | ${cell(cur.typical, pro.typical)} | ${cell(cur.heavy, pro.heavy)} | ${cell(cur.cap, pro.cap)} |`);
+  const L = ['### A. Cost breakdown (per use)', '', `Measured token counts (ai_usage, p50; heavy = p95 with +50% context). USD list prices ${SOURCES.openai}. GEL at ${fx} per USD (NBG ${A.fx.usdGelOfficial} + 10%).`, '', '| Feature | Typical (50% cached) | No caching | Heavy, no caching | Heavy in GEL |', '|---|---|---|---|---|'];
+  for (const [label, k] of rows) L.push(`| ${label} | ${usd(base[k])} | ${usd(nocache[k])} | ${usd(heavy[k])} | ${gel(heavy[k] * fx)} |`);
+  L.push('', 'Worst case per request (reserved before each call, so parallel requests cannot overrun an allowance):', '', `| ${Object.keys(RESERVE_USD).join(' | ')} |`, `|${Object.keys(RESERVE_USD).map(() => '---').join('|')}|`, `| ${Object.values(RESERVE_USD).map((x) => usd(x)).join(' | ')} |`);
+  const prof = profileCosts(A);
+  L.push('', 'Monthly AI cost by user profile (USD; "charged" = what the server lets an account spend):', '', '| Profile | Uncapped use | Charged | Hits the allowance |', '|---|---|---|---|');
+  for (const [k, v] of Object.entries(prof)) L.push(`| ${k} | ${usd(v.uncapped)} | ${usd(v.charged)} | ${v.capped ? 'yes' : 'no'} |`);
+  L.push('', `AI allowances (server/quota.mjs): Plus $${AI_ALLOWANCES.plus.usd} per rolling 30 days; free $${AI_ALLOWANCES.free.usd} per 30 days (+ $${AI_ALLOWANCES.freeArt.usd} once for the free Art session); Art program $${AI_ALLOWANCES.artProgram.usd} for all 43 sessions.`);
+  return L.join('\n');
+}
+
+function pricingTable() {
+  const L = ['### B. Pricing recommendation', '', `Worst case = every allowance fully used, ${A.taxes.scenarios.worst_case.label}, Flitt international card ${A.payments.channels.flitt_international.fee * 100}%, refunds ${A.payments.refundReserve * 100}%, ${A.free.perPaid} free users per paying customer, fixed costs over ${A.designPaidSubscribers} paying customers, CAC ${A.cacGel === null ? 'UNKNOWN (not included)' : A.cacGel + ' GEL'}.`, '', '| Product | Old price | Typical cost | Recommended price | Promo floor (max safe discount) | Worst-case cost | NET margin (worst case) | Required |', '|---|---|---|---|---|---|---|---|'];
+  const typicalAi = profileCosts(A).normal_plus.charged;
+  for (const p of products) {
+    const r = worstRow(p);
+    const price = p.amountMinor / 100;
+    const worstCost = price - r.contributionGel;
+    const months = p.kind === 'art' ? 3 : (p.durationDays || 30) / 30;
+    const typicalAiGel = p.kind === 'plus' ? typicalAi * months * fx : p.kind === 'art' ? unitCosts(A).artProgram43 * fx : 0;
+    const typical = worstCost - r.parts.ai + typicalAiGel;
+    const d = maxSafeDiscount(p);
+    L.push(`| ${p.id} | ${OLD_PRICES[p.id] ?? '—'} GEL | ${gel(typical)} | **${price} GEL** | ${d.floorGel} GEL (${(d.maxShare * 100).toFixed(1)}%) | ${gel(worstCost)} | ${gel(r.contributionGel)} | ${requiredGel(p)} |`);
+  }
+  L.push('', '**Old prices in the same worst case:**', '', '| Product | Old price | NET margin | Passes |', '|---|---|---|---|');
+  for (const p of products) {
+    const old = OLD_PRICES[p.id];
+    const c = worstOf(p, { priceGel: old });
+    L.push(`| ${p.id} | ${old} GEL | ${gel(c)} | ${c >= requiredGel(p) ? 'yes' : '**NO**'} |`);
+  }
+  L.push('', '**Pricing strategies compared** (GEL; worst-case NET margin in brackets):', '', '| Product | Existing | Affordable (only if 1% status confirmed) | Recommended | Promotional floor | Annual equivalent / month | Worst-case safe minimum |', '|---|---|---|---|---|---|---|');
+  for (const p of products) {
+    const price = p.amountMinor / 100;
+    const aff = affordable[p.id];
+    const minSafe = Math.max(...supportedChannels(A).map((channel) => minSafePrice(p, { channel })));
+    const monthly = p.durationDays ? (price / (p.durationDays / 30)).toFixed(2) : '—';
+    L.push(`| ${p.id} | ${OLD_PRICES[p.id]} [${gel(worstOf(p, { priceGel: OLD_PRICES[p.id] }))}] | ${aff ? `${aff} [1%: ${gel(worstOf(p, { priceGel: aff, scenario: 'small_business_1' }))}]` : '—'} | ${price} [${gel(worstOf(p))}] | ${maxSafeDiscount(p).floorGel} | ${monthly} | ${minSafe} |`);
   }
   return L.join('\n');
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const file = opt('assumptions');
-  const overrides = file ? JSON.parse(fs.readFileSync(path.resolve(file), 'utf8')) : {};
-  const result = await run(overrides);
-  if (args.includes('--json')) console.log(JSON.stringify(result, null, 2));
-  else console.log(markdown(result) + '\n' + (file ? '' : await sensitivity()));
+function forecastTable() {
+  const L = ['### C. Monthly business forecast', '', `Mix of paying customers: 50% Plus 30, 30% Plus 90, 20% Plus 365 (monthly share of the price). Typical = normal usage; worst = every paying account spends its whole AI allowance. Hosting: ${A.infra.options[A.infra.chosen].label}. GEL.`, '', '| Users | Paid share | Paying | Revenue | Taxes+fees+refunds | Hosting & services | Support | AI typical | AI worst | Profit typical | Profit worst |', '|---|---|---|---|---|---|---|---|---|---|---|'];
+  for (const users of [100, 500, 1000, 5000, 10000]) {
+    for (const share of [0.02, 0.05, 0.1]) {
+      const f = forecast({ users, paidShare: share });
+      L.push(`| ${users} | ${share * 100}% | ${f.paid} | ${gel(f.revenue)} | ${gel(f.deductions)} | ${gel(f.infra)} | ${gel(f.support)} | ${gel(f.typicalAi)} | ${gel(f.worstAi)} | ${gel(f.profitTypical)} | ${gel(f.profitWorst)} |`);
+    }
+  }
+  L.push('', '**Hosting options** (USD per month incl. email, domain and store builds):', '', '| Active users | Hetzner | DigitalOcean |', '|---|---|---|');
+  for (const users of [100, 1000, 5000, 10000]) L.push(`| ${users} | ${infraMonthlyUsd(A, users, 'hetzner').total.toFixed(2)} | ${infraMonthlyUsd(A, users, 'digitalocean').total.toFixed(2)} |`);
+  L.push('', '**Break-even** (paying customers to cover the fixed costs, worst case):', '');
+  for (const p of products) {
+    const be = breakEven(p);
+    L.push(`- ${p.id}: ${be.paid ?? 'not reached'}`);
+  }
+  return L.join('\n');
+}
+
+export function stressScenarios() {
+  return [
+    ['Base (worst case, design assumptions)', {}],
+    ['0% prompt caching', {}, 'allowance in USD: unchanged'],
+    ['GEL weakens to 3.20 per USD', { A: assumptions({ fx: { usdGel: 3.2 } }) }],
+    ['Flitt fee 3.5%', { A: assumptions({ payments: { channels: { flitt_international: { fee: 0.035 }, flitt_domestic: { fee: 0.035 } } } }) }],
+    ['20 free users per paying customer', { A: assumptions({ free: { perPaid: 20 } }) }],
+    ['Model prices x2, price table NOT updated', { aiStress: 2 }],
+    ['Only 30 paying customers carry the fixed costs', { paid: 30 }],
+    ['Eligible small business 1% (if confirmed)', { scenario: 'small_business_1' }],
+    ['LLC, VAT-registered', { scenario: 'llc_vat' }],
+    ['CAC 20 GEL per customer', { A: assumptions({ cacGel: 20 }) }],
+  ];
+}
+
+function stressTable() {
+  const L = ['### D. Stress test (passes the 15 GEL-per-30-days rule?)', '', `| Scenario | ${products.map((p) => p.id).join(' | ')} |`, `|---|${products.map(() => '---').join('|')}|`];
+  for (const [name, opts, note] of stressScenarios()) {
+    const cells = products.map((p) => {
+      const c = worstOf(p, opts);
+      return `${c >= requiredGel(p) ? 'PASS' : '**FAIL**'} ${gel(c)}`;
+    });
+    L.push(`| ${name}${note ? ` (${note})` : ''} | ${cells.join(' | ')} |`);
+  }
+  const app = products.filter((p) => p.kind !== 'professional').map((p) => `${p.id}: ${Math.ceil(minSafePrice(p, { channel: 'app_store' }))} GEL`);
+  L.push('', `In-app purchase is NOT supported in this build. If it were, Apple's 30% would need: ${app.join(', ')}.`);
+  return L.join('\n');
+}
+
+if (args.includes('--check')) {
+  const r = checkInvariant();
+  for (const row of r.rows) console.log(`${row.passes ? 'PASS' : 'FAIL'} ${row.productId} @ ${row.channel}: ${row.contributionGel.toFixed(2)} GEL (required ${row.requiredGel})`);
+  if (!r.ok) {
+    console.error('Economics check FAILED: a product leaves less than the required contribution.');
+    process.exit(1);
+  }
+  console.log(`Economics check passed (tax case ${A.taxes.invariantScenario}; CAC ${A.cacGel === null ? 'UNKNOWN, not included' : A.cacGel}).`);
+} else if (args.includes('--json')) {
+  console.log(JSON.stringify({ assumptions: A, unit: unitCosts(A), profiles: profileCosts(A), invariant: checkInvariant() }, null, 2));
+} else {
+  console.log([`Assumptions checked ${'2026-11-09'}. Sources: ${Object.values(SOURCES).join('; ')}.`, '', costTable(), '', pricingTable(), '', forecastTable(), '', stressTable()].join('\n'));
 }

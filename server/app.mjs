@@ -28,25 +28,10 @@ import { createMailer } from './notify/mailer.mjs';
 import { listNotifications, unreadCount } from './notify/notifications.mjs';
 import { getOrder } from './orders.mjs';
 import { applyFlittUpdate, createCheckout, isFinal, publicOrder, refreshOrderFromFlitt } from './payments.mjs';
-import { LIMITS, usageSummary } from './quota.mjs';
+import { AI_ALLOWANCES, LIMITS, usageSummary } from './quota.mjs';
+import { createPromotions, PromoError } from './promotions.mjs';
 import { ts } from './db/index.mjs';
-
-class IpWindow {
-  constructor(limit, windowMs) {
-    this.limit = limit;
-    this.windowMs = windowMs;
-    this.map = new Map();
-  }
-
-  allow(key) {
-    const now = Date.now();
-    const list = (this.map.get(key) || []).filter((t) => now - t < this.windowMs);
-    if (list.length >= this.limit) return false;
-    list.push(now);
-    this.map.set(key, list);
-    return true;
-  }
-}
+import { createLimiter } from './rateLimit.mjs';
 
 const SAFE_PATH = /^\/[A-Za-z0-9/_-]{0,80}$/;
 
@@ -131,8 +116,9 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
     next();
   });
 
-  const accountCreation = new IpWindow(config.limits?.accountsPerHourPerIp ?? 20, 60 * 60 * 1000);
-  const restoreAttempts = new IpWindow(10, 15 * 60 * 1000);
+  // Shared by every server instance (table rate_counters).
+  const accountCreation = createLimiter(db, { name: 'accounts-ip', limit: config.limits?.accountsPerHourPerIp ?? 20, windowMs: 60 * 60 * 1000 });
+  const restoreAttempts = createLimiter(db, { name: 'restore-ip', limit: 10, windowMs: 15 * 60 * 1000 });
   const auth = requireAccount(db, { clock });
   const json = express.json({ limit: '10kb' });
 
@@ -148,27 +134,33 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
     res.status(database === 'ok' ? 200 : 503).json({ ok: database === 'ok', database, schema, driver: db.kind, payments: 'flitt-test', ai: Boolean(config.openai.apiKey), email: mail.available });
   });
 
-  app.get('/api/catalog', (_req, res) => {
+  const promotions = createPromotions({ db, config, clock });
+  app.get('/api/catalog', async (_req, res) => {
     res.json({
       mode: 'test',
       catalog: config.catalog,
       products: getCatalog(config.catalog),
+      // Automatic offers anyone gets now (server-checked; the reference price is the regular price).
+      offers: await promotions.offers(clock.now()).catch(() => ({})),
       // Shown on the pricing page; the same numbers are enforced in quota.mjs.
       limits: {
-        free: { anuliaMessages: LIMITS.free.anulia.messages, anuliaPeriod: LIMITS.free.anulia.period, journalReflectionsPerDay: LIMITS.free.journal.reflections, cardConversations: LIMITS.free.cards.conversations, freeArtSessions: LIMITS.free.art.freeSessionIds.length },
-        plus: { anuliaMessages: LIMITS.plus.anulia.messages, anuliaPeriod: LIMITS.plus.anulia.period, journalReflectionsPerDay: LIMITS.plus.journal.reflections, cardConversationsPerDay: LIMITS.plus.cards.conversations, newArtSessionsPerDay: LIMITS.plus.art.newSessions },
+        free: { anuliaMessages: LIMITS.free.anulia.messages, anuliaPeriod: LIMITS.free.anulia.period, journalReflectionsPerDay: LIMITS.free.journal.reflections, cardConversations: LIMITS.free.cards.conversations, freeArtSessions: LIMITS.free.art.freeSessionIds.length, artMessagesPerSession: LIMITS.free.art.messagesPerSession },
+        plus: { anuliaMessages: LIMITS.plus.anulia.messages, anuliaPeriod: LIMITS.plus.anulia.period, journalReflectionsPerDay: LIMITS.plus.journal.reflections, cardConversationsPerDay: LIMITS.plus.cards.conversations, newArtSessionsPerDay: LIMITS.plus.art.newSessions, artMessagesPerSession: LIMITS.plus.art.messagesPerSession },
+        // The fair-use AI allowance per account (USD, server-enforced), shown as "fair use" with a usage meter.
+        allowances: { plusUsdPer30Days: AI_ALLOWANCES.plus.usd, freeUsdPer30Days: AI_ALLOWANCES.free.usd, artProgramUsd: AI_ALLOWANCES.artProgram.usd },
       },
+      renewal: 'manual',
     });
   });
 
   // ---------- Accounts ----------
   app.post('/api/account', json, async (req, res) => {
-    if (!accountCreation.allow(req.ip)) return res.status(429).json({ error: 'rate_limited' });
+    if (!(await accountCreation.allow(req.ip, clock.now()))) return res.status(429).json({ error: 'rate_limited' });
     res.status(201).json(await createAccount(db, { now: clock.now(), userAgent: req.get('user-agent') }));
   });
 
   app.post('/api/account/restore', json, async (req, res) => {
-    if (!restoreAttempts.allow(req.ip)) return res.status(429).json({ error: 'rate_limited' });
+    if (!(await restoreAttempts.allow(req.ip, clock.now()))) return res.status(429).json({ error: 'rate_limited' });
     const restored = await restoreAccount(db, req.body?.recoveryCode, { now: clock.now(), userAgent: req.get('user-agent') });
     if (!restored) return res.status(404).json({ error: 'not_found', message: 'No account matches this recovery code.' });
     res.json(restored);
@@ -255,9 +247,25 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
   app.use('/api/ai', express.json({ limit: '20mb' }), createAiRouter({ db, config, fetchImpl, clock, settings: settingsFor(deps) }));
 
   // ---------- Payments (Flitt TEST) ----------
+  // The price this account would pay now (a promo code is optional), decided on the server.
+  app.post('/api/payments/quote', json, auth, async (req, res) => {
+    try {
+      const q = await promotions.quote({ accountId: req.account.id, productId: String(req.body?.productId || ''), code: req.body?.promoCode ? String(req.body.promoCode).slice(0, 32) : null, now: clock.now() });
+      res.json({ productId: q.product.id, listMinor: q.listMinor, finalMinor: q.finalMinor, discountMinor: q.discountMinor, promotion: q.promotion ? { id: q.promotion.id, name: q.promotion.name, endsAt: q.promotion.endsAt } : null, clamped: q.clamped, codeNotBetter: Boolean(q.codeNotBetter), currency: q.product.currency });
+    } catch (error) {
+      if (error instanceof PromoError) return res.status(error.status).json({ error: error.code });
+      res.status(500).json({ error: 'quote_failed' });
+    }
+  });
+
   app.post('/api/payments/checkout', json, auth, async (req, res) => {
     try {
       const returnUrl = buildReturnUrl(config, req.body?.returnTo);
+      // The price is decided here (promotions held to the safe floor), never by the client.
+      const q = await promotions.quote({ accountId: req.account.id, productId: String(req.body?.productId || ''), code: req.body?.promoCode ? String(req.body.promoCode).slice(0, 32) : null, now: clock.now() }).catch((e) => {
+        if (e instanceof PromoError && e.code !== 'unknown_product') throw Object.assign(new Error(e.code), { status: e.status, code: e.code });
+        return null;
+      });
       const { order, checkoutUrl, product } = await createCheckout({
         db,
         config,
@@ -268,10 +276,11 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
         returnUrl,
         now: clock.now(),
         apiBase: requestApiBase(config, req),
+        pricing: q ? { productId: q.product.id, finalMinor: q.finalMinor, promotionId: q.promotion?.id || null } : null,
       });
       res.status(201).json({ order: publicOrder(order), checkoutUrl, product, mode: 'test' });
     } catch (error) {
-      res.status(error.status || 500).json({ error: 'checkout_failed', message: error.message });
+      res.status(error.status || 500).json({ error: error.code || 'checkout_failed', message: error.message });
     }
   });
 

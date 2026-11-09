@@ -1,5 +1,25 @@
 /** Well-being ecosystem (`wb`), Japanese. Machine-translated from en.ts (scripts/i18n/translate-wb.mjs); native review recommended. */
 export const wbJa = {
+  "money": {
+    "regularPrice": "通常価格",
+    "youSave": "{amount}お得",
+    "offerEnds": "割引は{date}まで",
+    "firstPurchase": "初めてのご購入に",
+    "discount": "割引",
+    "adjusted": "ご提供できる最も低い価格になるよう、割引を調整しました。",
+    "promoCode": "プロモーションコード",
+    "apply": "適用",
+    "codeApplied": "適用済みのコード：{name}",
+    "codeInvalid": "このコードは今回のご購入には使えません。",
+    "codeNotBetter": "現在の価格は、このコードを使った場合よりもお得です。",
+    "limitsTitle": "利用上限について",
+    "artSessionLimit": "アートセッションごとに最大{n}件のメッセージを送れます（通常、1回のセッションは8〜15件ほどです）。",
+    "fairUse": "公平にご利用いただくために、AI機能にはアカウントごとに月間利用枠を設けています。利用状況と次回の更新日はいつでも確認できます。ほとんどの方は上限に達することなく利用されています。",
+    "safetyNeverLimited": "ヘルプや安全に関する情報は、利用上限にかかわらずいつでも使えます。",
+    "allowanceTitle": "今月のAI利用枠を使い切りました",
+    "allowanceReached": "AI機能は{date}までお休みです。日記、ツール、ヘルプはいつもどおり使えます。",
+    "allowanceUsed": "AI利用枠の使用率：{percent}%"
+  },
   "sound": {
     "title": "サウンドラボ",
     "subtitle": "集中・休息・睡眠のための音をスマートフォンで作ります。オフラインでも使えます。",
@@ -458,9 +478,9 @@ export const wbJa = {
     }
   },
   "memory": {
-    "title": "Anuliaが覚えてよいこと",
-    "subtitle": "Anuliaが使ってよい記録を選べます。自分でオンにするまで、すべてオフです。",
-    "intro": "AIの利用に同意しても、履歴は共有されません。下の項目はそれぞれ個別に設定でき、いつでもオフにできます。オフにすると、Anuliaはその情報を使わず、新しい会話を始めます。",
+    "title": "Beaが覚えてよいこと",
+    "subtitle": "Beaが使ってよい記録を選べます。自分でオンにするまで、すべてオフです。",
+    "intro": "AIの利用に同意しても、履歴は共有されません。下の項目はそれぞれ個別に設定でき、いつでもオフにできます。オフにすると、Beaはその情報を使わず、新しい会話を始めます。",
     "categories": {
       "profile": "プロフィール（名前、年齢層、利用のきっかけ）",
       "steps": "ステップと自分の目標",
@@ -468,7 +488,7 @@ export const wbJa = {
       "activity": "取り組みの回数（日記、練習、アートセラピー、振り返りカード）",
       "sound": "音と集中の時間",
       "sleep": "睡眠チェックイン",
-      "priorChats": "Anuliaとの過去の会話のまとめ",
+      "priorChats": "Beaとの過去の会話のまとめ",
       "journalText": "日記の全文",
       "artSummaries": "アートセラピーのまとめ",
       "assessments": "セルフチェックの結果"
@@ -485,9 +505,9 @@ export const wbJa = {
       "artSummaries": "アートセラピーの最後のまとめです。",
       "assessments": "最新のセルフチェックの点数です。診断ではありません。"
     },
-    "never": "コミュニティのメッセージと心理士とのメッセージは、Anuliaに共有されません。",
-    "preview": "今、Anuliaに伝わる内容",
-    "previewEmpty": "何もありません。Anuliaはあなたの履歴を何も知りません。",
+    "never": "コミュニティのメッセージと心理士とのメッセージは、Beaに共有されません。",
+    "preview": "今、Beaに伝わる内容",
+    "previewEmpty": "何もありません。Beaはあなたの履歴を何も知りません。",
     "previewNote": "次のメッセージには、この文章がそのまま追加されます。",
     "exclude": "含めない",
     "include": "再び含める",
@@ -495,14 +515,14 @@ export const wbJa = {
     "journalItems": "日記",
     "chatItems": "以前の会話",
     "notes": "覚えておいてほしいこと",
-    "notesHint": "Anuliaへの短いメモです。例：「返事は短めにしてください」。",
+    "notesHint": "Beaへの短いメモです。例：「返事は短めにしてください」。",
     "addNote": "追加",
-    "notePlaceholder": "Anuliaへのメモ…",
+    "notePlaceholder": "Beaへのメモ…",
     "forgetAll": "すべて忘れる",
-    "forgetConfirm": "すべてオフにして、メモを削除しますか？次のメッセージから、Anuliaは何も覚えていない状態で始めます。",
-    "forgotten": "完了しました。Anuliaは今、あなたの履歴を何も覚えていません。",
+    "forgetConfirm": "すべてオフにして、メモを削除しますか？次のメッセージから、Beaは何も覚えていない状態で始めます。",
+    "forgotten": "完了しました。Beaは今、あなたの履歴を何も覚えていません。",
     "transfer": "仕組みについて",
-    "transferBody": "すべての情報はこのスマートフォン内に保存されます。Anuliaにメッセージを送ると、オンにした項目だけがそのメッセージに追加され、返答を作るためにBeHappyのサーバー経由でOpenAIに送信されます。OpenAIは不正利用の検出のためにAPIデータを最大30日間保持し、モデルの学習には使いません。BeHappyのサーバーには保存されません。",
+    "transferBody": "すべての情報はこのスマートフォン内に保存されます。Beaにメッセージを送ると、オンにした項目だけがそのメッセージに追加され、返答を作るためにBeHappyのサーバー経由でOpenAIに送信されます。OpenAIは不正利用の検出のためにAPIデータを最大30日間保持し、モデルの学習には使いません。BeHappyのサーバーには保存されません。",
     "sources": "情報源：{n}件"
   },
   "sleep": {
@@ -555,7 +575,7 @@ export const wbJa = {
       "subtitle": "寝る準備と、朝の振り返り"
     },
     "memory": {
-      "title": "Anuliaが覚えていること",
+      "title": "Beaが覚えていること",
       "subtitle": "記憶する項目の設定"
     }
   },

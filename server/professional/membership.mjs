@@ -11,6 +11,7 @@
 //  - Expiry hides the profile from the directory and stops new bookings and
 //    new inquiries; confirmed appointments, their messages and all records stay.
 
+import { createPromotions } from '../promotions.mjs';
 import { primaryRole } from '../admin/permissions.mjs';
 import { audit } from '../audit.mjs';
 import { getProfessionalCatalog } from '../catalog.mjs';
@@ -148,7 +149,9 @@ export function createMembership({ db, config, clock = { now: () => Date.now() }
     if (['verification_pending', 'rejected', 'suspended', 'verification_expired'].includes(s.state)) throw new ProError(409, 'verification_required', { state: s.state });
     // Don't sell more than about a year ahead.
     if (s.endsAt && s.endsAt - clock.now() > 330 * DAY) throw new ProError(409, 'far_enough_ahead');
-    return createCheckout({ db, config, flitt, accountId: account.id, productId: 'professional_30d', lang, returnUrl, professionalId: p.id, now: clock.now(), audience: 'professional', apiBase });
+    // Automatic campaigns apply to memberships too, held to the same safe floor.
+    const q = await createPromotions({ db, config, clock }).quote({ accountId: account.id, productId: 'professional_30d', now: clock.now() }).catch(() => null);
+    return createCheckout({ db, config, flitt, accountId: account.id, productId: 'professional_30d', lang, returnUrl, professionalId: p.id, now: clock.now(), audience: 'professional', apiBase, pricing: q ? { productId: q.product.id, finalMinor: q.finalMinor, promotionId: q.promotion?.id || null } : null });
   }
 
   async function setCancelled(account, cancelled) {

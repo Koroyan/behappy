@@ -1,5 +1,25 @@
 /** Well-being ecosystem (`wb`), Polish. Machine-translated from en.ts (scripts/i18n/translate-wb.mjs); native review recommended. */
 export const wbPl = {
+  "money": {
+    "regularPrice": "Cena standardowa",
+    "youSave": "Oszczędzasz {amount}",
+    "offerEnds": "Oferta kończy się {date}",
+    "firstPurchase": "Przy pierwszym zakupie",
+    "discount": "Rabat",
+    "adjusted": "Rabat został dostosowany do najniższej ceny, jaką możemy zaoferować.",
+    "promoCode": "Kod promocyjny",
+    "apply": "Zastosuj",
+    "codeApplied": "Zastosowano kod: {name}",
+    "codeInvalid": "Ten kod nie obowiązuje przy tym zakupie.",
+    "codeNotBetter": "Twoja obecna cena jest już niższa niż cena z tym kodem.",
+    "limitsTitle": "Jasno o limitach",
+    "artSessionLimit": "Do {n} wiadomości w każdej sesji artystycznej (sesja zwykle obejmuje 8–15 wiadomości).",
+    "fairUse": "Zasady uczciwego korzystania: funkcje AI mają miesięczny limit na konto. Możesz sprawdzić jego wykorzystanie i termin odnowienia. Większość osób nie osiąga tego limitu.",
+    "safetyNeverLimited": "Dostęp do pomocy i materiałów dotyczących bezpieczeństwa jest zawsze nieograniczony.",
+    "allowanceTitle": "Miesięczny limit AI został wykorzystany",
+    "allowanceReached": "Funkcje AI mają przerwę do {date}. Twój dziennik, narzędzia i materiały pomocowe działają jak zwykle.",
+    "allowanceUsed": "Wykorzystanie limitu AI: {percent}%"
+  },
   "sound": {
     "title": "Pracownia dźwięków",
     "subtitle": "Dźwięki do skupienia, odpoczynku i snu, tworzone na telefonie. Działa offline.",
@@ -458,9 +478,9 @@ export const wbPl = {
     }
   },
   "memory": {
-    "title": "Co Anulia może pamiętać",
-    "subtitle": "Wybierz, z których zapisów może korzystać Anulia. Wszystko jest wyłączone, dopóki tego nie włączysz.",
-    "intro": "Zgoda na AI nie udostępnia twojej historii. Każdy przełącznik poniżej działa osobno i możesz go wyłączyć w dowolnej chwili. Anulia zacznie wtedy nową rozmowę bez tych informacji.",
+    "title": "Co Bea może pamiętać",
+    "subtitle": "Wybierz, z których zapisów może korzystać Bea. Wszystko jest wyłączone, dopóki tego nie włączysz.",
+    "intro": "Zgoda na AI nie udostępnia twojej historii. Każdy przełącznik poniżej działa osobno i możesz go wyłączyć w dowolnej chwili. Bea zacznie wtedy nową rozmowę bez tych informacji.",
     "categories": {
       "profile": "Profil (imię, przedział wiekowy, powód korzystania z aplikacji)",
       "steps": "Kroki i cele",
@@ -468,13 +488,13 @@ export const wbPl = {
       "activity": "Liczby aktywności (Dziennik, praktyki, Arteterapia, Karty refleksji)",
       "sound": "Dźwięki i sesje skupienia",
       "sleep": "Zapisy snu",
-      "priorChats": "Podsumowania wcześniejszych rozmów z Anulią",
+      "priorChats": "Podsumowania wcześniejszych rozmów z Beą",
       "journalText": "Pełna treść Dziennika",
       "artSummaries": "Podsumowania sesji artystycznych",
       "assessments": "Wyniki samooceny"
     },
     "hints": {
-      "profile": "Pomaga Anulii mówić do ciebie tak, jak lubisz.",
+      "profile": "Pomaga Bei mówić do ciebie tak, jak lubisz.",
       "steps": "Dzisiejsze kroki i ich liczba w tym tygodniu.",
       "mood": "Twoje własne oceny i uczucia z zapisów samopoczucia.",
       "activity": "Tylko liczby, nigdy treść.",
@@ -485,9 +505,9 @@ export const wbPl = {
       "artSummaries": "Końcowe podsumowania twoich sesji artystycznych.",
       "assessments": "Twoje najnowsze wyniki samooceny. Nie są diagnozą."
     },
-    "never": "Nigdy nie udostępniamy Anulii wiadomości ze społeczności ani rozmów z psychologami.",
-    "preview": "Co Anulia zobaczyłaby teraz",
-    "previewEmpty": "Nic. Anulia nie zna żadnych informacji z twojej historii.",
+    "never": "Nigdy nie udostępniamy Bei wiadomości ze społeczności ani rozmów z psychologami.",
+    "preview": "Co Bea zobaczyłaby teraz",
+    "previewEmpty": "Nic. Bea nie zna żadnych informacji z twojej historii.",
     "previewNote": "Dokładnie ten tekst zostanie dodany do twojej następnej wiadomości.",
     "exclude": "Pomiń",
     "include": "Uwzględnij ponownie",
@@ -495,14 +515,14 @@ export const wbPl = {
     "journalItems": "Wpisy w Dzienniku",
     "chatItems": "Wcześniejsze rozmowy",
     "notes": "Rzeczy do zapamiętania",
-    "notesHint": "Krótkie notatki od ciebie dla Anulii, np. „Proszę o krótkie odpowiedzi”.",
+    "notesHint": "Krótkie notatki od ciebie dla Bei, np. „Proszę o krótkie odpowiedzi”.",
     "addNote": "Dodaj",
-    "notePlaceholder": "Notatka dla Anulii…",
+    "notePlaceholder": "Notatka dla Bei…",
     "forgetAll": "Zapomnij wszystko",
-    "forgetConfirm": "Wyłączyć wszystko i usunąć twoje notatki? Od następnej wiadomości Anulia zacznie od nowa.",
-    "forgotten": "Gotowe. Anulia nie pamięta teraz nic z twojej historii.",
+    "forgetConfirm": "Wyłączyć wszystko i usunąć twoje notatki? Od następnej wiadomości Bea zacznie od nowa.",
+    "forgotten": "Gotowe. Bea nie pamięta teraz nic z twojej historii.",
     "transfer": "Jak to działa",
-    "transferBody": "Wszystko zostaje na tym telefonie. Gdy piszesz do Anulii, tylko włączone informacje są dodawane do wiadomości i wysyłane przez serwer BeHappy do OpenAI, by przygotować odpowiedź. OpenAI przechowuje dane API do 30 dni w celu wykrywania nadużyć i nie używa ich do trenowania modeli. Serwer BeHappy ich nie przechowuje.",
+    "transferBody": "Wszystko zostaje na tym telefonie. Gdy piszesz do Bei, tylko włączone informacje są dodawane do wiadomości i wysyłane przez serwer BeHappy do OpenAI, by przygotować odpowiedź. OpenAI przechowuje dane API do 30 dni w celu wykrywania nadużyć i nie używa ich do trenowania modeli. Serwer BeHappy ich nie przechowuje.",
     "sources": "Źródła: {n}"
   },
   "sleep": {
@@ -555,7 +575,7 @@ export const wbPl = {
       "subtitle": "Wycisz się, a rano zapisz, jak było"
     },
     "memory": {
-      "title": "Co pamięta Anulia",
+      "title": "Co pamięta Bea",
       "subtitle": "Ty decydujesz, co zapamięta"
     }
   },

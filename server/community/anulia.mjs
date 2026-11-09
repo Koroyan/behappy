@@ -11,6 +11,7 @@ import { ts } from '../db/index.mjs';
 import { entitlementsForAccount } from '../entitlements.mjs';
 import { SERVER_PROMPTS } from '../prompts/index.mjs';
 import { checkAndRecord } from '../quota.mjs';
+import { createLimiter } from '../rateLimit.mjs';
 
 const HOUR = 60 * 60 * 1000;
 const LANGUAGE_NAMES = {
@@ -41,39 +42,22 @@ const outputText = (data) => data?.output_text || data?.output?.find((o) => o?.t
 
 export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch, clock = { now: () => Date.now() }, bus, settings = null }) {
   const controls = settings ? createAiControls({ db, settings, clock }) : null;
-  const roomHits = new Map();
-  let day = '';
-  let dayCount = 0;
-
-  const roomAllowed = (roomId, now) => {
-    const list = (roomHits.get(roomId) || []).filter((t) => now - t < HOUR);
-    if (list.length >= (config.community?.anuliaHourlyRoomCap ?? 30)) {
-      roomHits.set(roomId, list);
-      return false;
-    }
-    list.push(now);
-    roomHits.set(roomId, list);
-    return true;
-  };
+  // Shared by every server instance (table rate_counters).
+  const roomHourly = createLimiter(db, { name: 'community-ai-room', limit: config.community?.anuliaHourlyRoomCap ?? 30, windowMs: HOUR });
+  const globalDaily = createLimiter(db, { name: 'community-ai-global', limit: config.community?.anuliaDailyGlobalCap ?? 2000, windowMs: 24 * HOUR });
 
   const unavailable = (accountId, roomId, reason) => bus.emit('anulia:unavailable', { accountId, roomId, reason });
 
   return async function answer({ roomId, messageId, account }) {
     const now = clock.now();
     if (!config.openai?.apiKey) return unavailable(account.id, roomId, 'ai_unavailable');
-    const today = new Date(now).toISOString().slice(0, 10);
-    if (today !== day) {
-      day = today;
-      dayCount = 0;
-    }
-    if (dayCount >= (config.community?.anuliaDailyGlobalCap ?? 2000)) return unavailable(account.id, roomId, 'busy');
-    if (!roomAllowed(roomId, now)) return unavailable(account.id, roomId, 'room_busy');
+    if (!(await globalDaily.allow('all', now))) return unavailable(account.id, roomId, 'busy');
+    if (!(await roomHourly.allow(roomId, now))) return unavailable(account.id, roomId, 'room_busy');
     // Staff switch or daily AI budget (admin center › AI).
     if (controls && (await controls('community').catch(() => null))) return unavailable(account.id, roomId, 'busy');
     const entitlements = await entitlementsForAccount(db, account.id, now);
     const decision = await checkAndRecord({ db, accountId: account.id, entitlements, ctx: { feature: 'community' }, now });
     if (!decision.allowed) return unavailable(account.id, roomId, 'daily_limit');
-    dayCount += 1;
 
     const [topic, lang] = roomId.split(':');
     const recent = await db.query(
@@ -84,7 +68,7 @@ export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch
     );
     const transcript = recent.rows
       .reverse()
-      .map((r) => `${r.author_kind === 'anulia' ? 'Anulia' : r.name || 'Member'}: ${String(r.body).slice(0, 600)}`)
+      .map((r) => `${r.author_kind === 'anulia' ? 'Bea' : r.name || 'Member'}: ${String(r.body).slice(0, 600)}`)
       .join('\n');
     const asker = recent.rows.at(-1)?.name || 'a member';
     const input = `[Room] Topic: ${TOPIC_NAMES[topic] || topic}. Language: ${LANGUAGE_NAMES[lang] || 'English'}.\n[Recent public messages]\n${transcript}\n[${asker} asked you for help in the last message. Reply with the JSON object.]`;
@@ -110,10 +94,10 @@ export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch
       if (!res.ok) throw Object.assign(new Error(`upstream ${res.status}`), { code: `upstream_${res.status}` });
       data = await res.json();
     } catch (e) {
-      await recordAiUsage(db, { accountId: account.id, feature: 'community', model, status: 'error', errorCode: e?.code || 'unreachable', latencyMs: Date.now() - started });
+      await recordAiUsage(db, { accountId: account.id, feature: 'community', model, status: 'error', errorCode: e?.code || 'unreachable', latencyMs: Date.now() - started, reservationId: decision.reservationId });
       return unavailable(account.id, roomId, 'error');
     }
-    await recordAiUsage(db, { accountId: account.id, feature: 'community', model, usage: data?.usage, latencyMs: Date.now() - started });
+    await recordAiUsage(db, { accountId: account.id, feature: 'community', model, usage: data?.usage, latencyMs: Date.now() - started, reservationId: decision.reservationId });
 
     const parsed = parseJson(outputText(data)) || {};
     // No links from the AI in public rooms; trimmed to a readable length.
@@ -125,7 +109,7 @@ export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch
     const risk = String(parsed.risk_level || 'none');
 
     const id = await db.tx(async (t) => {
-      const ins = await t.query("insert into community_messages (room_id, author_account_id, author_kind, author_pseudonym, body, reply_to_id, status, created_at, flags) values ($1, null, 'anulia', 'Anulia', $2, $3, 'visible', $4, $5::jsonb) returning id", [
+      const ins = await t.query("insert into community_messages (room_id, author_account_id, author_kind, author_pseudonym, body, reply_to_id, status, created_at, flags) values ($1, null, 'anulia', 'Bea', $2, $3, 'visible', $4, $5::jsonb) returning id", [
         roomId,
         reply,
         messageId,
@@ -135,7 +119,7 @@ export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch
       if (risk === 'high' || risk === 'imminent') {
         const open = await t.query("select 1 from reports where target_type = 'message' and target_id = $1 and reason = 'self_harm_risk' and status in ('open', 'in_review')", [String(messageId)]);
         if (!open.rowCount) {
-          await t.query("insert into reports (reporter_kind, target_type, target_id, target_account_id, room_id, reason, details, snapshot, priority, created_at) values ('system', 'message', $1, $2, $3, 'self_harm_risk', 'Anulia judged a possible risk in this conversation', $4::jsonb, 3, $5)", [
+          await t.query("insert into reports (reporter_kind, target_type, target_id, target_account_id, room_id, reason, details, snapshot, priority, created_at) values ('system', 'message', $1, $2, $3, 'self_harm_risk', 'Bea (the AI companion) judged a possible risk in this conversation', $4::jsonb, 3, $5)", [
             String(messageId),
             account.id,
             roomId,

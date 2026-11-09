@@ -44,6 +44,23 @@ export const SETTINGS = {
     validate: numOrNull(1, 100000),
     description: 'Pause AI features for the rest of the day (UTC) when the estimated spend reaches this amount',
   },
+  'ai.featureBudgetsUsd': {
+    default: {},
+    validate: (v) => {
+      if (v === null) return {};
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+      const out = {};
+      for (const [k, x] of Object.entries(v)) {
+        if (!['anulia', 'art', 'cards', 'journal', 'summary', 'motivation', 'transcribe', 'speech', 'reflection', 'community'].includes(k)) return undefined;
+        if (x === null) continue;
+        const n = Number(x);
+        if (!(n >= 0.5 && n <= 100000)) return undefined;
+        out[k] = n;
+      }
+      return out;
+    },
+    description: 'Per-feature daily AI budget in USD (UTC day): that feature pauses when its spend would pass it',
+  },
   'ai.pricing': {
     default: { inputPerMillion: null, outputPerMillion: null },
     validate: (v) => {

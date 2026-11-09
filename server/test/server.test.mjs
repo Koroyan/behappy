@@ -1,4 +1,5 @@
 // Run: npm run test:server
+import { getCatalog } from '../catalog.mjs';
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { createApp } from '../app.mjs';
@@ -229,11 +230,12 @@ describe('API', () => {
       body: { productId: 'art_program', amount: 1, amountMinor: 1, returnTo: { platform: 'web', origin: 'http://evil.test', path: '//evil.test' } },
     });
     assert.equal(res.status, 201);
-    assert.equal(res.json.order.amountMinor, 5000, 'Art Therapy keeps its configured 50 GEL price');
+    const artPrice = getCatalog('current').find((p) => p.id === 'art_program').amountMinor;
+    assert.equal(res.json.order.amountMinor, artPrice, 'the catalog price (server/catalog.mjs), never the client amount');
     assert.equal(res.json.order.currency, 'GEL');
     assert.equal(res.json.mode, 'test');
     const created = flitt.created.at(-1);
-    assert.equal(created.amountMinor, 5000);
+    assert.equal(created.amountMinor, artPrice);
     const stored = await getOrder(db, res.json.order.id);
     assert.equal(stored.returnUrl, 'http://app.test/checkout/result', 'unknown origins and unsafe paths fall back to the app URL');
     assert.equal((await api('/api/payments/checkout', { token: acct.token, method: 'POST', body: { productId: 'free_money' } })).status, 400);
@@ -401,7 +403,7 @@ describe('API', () => {
     assert.equal((await anulia(acct.token, 'c-legacy')).status, 200);
     let sent = JSON.parse(openai.calls.at(-1).body);
     assert.equal(sent.prompt, undefined, 'hosted prompt reference is dropped');
-    assert.match(sent.instructions, /You are \*\*Anulia\*\*/);
+    assert.match(sent.instructions, /You are \*\*Bea\*\*/);
     assert.match(sent.instructions, /not a therapist, psychologist/);
     assert.doesNotMatch(sent.instructions, /Dr\.?\s*Pijilo|compassionate therapist|AI therapy companion/i);
     // 3.0 builds send no prompt at all.
@@ -429,7 +431,10 @@ describe('API', () => {
     assert.equal(chat.status, 200);
     sent = JSON.parse(openai.calls.at(-1).body);
     assert.equal(sent.messages[0].role, 'system');
-    assert.match(sent.messages[0].content, /You are Anulia.*not a therapist, psychologist/);
+    assert.match(sent.messages[0].content, /You are Bea.*not a therapist, psychologist/);
+    // The client's own system message is dropped (it can't instruct the model), and the model is the server's.
+    assert.ok(!sent.messages.some((m) => /licensed psychologist/.test(String(m.content))));
+    assert.equal(sent.model, 'gpt-5.4-mini');
     // GPT-5 mini (conversation summaries): the server sets its token budget and
     // effort; a client temperature is dropped (the model rejects it).
     const five = await api('/api/ai/chat', {

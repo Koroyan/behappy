@@ -1,5 +1,25 @@
 /** Well-being ecosystem (`wb`), Simplified Chinese. Machine-translated from en.ts (scripts/i18n/translate-wb.mjs); native review recommended. */
 export const wbZh = {
+  "money": {
+    "regularPrice": "原价",
+    "youSave": "为你节省 {amount}",
+    "offerEnds": "优惠于 {date} 结束",
+    "firstPurchase": "适用于首次购买",
+    "discount": "优惠",
+    "adjusted": "优惠已调整，当前为我们能提供的最低价格。",
+    "promoCode": "优惠码",
+    "apply": "使用",
+    "codeApplied": "已使用优惠码：{name}",
+    "codeInvalid": "此优惠码不适用于本次购买。",
+    "codeNotBetter": "你当前的价格已比使用此优惠码更优惠。",
+    "limitsTitle": "用量限制，清楚说明",
+    "artSessionLimit": "每次艺术互动最多可发送 {n} 条消息（一次互动通常需要 8–15 条）。",
+    "fairUse": "公平使用：每个账户的 AI 功能都有每月用量额度。你可以查看已用额度和重置时间；大多数人不会用完额度。",
+    "safetyNeverLimited": "帮助与安全资源始终可用，不受用量限制。",
+    "allowanceTitle": "你本月的 AI 额度已用完",
+    "allowanceReached": "AI 功能将暂停至 {date}。你的日记、工具和帮助资源仍可照常使用。",
+    "allowanceUsed": "AI 额度已用：{percent}%"
+  },
   "sound": {
     "title": "声音实验室",
     "subtitle": "在手机上生成陪你专注、休息和入睡的声音。离线也能用。",
@@ -458,9 +478,9 @@ export const wbZh = {
     }
   },
   "memory": {
-    "title": "Anulia 可以记住什么",
-    "subtitle": "选择 Anulia 可以使用哪些记录。所有选项默认关闭，由你决定是否开启。",
-    "intro": "同意使用 AI 不会自动分享你的历史记录。下方每个开关都独立控制，随时可以关闭；关闭后，Anulia 会开启一段不使用这些内容的新对话。",
+    "title": "Bea 可以记住什么",
+    "subtitle": "选择 Bea 可以使用哪些记录。所有选项默认关闭，由你决定是否开启。",
+    "intro": "同意使用 AI 不会自动分享你的历史记录。下方每个开关都独立控制，随时可以关闭；关闭后，Bea 会开启一段不使用这些内容的新对话。",
     "categories": {
       "profile": "个人资料（名字、年龄段、来这里的原因）",
       "steps": "小行动与个人目标",
@@ -468,13 +488,13 @@ export const wbZh = {
       "activity": "活动次数（日记、练习、艺术疗愈、反思卡片）",
       "sound": "声音与专注时段",
       "sleep": "睡眠记录",
-      "priorChats": "与 Anulia 以往对话的摘要",
+      "priorChats": "与 Bea 以往对话的摘要",
       "journalText": "完整日记正文",
       "artSummaries": "艺术疗愈小结",
       "assessments": "自我检查结果"
     },
     "hints": {
-      "profile": "帮助 Anulia 用你喜欢的方式与你交流。",
+      "profile": "帮助 Bea 用你喜欢的方式与你交流。",
       "steps": "今天的小行动和本周的完成数量。",
       "mood": "你记录的评分和感受。",
       "activity": "只有数量，不含具体内容。",
@@ -485,9 +505,9 @@ export const wbZh = {
       "artSummaries": "每次艺术疗愈结束时的小结。",
       "assessments": "你最近的自我检查分数，不代表诊断。"
     },
-    "never": "绝不会分享给 Anulia：社区消息和你与心理咨询师的消息。",
-    "preview": "Anulia 现在会看到什么",
-    "previewEmpty": "没有内容。Anulia 还不知道你的任何历史记录。",
+    "never": "绝不会分享给 Bea：社区消息和你与心理咨询师的消息。",
+    "preview": "Bea 现在会看到什么",
+    "previewEmpty": "没有内容。Bea 还不知道你的任何历史记录。",
     "previewNote": "这些文字会原样附加到你的下一条消息中。",
     "exclude": "排除",
     "include": "重新包含",
@@ -495,14 +515,14 @@ export const wbZh = {
     "journalItems": "日记",
     "chatItems": "以往对话",
     "notes": "希望记住的事",
-    "notesHint": "写给 Anulia 的简短备注，例如“请回答得简短一些”。",
+    "notesHint": "写给 Bea 的简短备注，例如“请回答得简短一些”。",
     "addNote": "添加",
-    "notePlaceholder": "给 Anulia 的备注…",
+    "notePlaceholder": "给 Bea 的备注…",
     "forgetAll": "忘记全部",
-    "forgetConfirm": "关闭所有选项并删除备注吗？从下一条消息起，Anulia 会重新开始。",
-    "forgotten": "好了。Anulia 现在不再记得你的任何历史记录。",
+    "forgetConfirm": "关闭所有选项并删除备注吗？从下一条消息起，Bea 会重新开始。",
+    "forgotten": "好了。Bea 现在不再记得你的任何历史记录。",
     "transfer": "运作方式",
-    "transferBody": "所有内容都保留在这部手机上。你向 Anulia 发消息时，只有已开启的部分会附加到消息中，经由 BeHappy 服务器发送给 OpenAI，用于生成回复。OpenAI 最多保留 API 数据 30 天以检测滥用，不会用这些数据训练模型；BeHappy 服务器不会存储这些数据。",
+    "transferBody": "所有内容都保留在这部手机上。你向 Bea 发消息时，只有已开启的部分会附加到消息中，经由 BeHappy 服务器发送给 OpenAI，用于生成回复。OpenAI 最多保留 API 数据 30 天以检测滥用，不会用这些数据训练模型；BeHappy 服务器不会存储这些数据。",
     "sources": "来源：{n}"
   },
   "sleep": {
@@ -555,7 +575,7 @@ export const wbZh = {
       "subtitle": "睡前放松，醒后记录"
     },
     "memory": {
-      "title": "Anulia 记得什么",
+      "title": "Bea 记得什么",
       "subtitle": "由你掌控的记忆开关"
     }
   },

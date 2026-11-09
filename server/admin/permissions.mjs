@@ -58,6 +58,8 @@ export const PERMISSIONS = {
   'ai.manage': 'Change AI budgets, limits, switches and prompt versions',
   // Finance.
   'finance.view': 'See the finance dashboard (TEST mode)',
+  'finance.economics': 'See unit economics: AI cost, margins, tax scenarios, safe discounts (sensitive)',
+  'promotions.manage': 'Create, pause and end promotions (held to the safe minimum margin)',
   // Support.
   'support.view': 'See support requests',
   'support.respond': 'Answer support requests',
@@ -81,7 +83,7 @@ export const ROLE_PERMISSIONS = {
   admin: ALL.filter((p) => !['staff.manage', 'sensitive.approve'].includes(p)),
   verifier: ['dashboard.view', 'professionals.view', 'professionals.verify', 'professionals.documents', 'policies.edit'],
   moderator: ['dashboard.view', 'community.view', 'moderation.act', 'moderation.appeals', 'moderation.context', 'moderation.members.view', 'safety.view', 'safety.manage'],
-  finance: ['dashboard.view', 'analytics.view', 'finance.view', 'memberships.view', 'memberships.manage', 'payments.refund', 'users.transactions.view'],
+  finance: ['dashboard.view', 'analytics.view', 'finance.view', 'finance.economics', 'promotions.manage', 'memberships.view', 'memberships.manage', 'payments.refund', 'users.transactions.view'],
   // Support helps with accounts, payments, bookings and sign-in, but doesn't see
   // usage analytics or which community name belongs to an account.
   support: ['dashboard.view', 'users.view', 'users.sessions', 'users.deletion', 'users.transactions.view', 'users.appointments.view', 'users.security.view', 'support.view', 'support.respond', 'appointments.view', 'memberships.view'],

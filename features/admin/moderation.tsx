@@ -208,7 +208,7 @@ export function ContextThread({ reportId, scrollToFocus = false }: { reportId: n
         <View style={{ gap: 8 }} testID="mod-context">
           {!d.focusFound ? <Note tone="warning">{t('ac.mod.focusMissing')}</Note> : null}
           {d.messages.map((m) => {
-            const who = m.author.kind === 'anulia' ? 'Anulia' : m.author.formerMember ? t('ac.mod.former') : m.author.pseudonym || '—';
+            const who = m.author.kind === 'anulia' ? 'Bea' : m.author.formerMember ? t('ac.mod.former') : m.author.pseudonym || '—';
             const placeholder = m.status === 'removed' ? t('ac.mod.removedText') : m.status === 'deleted' ? t('ac.mod.deletedText') : null;
             return (
               <View

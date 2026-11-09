@@ -21,6 +21,7 @@
 // unchanged: they live in server/prompts/art.md. Nothing here adds a phase.
 
 import { recordAiUsage } from '../ai.mjs';
+import { RESERVE_USD } from '../aiPricing.mjs';
 import { ts } from '../db/index.mjs';
 import { clinicalClaims, endIntent, extractFacts, languageNote, polarityOf } from './facts.mjs';
 import { compareFingerprints, fingerprint } from './imageCompare.mjs';
@@ -323,7 +324,8 @@ export function createArtTurns({ db, config, fetchImpl, clock = { now: () => Dat
       report.calls += 1;
       report.ms += r.ms;
       if (!r.ok) {
-        await recordAiUsage(db, { accountId, feature: 'art', model: base.model, status: 'error', errorCode: r.errorText === 'timeout' ? 'timeout' : `upstream_${r.status}`, latencyMs: r.ms });
+        // A timed-out call may still be billed (the input was read): count a third of the turn's worst case.
+        await recordAiUsage(db, { accountId, feature: 'art', model: base.model, status: 'error', errorCode: r.errorText === 'timeout' ? 'timeout' : `upstream_${r.status}`, latencyMs: r.ms, ...(r.errorText === 'timeout' ? { costUsd: RESERVE_USD.art / 3 } : {}) });
         if (value) break; // keep the best reply we already have
         const stale = /previous[_ ]response/i.test(r.errorText || '') || (r.status === 404 && /not found/i.test(r.errorText || ''));
         if (!stale && r.status !== 429) console.warn(`[art] upstream ${r.status || r.errorText}${upstreamReason(r.errorText)}`);

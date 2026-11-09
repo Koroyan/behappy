@@ -181,7 +181,7 @@ export function createUsersAdmin(deps) {
       supportOpen: tickets[0].open,
       // Session counts only with the activity permission (and never when the person opted out).
       usage30d: tabs.activity && !a.analytics_opt_out ? { activeDays: days[0].days, sessions: days[0].sessions } : null,
-      privacyNote: 'Journal entries, Anulia conversations, assessments and safety plans are not available here.',
+      privacyNote: 'Journal entries, Bea conversations, assessments and safety plans are not available here.',
     };
   }
 

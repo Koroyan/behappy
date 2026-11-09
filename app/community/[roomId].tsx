@@ -236,7 +236,7 @@ export default function RoomScreen() {
                     {replyTo ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: colors.surfaceMuted }}>
                         <AppText variant="caption" color="textSecondary" style={{ flex: 1 }} numberOfLines={1}>
-                          {t('community.room.replyingTo', { name: replyTo.author.kind === 'anulia' ? 'Anulia' : replyTo.author.pseudonym || '' })}
+                          {t('community.room.replyingTo', { name: replyTo.author.kind === 'anulia' ? 'Bea' : replyTo.author.pseudonym || '' })}
                         </AppText>
                         <IconButton icon="close" label={t('community.room.cancelReply')} onPress={() => setReplyTo(null)} size={28} />
                       </View>
@@ -312,7 +312,7 @@ export default function RoomScreen() {
             </AppText>
           ) : null}
           {(results || []).map((m) => (
-            <ListRow key={m.id} title={m.author.kind === 'anulia' ? 'Anulia' : m.author.pseudonym || t('community.room.formerMember')} subtitle={`${time(m.createdAt)} · ${m.body.slice(0, 140)}`} />
+            <ListRow key={m.id} title={m.author.kind === 'anulia' ? 'Bea' : m.author.pseudonym || t('community.room.formerMember')} subtitle={`${time(m.createdAt)} · ${m.body.slice(0, 140)}`} />
           ))}
         </View>
       </Sheet>

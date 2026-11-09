@@ -1,5 +1,25 @@
 /** Well-being ecosystem (`wb`), German. Machine-translated from en.ts (scripts/i18n/translate-wb.mjs); native review recommended. */
 export const wbDe = {
+  "money": {
+    "regularPrice": "Regulärer Preis",
+    "youSave": "Du sparst {amount}",
+    "offerEnds": "Angebot endet am {date}",
+    "firstPurchase": "Für deinen ersten Kauf",
+    "discount": "Rabatt",
+    "adjusted": "Der Rabatt wurde auf den niedrigsten Preis angepasst, den wir anbieten können.",
+    "promoCode": "Aktionscode",
+    "apply": "Anwenden",
+    "codeApplied": "Code angewendet: {name}",
+    "codeInvalid": "Dieser Code ist für diesen Kauf nicht gültig.",
+    "codeNotBetter": "Dein aktueller Preis ist bereits günstiger als der Preis mit diesem Code.",
+    "limitsTitle": "Nutzungsgrenzen, klar erklärt",
+    "artSessionLimit": "Bis zu {n} Nachrichten pro Kunst-Session (meist sind es 8–15).",
+    "fairUse": "Faire Nutzung: Für AI-Funktionen gibt es ein monatliches Kontingent pro Konto. Du kannst sehen, wie viel davon genutzt wurde und wann es erneuert wird. Die meisten Menschen schöpfen es nie aus.",
+    "safetyNeverLimited": "Hilfsangebote und Ressourcen für deine Sicherheit sind immer uneingeschränkt verfügbar.",
+    "allowanceTitle": "Dein monatliches AI-Kontingent ist aufgebraucht",
+    "allowanceReached": "Die AI-Funktionen pausieren bis zum {date}. Dein Tagebuch, deine Übungen und Hilfsangebote stehen dir wie gewohnt zur Verfügung.",
+    "allowanceUsed": "Genutztes AI-Kontingent: {percent}%"
+  },
   "sound": {
     "title": "Klanglabor",
     "subtitle": "Klänge zum Konzentrieren, Ausruhen und Schlafen, direkt auf deinem Handy erzeugt. Funktioniert offline.",
@@ -458,9 +478,9 @@ export const wbDe = {
     }
   },
   "memory": {
-    "title": "Was Anulia sich merken darf",
-    "subtitle": "Wähle, was Anulia aus deinen Einträgen nutzen darf. Alles bleibt aus, bis du es einschaltest.",
-    "intro": "Deine Zustimmung zu AI gibt deinen Verlauf nicht frei. Jeder Schalter unten gilt einzeln und lässt sich jederzeit ausschalten. Anulia beginnt dann ein neues Gespräch ohne diese Angaben.",
+    "title": "Was Bea sich merken darf",
+    "subtitle": "Wähle, was Bea aus deinen Einträgen nutzen darf. Alles bleibt aus, bis du es einschaltest.",
+    "intro": "Deine Zustimmung zu AI gibt deinen Verlauf nicht frei. Jeder Schalter unten gilt einzeln und lässt sich jederzeit ausschalten. Bea beginnt dann ein neues Gespräch ohne diese Angaben.",
     "categories": {
       "profile": "Profil (Name, Altersgruppe, was dich hergeführt hat)",
       "steps": "Schritte und persönliche Ziele",
@@ -468,13 +488,13 @@ export const wbDe = {
       "activity": "Aktivitäten als Anzahl (Tagebuch, Übungen, Kunsttherapie, Reflexionskarten)",
       "sound": "Klänge und Fokuseinheiten",
       "sleep": "Schlaf-Check-ins",
-      "priorChats": "Zusammenfassungen früherer Chats mit Anulia",
+      "priorChats": "Zusammenfassungen früherer Chats mit Bea",
       "journalText": "Vollständiger Tagebuchtext",
       "artSummaries": "Zusammenfassungen der Kunsttherapie",
       "assessments": "Ergebnisse der Selbstchecks"
     },
     "hints": {
-      "profile": "Hilft Anulia, so mit dir zu sprechen, wie du es magst.",
+      "profile": "Hilft Bea, so mit dir zu sprechen, wie du es magst.",
       "steps": "Heutige Schritte und die Anzahl dieser Woche.",
       "mood": "Deine eigenen Bewertungen und Gefühle aus den Check-ins.",
       "activity": "Nur Zahlen, nie Inhalte.",
@@ -485,24 +505,24 @@ export const wbDe = {
       "artSummaries": "Die abschließenden Zusammenfassungen deiner Kunsttherapie-Einheiten.",
       "assessments": "Deine letzten Selbstcheck-Ergebnisse. Sie sind keine Diagnose."
     },
-    "never": "Nie mit Anulia geteilt: Community-Nachrichten und Nachrichten mit Psychologinnen und Psychologen.",
-    "preview": "Was Anulia jetzt sehen würde",
-    "previewEmpty": "Nichts. Anulia kennt nichts aus deinem Verlauf.",
+    "never": "Nie mit Bea geteilt: Community-Nachrichten und Nachrichten mit Psychologinnen und Psychologen.",
+    "preview": "Was Bea jetzt sehen würde",
+    "previewEmpty": "Nichts. Bea kennt nichts aus deinem Verlauf.",
     "previewNote": "Genau dieser Text wird deiner nächsten Nachricht hinzugefügt.",
     "exclude": "Auslassen",
     "include": "Wieder einbeziehen",
     "excludedTitle": "Ausgelassen",
     "journalItems": "Tagebucheinträge",
     "chatItems": "Frühere Chats",
-    "notes": "Was Anulia beachten soll",
-    "notesHint": "Kurze Notizen von dir für Anulia, z. B. „Bitte antworte kurz“.",
+    "notes": "Was Bea beachten soll",
+    "notesHint": "Kurze Notizen von dir für Bea, z. B. „Bitte antworte kurz“.",
     "addNote": "Hinzufügen",
-    "notePlaceholder": "Eine Notiz für Anulia…",
+    "notePlaceholder": "Eine Notiz für Bea…",
     "forgetAll": "Alles vergessen",
-    "forgetConfirm": "Alles ausschalten und deine Notizen löschen? Mit deiner nächsten Nachricht beginnt Anulia neu.",
-    "forgotten": "Erledigt. Anulia merkt sich jetzt nichts mehr aus deinem Verlauf.",
+    "forgetConfirm": "Alles ausschalten und deine Notizen löschen? Mit deiner nächsten Nachricht beginnt Bea neu.",
+    "forgotten": "Erledigt. Bea merkt sich jetzt nichts mehr aus deinem Verlauf.",
     "transfer": "So funktioniert es",
-    "transferBody": "Alles bleibt auf diesem Handy. Wenn du Anulia schreibst, werden nur die eingeschalteten Bereiche deiner Nachricht hinzugefügt und über den Server von BeHappy an OpenAI gesendet, um die Antwort zu schreiben. OpenAI bewahrt API-Daten bis zu 30 Tage auf, um Missbrauch zu erkennen, und nutzt sie nicht zum Trainieren von Modellen. Der Server von BeHappy speichert sie nicht.",
+    "transferBody": "Alles bleibt auf diesem Handy. Wenn du Bea schreibst, werden nur die eingeschalteten Bereiche deiner Nachricht hinzugefügt und über den Server von BeHappy an OpenAI gesendet, um die Antwort zu schreiben. OpenAI bewahrt API-Daten bis zu 30 Tage auf, um Missbrauch zu erkennen, und nutzt sie nicht zum Trainieren von Modellen. Der Server von BeHappy speichert sie nicht.",
     "sources": "Quellen: {n}"
   },
   "sleep": {
@@ -555,8 +575,8 @@ export const wbDe = {
       "subtitle": "Abends zur Ruhe kommen, morgens kurz nachspüren"
     },
     "memory": {
-      "title": "Was Anulia sich merkt",
-      "subtitle": "Du bestimmst, was Anulia wissen darf"
+      "title": "Was Bea sich merkt",
+      "subtitle": "Du bestimmst, was Bea wissen darf"
     }
   },
   "today": {

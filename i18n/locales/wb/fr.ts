@@ -1,5 +1,25 @@
 /** Well-being ecosystem (`wb`), French. Machine-translated from en.ts (scripts/i18n/translate-wb.mjs); native review recommended. */
 export const wbFr = {
+  "money": {
+    "regularPrice": "Prix habituel",
+    "youSave": "Vous économisez {amount}",
+    "offerEnds": "L’offre se termine le {date}",
+    "firstPurchase": "Pour votre premier achat",
+    "discount": "Réduction",
+    "adjusted": "La réduction a été ajustée pour vous proposer notre prix le plus bas.",
+    "promoCode": "Code promo",
+    "apply": "Appliquer",
+    "codeApplied": "Code appliqué : {name}",
+    "codeInvalid": "Ce code n’est pas valable pour cet achat.",
+    "codeNotBetter": "Vous bénéficiez déjà d’un meilleur prix que celui proposé par ce code.",
+    "limitsTitle": "Des limites claires",
+    "artSessionLimit": "Jusqu’à {n} messages par séance artistique (une séance en compte généralement 8 à 15).",
+    "fairUse": "Usage raisonnable : les fonctionnalités AI ont un quota mensuel par compte. Vous pouvez consulter votre consommation et la date de renouvellement ; la plupart des personnes n’atteignent jamais cette limite.",
+    "safetyNeverLimited": "Les ressources d’aide et de sécurité restent toujours accessibles, sans limite.",
+    "allowanceTitle": "Votre quota mensuel AI est épuisé",
+    "allowanceReached": "Les fonctionnalités AI sont en pause jusqu’au {date}. Votre journal, vos outils et les ressources d’aide restent disponibles comme d’habitude.",
+    "allowanceUsed": "Quota AI utilisé : {percent}%"
+  },
   "sound": {
     "title": "Labo sonore",
     "subtitle": "Des sons pour vous concentrer, vous reposer et dormir, créés sur votre téléphone. Fonctionne hors ligne.",
@@ -458,9 +478,9 @@ export const wbFr = {
     }
   },
   "memory": {
-    "title": "Ce qu’Anulia peut retenir",
-    "subtitle": "Choisissez ce qu’Anulia peut utiliser parmi vos données. Tout est désactivé tant que vous ne l’activez pas.",
-    "intro": "Accepter d’utiliser AI ne partage pas votre historique. Chaque option ci-dessous est indépendante et peut être désactivée à tout moment : Anulia commence alors une nouvelle conversation sans ces éléments.",
+    "title": "Ce que Bea peut retenir",
+    "subtitle": "Choisissez ce que Bea peut utiliser parmi vos données. Tout est désactivé tant que vous ne l’activez pas.",
+    "intro": "Accepter d’utiliser AI ne partage pas votre historique. Chaque option ci-dessous est indépendante et peut être désactivée à tout moment : Bea commence alors une nouvelle conversation sans ces éléments.",
     "categories": {
       "profile": "Profil (nom, tranche d’âge, ce qui vous amène ici)",
       "steps": "Petits pas et objectifs",
@@ -468,13 +488,13 @@ export const wbFr = {
       "activity": "Nombre d’activités (Journal, pratiques, art, cartes)",
       "sound": "Sons et séances de concentration",
       "sleep": "Points sur votre sommeil",
-      "priorChats": "Résumés des échanges précédents avec Anulia",
+      "priorChats": "Résumés des échanges précédents avec Bea",
       "journalText": "Texte complet du Journal",
       "artSummaries": "Résumés des séances d’Art-thérapie",
       "assessments": "Résultats des bilans personnels"
     },
     "hints": {
-      "profile": "Aide Anulia à vous parler comme vous le préférez.",
+      "profile": "Aide Bea à vous parler comme vous le préférez.",
       "steps": "Les petits pas du jour et le total de la semaine.",
       "mood": "Vos propres appréciations et ressentis lors des points sur vous.",
       "activity": "Des nombres uniquement, jamais de contenu.",
@@ -485,9 +505,9 @@ export const wbFr = {
       "artSummaries": "Les résumés de fin de vos séances d’Art-thérapie.",
       "assessments": "Vos derniers scores aux bilans personnels. Ce ne sont pas des diagnostics."
     },
-    "never": "Jamais partagés avec Anulia : les messages de la communauté et vos échanges avec des psychologues.",
-    "preview": "Ce qu’Anulia verrait maintenant",
-    "previewEmpty": "Rien. Anulia ne connaît aucun élément de votre historique.",
+    "never": "Jamais partagés avec Bea : les messages de la communauté et vos échanges avec des psychologues.",
+    "preview": "Ce que Bea verrait maintenant",
+    "previewEmpty": "Rien. Bea ne connaît aucun élément de votre historique.",
     "previewNote": "Voici le texte exact ajouté à votre prochain message.",
     "exclude": "Exclure",
     "include": "Inclure à nouveau",
@@ -495,14 +515,14 @@ export const wbFr = {
     "journalItems": "Entrées du Journal",
     "chatItems": "Échanges précédents",
     "notes": "À garder en tête",
-    "notesHint": "De courtes notes que vous écrivez pour Anulia, par exemple : « Merci de répondre brièvement ».",
+    "notesHint": "De courtes notes que vous écrivez pour Bea, par exemple : « Merci de répondre brièvement ».",
     "addNote": "Ajouter",
-    "notePlaceholder": "Une note pour Anulia…",
+    "notePlaceholder": "Une note pour Bea…",
     "forgetAll": "Tout oublier",
-    "forgetConfirm": "Tout désactiver et supprimer vos notes ? Anulia repartira de zéro à votre prochain message.",
-    "forgotten": "C’est fait. Anulia ne retient plus rien de votre historique.",
+    "forgetConfirm": "Tout désactiver et supprimer vos notes ? Bea repartira de zéro à votre prochain message.",
+    "forgotten": "C’est fait. Bea ne retient plus rien de votre historique.",
     "transfer": "Comment cela fonctionne",
-    "transferBody": "Tout reste sur ce téléphone. Quand vous écrivez à Anulia, seuls les éléments activés sont ajoutés à votre message et envoyés à OpenAI via le serveur de BeHappy pour rédiger la réponse. OpenAI conserve les données API jusqu’à 30 jours pour détecter les abus et ne les utilise pas pour entraîner ses modèles ; le serveur de BeHappy ne les stocke pas.",
+    "transferBody": "Tout reste sur ce téléphone. Quand vous écrivez à Bea, seuls les éléments activés sont ajoutés à votre message et envoyés à OpenAI via le serveur de BeHappy pour rédiger la réponse. OpenAI conserve les données API jusqu’à 30 jours pour détecter les abus et ne les utilise pas pour entraîner ses modèles ; le serveur de BeHappy ne les stocke pas.",
     "sources": "Sources : {n}"
   },
   "sleep": {
@@ -555,7 +575,7 @@ export const wbFr = {
       "subtitle": "Ralentir le soir, faire le point au réveil"
     },
     "memory": {
-      "title": "Ce qu’Anulia retient",
+      "title": "Ce que Bea retient",
       "subtitle": "Vos options de mémoire"
     }
   },

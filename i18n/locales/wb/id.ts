@@ -1,5 +1,25 @@
 /** Well-being ecosystem (`wb`), Indonesian. Machine-translated from en.ts (scripts/i18n/translate-wb.mjs); native review recommended. */
 export const wbId = {
+  "money": {
+    "regularPrice": "Harga normal",
+    "youSave": "Anda hemat {amount}",
+    "offerEnds": "Penawaran berakhir {date}",
+    "firstPurchase": "Untuk pembelian pertama Anda",
+    "discount": "Diskon",
+    "adjusted": "Diskon telah disesuaikan ke harga terendah yang dapat kami tawarkan.",
+    "promoCode": "Kode promo",
+    "apply": "Terapkan",
+    "codeApplied": "Kode diterapkan: {name}",
+    "codeInvalid": "Kode ini tidak berlaku untuk pembelian ini.",
+    "codeNotBetter": "Harga yang Anda dapatkan sudah lebih rendah daripada harga dengan kode ini.",
+    "limitsTitle": "Batas penggunaan yang jelas",
+    "artSessionLimit": "Hingga {n} pesan dalam setiap sesi seni (satu sesi biasanya membutuhkan 8–15 pesan).",
+    "fairUse": "Penggunaan wajar: fitur AI memiliki kuota bulanan per akun. Anda dapat melihat jumlah yang telah digunakan dan kapan kuota diperbarui; sebagian besar pengguna tidak pernah mencapai batasnya.",
+    "safetyNeverLimited": "Akses ke bantuan dan sumber daya keselamatan tidak pernah dibatasi.",
+    "allowanceTitle": "Kuota AI bulanan Anda sudah habis",
+    "allowanceReached": "Fitur AI beristirahat hingga {date}. Jurnal, alat, dan sumber bantuan Anda tetap dapat digunakan seperti biasa.",
+    "allowanceUsed": "Kuota AI yang terpakai: {percent}%"
+  },
   "sound": {
     "title": "Lab Suara",
     "subtitle": "Suara untuk fokus, beristirahat, dan tidur, dibuat di ponselmu. Bisa digunakan offline.",
@@ -458,9 +478,9 @@ export const wbId = {
     }
   },
   "memory": {
-    "title": "Yang bisa diingat Anulia",
-    "subtitle": "Pilih catatan yang boleh digunakan Anulia. Semuanya nonaktif sampai kamu mengaktifkannya.",
-    "intro": "Persetujuan penggunaan AI tidak membagikan riwayatmu. Setiap pilihan di bawah terpisah dan bisa dinonaktifkan kapan saja: Anulia lalu memulai percakapan baru tanpa informasi itu.",
+    "title": "Yang bisa diingat Bea",
+    "subtitle": "Pilih catatan yang boleh digunakan Bea. Semuanya nonaktif sampai kamu mengaktifkannya.",
+    "intro": "Persetujuan penggunaan AI tidak membagikan riwayatmu. Setiap pilihan di bawah terpisah dan bisa dinonaktifkan kapan saja: Bea lalu memulai percakapan baru tanpa informasi itu.",
     "categories": {
       "profile": "Profil (nama, rentang usia, alasanmu datang)",
       "steps": "Langkah dan tujuan pribadi",
@@ -468,13 +488,13 @@ export const wbId = {
       "activity": "Jumlah aktivitas (jurnal, latihan, seni, kartu)",
       "sound": "Suara dan sesi fokus",
       "sleep": "Catatan tidur",
-      "priorChats": "Ringkasan obrolan sebelumnya dengan Anulia",
+      "priorChats": "Ringkasan obrolan sebelumnya dengan Bea",
       "journalText": "Teks jurnal lengkap",
       "artSummaries": "Ringkasan sesi terapi seni",
       "assessments": "Hasil cek diri"
     },
     "hints": {
-      "profile": "Membantu Anulia berbicara sesuai keinginanmu.",
+      "profile": "Membantu Bea berbicara sesuai keinginanmu.",
       "steps": "Langkah hari ini dan jumlah minggu ini.",
       "mood": "Penilaian dan perasaan yang kamu catat sendiri.",
       "activity": "Hanya jumlah, tidak pernah isinya.",
@@ -485,9 +505,9 @@ export const wbId = {
       "artSummaries": "Ringkasan penutup sesi terapi senimu.",
       "assessments": "Skor cek diri terbarumu. Ini bukan diagnosis."
     },
-    "never": "Tidak pernah dibagikan ke Anulia: pesan komunitas dan pesan dengan psikolog.",
-    "preview": "Yang akan dilihat Anulia sekarang",
-    "previewEmpty": "Tidak ada. Anulia tidak tahu apa pun dari riwayatmu.",
+    "never": "Tidak pernah dibagikan ke Bea: pesan komunitas dan pesan dengan psikolog.",
+    "preview": "Yang akan dilihat Bea sekarang",
+    "previewEmpty": "Tidak ada. Bea tidak tahu apa pun dari riwayatmu.",
     "previewNote": "Inilah teks persis yang ditambahkan ke pesanmu berikutnya.",
     "exclude": "Jangan sertakan",
     "include": "Sertakan lagi",
@@ -495,14 +515,14 @@ export const wbId = {
     "journalItems": "Entri jurnal",
     "chatItems": "Obrolan sebelumnya",
     "notes": "Hal yang perlu diingat",
-    "notesHint": "Catatan singkat darimu untuk Anulia, misalnya “Tolong jawab singkat saja”.",
+    "notesHint": "Catatan singkat darimu untuk Bea, misalnya “Tolong jawab singkat saja”.",
     "addNote": "Tambah",
-    "notePlaceholder": "Catatan untuk Anulia…",
+    "notePlaceholder": "Catatan untuk Bea…",
     "forgetAll": "Lupakan semuanya",
-    "forgetConfirm": "Nonaktifkan semuanya dan hapus catatanmu? Anulia memulai dari awal pada pesanmu berikutnya.",
-    "forgotten": "Selesai. Anulia kini tidak mengingat apa pun dari riwayatmu.",
+    "forgetConfirm": "Nonaktifkan semuanya dan hapus catatanmu? Bea memulai dari awal pada pesanmu berikutnya.",
+    "forgotten": "Selesai. Bea kini tidak mengingat apa pun dari riwayatmu.",
     "transfer": "Cara kerjanya",
-    "transferBody": "Semuanya tetap di ponsel ini. Saat kamu mengirim pesan ke Anulia, hanya bagian yang diaktifkan yang ditambahkan ke pesan itu dan dikirim melalui server BeHappy ke OpenAI untuk menulis balasan. OpenAI menyimpan data API hingga 30 hari untuk mendeteksi penyalahgunaan dan tidak menggunakannya untuk melatih model; server BeHappy tidak menyimpannya.",
+    "transferBody": "Semuanya tetap di ponsel ini. Saat kamu mengirim pesan ke Bea, hanya bagian yang diaktifkan yang ditambahkan ke pesan itu dan dikirim melalui server BeHappy ke OpenAI untuk menulis balasan. OpenAI menyimpan data API hingga 30 hari untuk mendeteksi penyalahgunaan dan tidak menggunakannya untuk melatih model; server BeHappy tidak menyimpannya.",
     "sources": "Sumber: {n}"
   },
   "sleep": {
@@ -555,8 +575,8 @@ export const wbId = {
       "subtitle": "Bersantai, lalu catat tidurmu"
     },
     "memory": {
-      "title": "Yang diingat Anulia",
-      "subtitle": "Atur ingatan Anulia"
+      "title": "Yang diingat Bea",
+      "subtitle": "Atur ingatan Bea"
     }
   },
   "today": {
