@@ -52,7 +52,10 @@ export const wbDe = {
       "padSoft": "Sanfte Harmonie (zart)",
       "tones": "Reine Töne",
       "bowls": "Klangschalen",
-      "chimes": "Sanfte Glocken"
+      "chimes": "Sanfte Glocken",
+      "music": "Musik",
+      "fire": "Kaminfeuer",
+      "night": "Sommernacht"
     },
     "binaural": {
       "title": "Binauraler Ton",
@@ -74,6 +77,148 @@ export const wbDe = {
     "styleRainBells": "Regen & sanfte Glocken",
     "styleMixes": "Fertige Mixe",
     "tonesNote": "Reine Töne mit 174 Hz und 528 Hz über einer sanften Harmonie, wie in beliebter Meditationsmusik. Es sind einfach musikalische Töne, die auf beiden Ohren gleich sind: Es gibt keine Belege dafür, dass irgendeine Frequenz heilt.",
+    "catalogSubtitle": "Bereit zum Abspielen: Musik, Natur und Frequenzen. Auf deinem Handy erzeugt, auch offline verfügbar.",
+    "catalog": {
+      "all": "Alle",
+      "sleep": "Schlafen",
+      "relax": "Entspannen",
+      "meditate": "Meditieren",
+      "focus": "Fokus",
+      "frequencies": "Frequenzen",
+      "nature": "Natur",
+      "noise": "Rauschen"
+    },
+    "seeAll": "Alle ansehen",
+    "recent": "Zuletzt gehört",
+    "preparing": "Klang wird vorbereitet … (nur beim ersten Mal)",
+    "untilStopped": "bis du stoppst",
+    "customize": "Diesen Mix anpassen",
+    "customMix": "Eigenen Mix erstellen",
+    "customMixHint": "Wähle die Klänge und stelle ihre Lautstärke einzeln ein.",
+    "headphonesBadge": "Kopfhörer",
+    "frequencyNote": "Frequenzstücke sind Musik in einer Tonart, die auf diesem Ton aufbaut, mit einem sanften Ton bei genau dieser Frequenz – wie in beliebten Meditationsvideos. Es sind einfach musikalische Töne: Es gibt keine Belege dafür, dass irgendeine Frequenz heilt.",
+    "tracks": {
+      "sleepDelta": {
+        "title": "Tiefschlaf · Delta 2 Hz",
+        "desc": "Langsame Musik in Moll, Regen und ein binauraler Beat mit 2 Hz (Kopfhörer)"
+      },
+      "sleepRainPiano": {
+        "title": "Regen und sanftes Klavier",
+        "desc": "Ein ruhiges Nocturne unter gleichmäßigem Regen"
+      },
+      "sleepOcean": {
+        "title": "Meer bei Nacht",
+        "desc": "Wellen, ein tiefer Dauerton und sanftes braunes Rauschen"
+      },
+      "sleepFire": {
+        "title": "Kaminfeuer",
+        "desc": "Ein knisterndes Feuer mit einem warmen, tiefen Dauerton"
+      },
+      "sleepNight": {
+        "title": "Sommernacht",
+        "desc": "Grillen und eine sanfte Brise"
+      },
+      "relaxAlpha": {
+        "title": "Ruhe · Alpha 10 Hz",
+        "desc": "Harfe und Wellen mit einem binauralen Beat mit 10 Hz (Kopfhörer)"
+      },
+      "relaxBowls": {
+        "title": "Tibetische Klangschalen und Bach",
+        "desc": "Sanfte Akkorde, tibetische Klangschalen und fließendes Wasser"
+      },
+      "relaxPiano": {
+        "title": "Ambient-Klavier",
+        "desc": "Langsames Klavier über warmen Akkorden"
+      },
+      "relaxStream": {
+        "title": "Waldbach und Glocken",
+        "desc": "Ein plätschernder Bach mit sanften Glocken"
+      },
+      "meditateTheta": {
+        "title": "Meditation · Theta 6 Hz",
+        "desc": "Tibetische Klangschalen über einem Dauerton mit einem binauralen Beat mit 6 Hz (Kopfhörer)"
+      },
+      "meditateBowls": {
+        "title": "Tibetische Klangschalen",
+        "desc": "Langsam angeschlagene tibetische Klangschalen über einem tiefen Dauerton"
+      },
+      "focusBeta": {
+        "title": "Fokus · Beta 15 Hz",
+        "desc": "Gleichmäßige Akkorde, sanftes Rauschen und ein binauraler Beat mit 15 Hz (Kopfhörer)"
+      },
+      "focusRain": {
+        "title": "Regen für den Fokus",
+        "desc": "Gleichmäßiger Regen über einer ruhigen Klangfläche"
+      },
+      "hz174": {
+        "title": "174 Hz",
+        "desc": "Musik auf Basis von 174 Hz, ein sanfter 174 Hz-Ton und ein Bach"
+      },
+      "hz285": {
+        "title": "285 Hz",
+        "desc": "Musik auf Basis von 285 Hz, ein sanfter Ton und Regen"
+      },
+      "hz396": {
+        "title": "396 Hz",
+        "desc": "Musik auf Basis von 396 Hz, tibetische Klangschalen und ein sanfter Ton"
+      },
+      "hz417": {
+        "title": "417 Hz",
+        "desc": "Musik auf Basis von 417 Hz, Glocken und das Meer"
+      },
+      "hz528": {
+        "title": "528 Hz",
+        "desc": "Musik auf Basis von 528 Hz, Klavier und ein sanfter 528 Hz-Ton"
+      },
+      "hz639": {
+        "title": "639 Hz",
+        "desc": "Musik auf Basis von 639 Hz, Harfe und ein Bach"
+      },
+      "hz741": {
+        "title": "741 Hz",
+        "desc": "Musik auf Basis von 741 Hz, Glocken und ein sanfter Ton"
+      },
+      "hz852": {
+        "title": "852 Hz",
+        "desc": "Musik auf Basis von 852 Hz, Klavier und tibetische Klangschalen"
+      },
+      "hz963": {
+        "title": "963 Hz",
+        "desc": "Ein Dauerton auf Basis von 963 Hz, tibetische Klangschalen und Glocken"
+      },
+      "hz432": {
+        "title": "432 Hz-Musik",
+        "desc": "Klaviermusik, gestimmt auf A = 432 Hz"
+      },
+      "hz528x174": {
+        "title": "528 + 174 Hz",
+        "desc": "Beide Töne über einer sanften Harmonie, mit tibetischen Klangschalen und Glocken"
+      },
+      "natureRain": {
+        "title": "Regen",
+        "desc": "Gleichmäßiger Regen mit Tropfen, die ins Wasser fallen"
+      },
+      "natureOcean": {
+        "title": "Meereswellen",
+        "desc": "Wellen, die anrollen und sich zurückziehen"
+      },
+      "natureStream": {
+        "title": "Bach",
+        "desc": "Ein plätschernder Bach"
+      },
+      "noiseBrown": {
+        "title": "Braunes Rauschen",
+        "desc": "Tief, sanft und gleichmäßig"
+      },
+      "noisePink": {
+        "title": "Rosa Rauschen",
+        "desc": "Ausgewogen, wie gleichmäßiger Regen"
+      },
+      "noiseWhite": {
+        "title": "Weißes Rauschen",
+        "desc": "Hell; überdeckt Stimmen"
+      }
+    },
     "honesty": "Diese Klänge können eine ruhigere Atmosphäre schaffen oder dir helfen, dich zu konzentrieren. Sie behandeln keine Kopfschmerzen, Schlafprobleme oder andere Beschwerden.",
     "headache": {
       "dim": "Bildschirm abdunkeln",

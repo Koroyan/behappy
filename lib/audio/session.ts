@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 
-import { EngineState, soundEngine } from './engine';
+import { EngineState, prepareSounds as prepareSoundsNow, soundEngine } from './engine';
 
 export { prepareSounds } from './engine';
 import { MixLayer, recordSession, SoundMode } from './soundStore';
@@ -14,6 +14,8 @@ import { MixLayer, recordSession, SoundMode } from './soundStore';
 export interface SoundSessionState {
   mode: SoundMode;
   title: string;
+  /** The catalog track playing (null: a mix from the mixer). */
+  trackId: string | null;
   layers: MixLayer[];
   startedAt: number;
   /** When the timer ends (null: no timer). */
@@ -28,6 +30,8 @@ export interface SoundSessionState {
 }
 
 let current: SoundSessionState | null = null;
+/** Identifies the latest start (the session object itself is replaced on every state change). */
+let startToken = 0;
 const listeners = new Set<(s: SoundSessionState | null) => void>();
 const emit = () => listeners.forEach((fn) => fn(current ? { ...current } : null));
 let ticker: ReturnType<typeof setInterval> | null = null;
@@ -75,13 +79,15 @@ export function useSoundSession(): SoundSessionState | null {
   return s;
 }
 
-export async function startSound(opts: { mode: SoundMode; title: string; layers: MixLayer[]; minutes: number | null; fadeMs?: number }) {
-  if (current) await stopSound({ completed: false });
+export async function startSound(opts: { mode: SoundMode; title: string; layers: MixLayer[]; minutes: number | null; fadeMs?: number; trackId?: string | null }) {
+  // Switching tracks: a short fade, then the new one.
+  if (current) await stopSound({ completed: false, fadeMs: 400 });
   fading = false;
   const now = Date.now();
   current = {
     mode: opts.mode,
     title: opts.title,
+    trackId: opts.trackId ?? null,
     layers: opts.layers,
     startedAt: now,
     endsAt: opts.minutes ? now + opts.minutes * 60000 : null,
@@ -91,9 +97,15 @@ export async function startSound(opts: { mode: SoundMode; title: string; layers:
     finished: false,
   };
   emit();
-  await soundEngine.setLayers(opts.layers, opts.title);
+  // Start with what is already generated; the rest is made now and fades in when ready.
+  const token = ++startToken;
+  const ready = await soundEngine.readyLayers(opts.layers);
+  const later = ready.length && ready.length < opts.layers.length ? opts.layers.filter((l) => !ready.includes(l)) : [];
+  if (later.length) prepareSoundsNow(later.map((l) => l.spec));
+  await soundEngine.setLayers(later.length ? ready : opts.layers, opts.title);
   await soundEngine.play();
   startTicker();
+  if (later.length && token === startToken && current) await soundEngine.setLayers(opts.layers, opts.title, { background: true });
 }
 
 export async function updateLayers(layers: MixLayer[]) {
@@ -112,6 +124,17 @@ export function setLayerVolume(id: string, volume: number) {
 
 export const setMasterVolume = (v: number) => soundEngine.setMaster(v);
 
+/** Sets the timer from now (null: until stopped). Lifts a fade that had begun. */
+export function setSoundTimer(minutes: number | null) {
+  if (!current) return;
+  current = { ...current, endsAt: minutes ? Date.now() + minutes * 60000 : null };
+  if (fading) {
+    fading = false;
+    if (current.state === 'playing') soundEngine.fadeTo(1, 1500).catch(() => {});
+  }
+  emit();
+}
+
 export async function pauseSound() {
   pausing = true;
   await soundEngine.pause();
@@ -128,15 +151,15 @@ export async function resumeSound() {
 }
 
 /** Stops with a fade and records the session (a minute or more). */
-export async function stopSound({ completed }: { completed: boolean }) {
+export async function stopSound({ completed, fadeMs = 1200 }: { completed: boolean; fadeMs?: number }) {
   const s = current;
   if (!s) return null;
   stopTicker();
   current = { ...s, finished: completed, state: 'stopped' };
   emit();
-  await soundEngine.stop(fading ? 0 : 1200);
+  await soundEngine.stop(fading ? 0 : fadeMs);
   fading = false;
-  const session = await recordSession(s.mode, s.startedAt, s.layers, completed).catch(() => null);
+  const session = await recordSession(s.mode, s.startedAt, s.layers, completed, s.trackId).catch(() => null);
   current = null;
   emit();
   lastFinished = completed ? { mode: s.mode, at: Date.now() } : null;

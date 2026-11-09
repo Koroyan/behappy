@@ -76,6 +76,11 @@ class NativeEngine {
   state: EngineState = 'stopped';
   private listeners = new Set<(s: EngineState) => void>();
   private title = 'BeHappy';
+  /** Bumped by every setLayers/stop: a layer that finishes generating late never joins a newer mix. */
+  private gen = 0;
+  /** Fade-in of layers that join while playing (0..1 per layer). */
+  private entry = new Map<string, number>();
+  private entryTimer: ReturnType<typeof setInterval> | null = null;
 
   onState(fn: (s: EngineState) => void) {
     this.listeners.add(fn);
@@ -95,11 +100,40 @@ class NativeEngine {
       this.master
     );
     entries.forEach((e, i) => {
-      e.player.volume = gains[i] * this.level;
+      e.player.volume = gains[i] * this.level * (this.entry.get(e.layer.id) ?? 1);
     });
   }
 
-  async setLayers(layers: Layer[], title?: string) {
+  /** Layers whose sound is already generated on this device. */
+  async readyLayers(layers: Layer[]): Promise<Layer[]> {
+    const out: Layer[] = [];
+    for (const l of layers) {
+      const info = await FileSystem.getInfoAsync(`${DIR}${specKey(l.spec)}.wav`).catch(() => null);
+      if (info?.exists && (info as any).size > 44) out.push(l);
+    }
+    return out;
+  }
+
+  /** A layer joining a playing mix fades in over 2.5 s instead of appearing at once. */
+  private fadeIn(id: string) {
+    this.entry.set(id, 0);
+    if (this.entryTimer) return;
+    this.entryTimer = setInterval(() => {
+      for (const [k, v] of this.entry) {
+        if (v >= 1) this.entry.delete(k);
+        else this.entry.set(k, Math.min(1, v + 0.02));
+      }
+      this.apply();
+      if (!this.entry.size && this.entryTimer) {
+        clearInterval(this.entryTimer);
+        this.entryTimer = null;
+      }
+    }, 50);
+  }
+
+  /** background: add the missing layers quietly (no "loading" state), fading each in when ready. */
+  async setLayers(layers: Layer[], title?: string, opts: { background?: boolean } = {}) {
+    const gen = ++this.gen;
     if (title) this.title = title;
     const keep = new Set(layers.map((l) => l.id));
     for (const [id, e] of this.players) {
@@ -119,8 +153,9 @@ class NativeEngine {
         existing.sub?.remove();
         existing.player.remove();
       }
-      if (wasPlaying) this.set('loading');
+      if (wasPlaying && !opts.background) this.set('loading');
       const uri = await soundFile(layer.spec);
+      if (gen !== this.gen) return; // a newer mix (or a stop) took over
       const player = createAudioPlayer({ uri });
       player.loop = true;
       player.volume = 0;
@@ -132,10 +167,14 @@ class NativeEngine {
         }
       });
       this.players.set(layer.id, { layer, player, sub });
-      if (wasPlaying) player.play();
+      if (opts.background) {
+        this.fadeIn(layer.id);
+        if (this.state === 'playing') player.play();
+      } else if (wasPlaying) player.play();
+      this.apply();
     }
     this.apply();
-    if (wasPlaying) this.set('playing');
+    if (wasPlaying && !opts.background) this.set('playing');
   }
 
   setVolume(id: string, volume: number) {
@@ -173,7 +212,9 @@ class NativeEngine {
   }
 
   async stop(fadeMs = 1500) {
+    this.gen += 1;
     if (this.state === 'playing') await this.fadeTo(0, fadeMs);
+    this.entry.clear();
     this.players.forEach((e) => {
       e.sub?.remove();
       if (LOCK_SCREEN) {

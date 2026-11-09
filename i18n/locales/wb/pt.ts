@@ -52,7 +52,10 @@ export const wbPt = {
       "padSoft": "Harmonia suave (delicada)",
       "tones": "Tons puros",
       "bowls": "Taças tibetanas",
-      "chimes": "Sinos suaves"
+      "chimes": "Sinos suaves",
+      "music": "Música",
+      "fire": "Lareira",
+      "night": "Noite de verão"
     },
     "binaural": {
       "title": "Tom binaural",
@@ -74,6 +77,148 @@ export const wbPt = {
     "styleRainBells": "Chuva e sinos suaves",
     "styleMixes": "Misturas prontas",
     "tonesNote": "Tons puros a 174 Hz e 528 Hz sobre uma harmonia suave, como na música de meditação popular. São apenas tons musicais, iguais nos dois ouvidos: não há provas de que qualquer frequência cure.",
+    "catalogSubtitle": "Pronto para ouvir: música, natureza e frequências. Criado no seu celular, funciona offline.",
+    "catalog": {
+      "all": "Todos",
+      "sleep": "Dormir",
+      "relax": "Relaxar",
+      "meditate": "Meditar",
+      "focus": "Foco",
+      "frequencies": "Frequências",
+      "nature": "Natureza",
+      "noise": "Ruído"
+    },
+    "seeAll": "Ver todos",
+    "recent": "Ouvidos recentemente",
+    "preparing": "Preparando o som… (só na primeira vez)",
+    "untilStopped": "até você parar",
+    "customize": "Ajustar esta mistura",
+    "customMix": "Criar sua mistura",
+    "customMixHint": "Escolha os sons e ajuste o volume de cada um.",
+    "headphonesBadge": "Fones de ouvido",
+    "frequencyNote": "As faixas de frequência são músicas em uma tonalidade baseada nessa nota, com um tom suave exatamente nessa frequência, como nos vídeos populares de meditação. São apenas tons musicais: não há evidências de que qualquer frequência cure.",
+    "tracks": {
+      "sleepDelta": {
+        "title": "Sono profundo · Delta 2 Hz",
+        "desc": "Música lenta em tom menor, chuva e uma batida binaural de 2 Hz (fones de ouvido)"
+      },
+      "sleepRainPiano": {
+        "title": "Chuva e piano suave",
+        "desc": "Um noturno tranquilo sob chuva constante"
+      },
+      "sleepOcean": {
+        "title": "Oceano à noite",
+        "desc": "Ondas, um som grave contínuo e ruído marrom suave"
+      },
+      "sleepFire": {
+        "title": "Lareira",
+        "desc": "O crepitar do fogo com um som grave contínuo e acolhedor"
+      },
+      "sleepNight": {
+        "title": "Noite de verão",
+        "desc": "Grilos e uma brisa suave"
+      },
+      "relaxAlpha": {
+        "title": "Calma · Alfa 10 Hz",
+        "desc": "Harpa e ondas com uma batida binaural de 10 Hz (fones de ouvido)"
+      },
+      "relaxBowls": {
+        "title": "Tigelas tibetanas e riacho",
+        "desc": "Acordes suaves, tigelas tibetanas e água corrente"
+      },
+      "relaxPiano": {
+        "title": "Piano ambiente",
+        "desc": "Piano lento sobre acordes acolhedores"
+      },
+      "relaxStream": {
+        "title": "Riacho na floresta e sinos",
+        "desc": "O murmúrio de um riacho com sinos suaves"
+      },
+      "meditateTheta": {
+        "title": "Meditação · Teta 6 Hz",
+        "desc": "Tigelas tibetanas sobre um som contínuo com uma batida binaural de 6 Hz (fones de ouvido)"
+      },
+      "meditateBowls": {
+        "title": "Tigelas tibetanas",
+        "desc": "Tigelas tibetanas tocadas lentamente sobre um som grave contínuo"
+      },
+      "focusBeta": {
+        "title": "Foco · Beta 15 Hz",
+        "desc": "Acordes constantes, ruído suave e uma batida binaural de 15 Hz (fones de ouvido)"
+      },
+      "focusRain": {
+        "title": "Chuva para focar",
+        "desc": "Chuva constante sobre um fundo musical suave"
+      },
+      "hz174": {
+        "title": "174 Hz",
+        "desc": "Música baseada em 174 Hz, um tom suave de 174 Hz e um riacho"
+      },
+      "hz285": {
+        "title": "285 Hz",
+        "desc": "Música baseada em 285 Hz, um tom suave e chuva"
+      },
+      "hz396": {
+        "title": "396 Hz",
+        "desc": "Música baseada em 396 Hz, tigelas tibetanas e um tom suave"
+      },
+      "hz417": {
+        "title": "417 Hz",
+        "desc": "Música baseada em 417 Hz, sinos e o mar"
+      },
+      "hz528": {
+        "title": "528 Hz",
+        "desc": "Música baseada em 528 Hz, piano e um tom suave de 528 Hz"
+      },
+      "hz639": {
+        "title": "639 Hz",
+        "desc": "Música baseada em 639 Hz, harpa e um riacho"
+      },
+      "hz741": {
+        "title": "741 Hz",
+        "desc": "Música baseada em 741 Hz, sinos e um tom suave"
+      },
+      "hz852": {
+        "title": "852 Hz",
+        "desc": "Música baseada em 852 Hz, piano e tigelas tibetanas"
+      },
+      "hz963": {
+        "title": "963 Hz",
+        "desc": "Um som contínuo baseado em 963 Hz, tigelas tibetanas e sinos"
+      },
+      "hz432": {
+        "title": "Música em 432 Hz",
+        "desc": "Música de piano afinado em A = 432 Hz"
+      },
+      "hz528x174": {
+        "title": "528 + 174 Hz",
+        "desc": "Os dois tons sobre uma harmonia suave, com tigelas tibetanas e sinos"
+      },
+      "natureRain": {
+        "title": "Chuva",
+        "desc": "Chuva constante com gotas caindo na água"
+      },
+      "natureOcean": {
+        "title": "Ondas do oceano",
+        "desc": "Ondas que vêm e vão"
+      },
+      "natureStream": {
+        "title": "Riacho",
+        "desc": "O murmúrio de um riacho"
+      },
+      "noiseBrown": {
+        "title": "Ruído marrom",
+        "desc": "Grave, suave e constante"
+      },
+      "noisePink": {
+        "title": "Ruído rosa",
+        "desc": "Equilibrado, como chuva constante"
+      },
+      "noiseWhite": {
+        "title": "Ruído branco",
+        "desc": "Brilhante; mascara vozes"
+      }
+    },
     "honesty": "Estes sons podem tornar um espaço mais tranquilo ou ajudar na concentração. Não tratam dores de cabeça, problemas de sono nem outras condições.",
     "headache": {
       "dim": "Escurecer o ecrã",

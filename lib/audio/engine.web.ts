@@ -80,7 +80,12 @@ class WebEngine {
     });
   }
 
-  async setLayers(layers: Layer[], _title?: string) {
+  /** The web renders quickly: every layer counts as ready. */
+  async readyLayers(layers: Layer[]): Promise<Layer[]> {
+    return layers;
+  }
+
+  async setLayers(layers: Layer[], _title?: string, _opts: { background?: boolean } = {}) {
     const ctx = this.context();
     const keep = new Set(layers.map((l) => l.id));
     for (const [id, n] of this.nodes) {

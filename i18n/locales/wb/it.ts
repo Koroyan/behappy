@@ -52,7 +52,10 @@ export const wbIt = {
       "padSoft": "Armonia soffusa (delicata)",
       "tones": "Toni puri",
       "bowls": "Campane tibetane",
-      "chimes": "Campanelli delicati"
+      "chimes": "Campanelli delicati",
+      "music": "Musica",
+      "fire": "Camino",
+      "night": "Notte d'estate"
     },
     "binaural": {
       "title": "Tono binaurale",
@@ -74,6 +77,148 @@ export const wbIt = {
     "styleRainBells": "Pioggia e campanelli delicati",
     "styleMixes": "Mix pronti",
     "tonesNote": "Toni puri a 174 Hz e 528 Hz su un’armonia morbida, come nella musica per meditazione più diffusa. Sono semplicemente toni musicali, uguali in entrambe le orecchie: non ci sono prove che una qualsiasi frequenza guarisca.",
+    "catalogSubtitle": "Pronti all'ascolto: musica, natura e frequenze. Generati sul telefono, disponibili offline.",
+    "catalog": {
+      "all": "Tutti",
+      "sleep": "Sonno",
+      "relax": "Relax",
+      "meditate": "Meditazione",
+      "focus": "Concentrazione",
+      "frequencies": "Frequenze",
+      "nature": "Natura",
+      "noise": "Rumore"
+    },
+    "seeAll": "Mostra tutti",
+    "recent": "Ascoltati di recente",
+    "preparing": "Preparazione del suono… (solo la prima volta)",
+    "untilStopped": "finché non lo interrompi",
+    "customize": "Regola questo mix",
+    "customMix": "Crea il tuo mix",
+    "customMixHint": "Scegli i suoni e regola il volume di ciascuno.",
+    "headphonesBadge": "Cuffie",
+    "frequencyNote": "Le tracce di frequenze sono brani in una tonalità basata su quella nota, con un suono delicato esattamente a quella frequenza, come nei video di meditazione più diffusi. Sono semplicemente suoni musicali: non ci sono prove che alcuna frequenza guarisca.",
+    "tracks": {
+      "sleepDelta": {
+        "title": "Sonno profondo · Delta 2 Hz",
+        "desc": "Musica lenta in tonalità minore, pioggia e un binaural beat a 2 Hz (cuffie)"
+      },
+      "sleepRainPiano": {
+        "title": "Pioggia e piano delicato",
+        "desc": "Un notturno tranquillo sotto una pioggia costante"
+      },
+      "sleepOcean": {
+        "title": "Oceano di notte",
+        "desc": "Onde, un bordone grave e un delicato rumore marrone"
+      },
+      "sleepFire": {
+        "title": "Camino",
+        "desc": "Un fuoco scoppiettante con un bordone caldo e grave"
+      },
+      "sleepNight": {
+        "title": "Notte d'estate",
+        "desc": "Grilli e una brezza leggera"
+      },
+      "relaxAlpha": {
+        "title": "Calma · Alfa 10 Hz",
+        "desc": "Arpa e onde con un binaural beat a 10 Hz (cuffie)"
+      },
+      "relaxBowls": {
+        "title": "Campane tibetane e ruscello",
+        "desc": "Accordi delicati, campane tibetane e acqua che scorre"
+      },
+      "relaxPiano": {
+        "title": "Piano ambient",
+        "desc": "Piano lento su accordi caldi"
+      },
+      "relaxStream": {
+        "title": "Ruscello nel bosco e campanelli",
+        "desc": "Un ruscello che gorgoglia con delicati campanelli"
+      },
+      "meditateTheta": {
+        "title": "Meditazione · Theta 6 Hz",
+        "desc": "Campane tibetane su un bordone con un binaural beat a 6 Hz (cuffie)"
+      },
+      "meditateBowls": {
+        "title": "Campane tibetane",
+        "desc": "Lenti rintocchi di campane tibetane su un bordone profondo"
+      },
+      "focusBeta": {
+        "title": "Concentrazione · Beta 15 Hz",
+        "desc": "Accordi regolari, rumore delicato e un binaural beat a 15 Hz (cuffie)"
+      },
+      "focusRain": {
+        "title": "Pioggia per concentrarsi",
+        "desc": "Pioggia costante su un tappeto sonoro discreto"
+      },
+      "hz174": {
+        "title": "174 Hz",
+        "desc": "Musica basata su 174 Hz, un suono delicato a 174 Hz e un ruscello"
+      },
+      "hz285": {
+        "title": "285 Hz",
+        "desc": "Musica basata su 285 Hz, un suono delicato e pioggia"
+      },
+      "hz396": {
+        "title": "396 Hz",
+        "desc": "Musica basata su 396 Hz, campane tibetane e un suono delicato"
+      },
+      "hz417": {
+        "title": "417 Hz",
+        "desc": "Musica basata su 417 Hz, campanelli e mare"
+      },
+      "hz528": {
+        "title": "528 Hz",
+        "desc": "Musica basata su 528 Hz, piano e un suono delicato a 528 Hz"
+      },
+      "hz639": {
+        "title": "639 Hz",
+        "desc": "Musica basata su 639 Hz, arpa e un ruscello"
+      },
+      "hz741": {
+        "title": "741 Hz",
+        "desc": "Musica basata su 741 Hz, campanelli e un suono delicato"
+      },
+      "hz852": {
+        "title": "852 Hz",
+        "desc": "Musica basata su 852 Hz, piano e campane tibetane"
+      },
+      "hz963": {
+        "title": "963 Hz",
+        "desc": "Un bordone basato su 963 Hz, campane tibetane e campanelli"
+      },
+      "hz432": {
+        "title": "Musica a 432 Hz",
+        "desc": "Musica per piano accordato a A = 432 Hz"
+      },
+      "hz528x174": {
+        "title": "528 + 174 Hz",
+        "desc": "Entrambi i suoni su un'armonia delicata, con campane tibetane e campanelli"
+      },
+      "natureRain": {
+        "title": "Pioggia",
+        "desc": "Pioggia costante con gocce che cadono sull'acqua"
+      },
+      "natureOcean": {
+        "title": "Onde dell'oceano",
+        "desc": "Onde che arrivano e si ritirano"
+      },
+      "natureStream": {
+        "title": "Ruscello",
+        "desc": "Un ruscello che gorgoglia"
+      },
+      "noiseBrown": {
+        "title": "Rumore marrone",
+        "desc": "Profondo, delicato e costante"
+      },
+      "noisePink": {
+        "title": "Rumore rosa",
+        "desc": "Equilibrato, come una pioggia costante"
+      },
+      "noiseWhite": {
+        "title": "Rumore bianco",
+        "desc": "Brillante; maschera le voci"
+      }
+    },
     "honesty": "Questi suoni possono rendere un ambiente più tranquillo o aiutarti a concentrarti. Non curano il mal di testa, i problemi di sonno o altri disturbi.",
     "headache": {
       "dim": "Attenua lo schermo",

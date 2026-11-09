@@ -17,8 +17,11 @@ import type { Pcm } from './synth';
 
 export type Job = Generator<void, Pcm, void>;
 
-/** Musical layers have nothing above ~4 kHz: 16 kHz keeps rendering light. */
-export const MUSIC_RATE = 16000;
+/**
+ * Musical layers keep every partial below 4.5 kHz: 12 kHz holds them all and
+ * keeps rendering light on phones (which run JavaScript without a JIT).
+ */
+export const MUSIC_RATE = 12000;
 
 const TAU = 2 * Math.PI;
 const BLOCK = 64;
@@ -31,7 +34,7 @@ export interface PadNote {
   h3: number;
 }
 
-interface Voice {
+export interface Voice {
   hz: number;
   phase: number;
   gainL: number;
@@ -51,7 +54,7 @@ interface Voice {
  * sin 3θ = 3 sin θ − 4 sin³ θ), so a rich voice costs about one sine.
  * Writes wrap around the end of the buffer (struck tails continue at the start).
  */
-function addVoice(L: Float32Array, R: Float32Array, sr: number, v: Voice) {
+export function addVoice(L: Float32Array, R: Float32Array, sr: number, v: Voice) {
   const n = L.length;
   const w = (TAU * v.hz) / sr;
   const c = Math.cos(w);
@@ -192,7 +195,7 @@ function fdnRun(st: Fdn, input: Float32Array, from: number, to: number, outL: Fl
  * whole loop once, which is kept. Runs at half rate on a mono input; the wet
  * signal is interpolated back and mixed in (dry · x + wet · reverb).
  */
-function* reverb(L: Float32Array, R: Float32Array, sr: number, o: { t60: number; dry: number; wet: number }): Generator<void, void, void> {
+export function* reverb(L: Float32Array, R: Float32Array, sr: number, o: { t60: number; dry: number; wet: number }): Generator<void, void, void> {
   const n = L.length;
   const m = Math.ceil(n / 2);
   const rate = sr / 2;
@@ -204,7 +207,7 @@ function* reverb(L: Float32Array, R: Float32Array, sr: number, o: { t60: number;
   }
   const st = makeFdn(rate, o.t60);
   const CHUNK = 8192;
-  let warm = Math.round(1.5 * o.t60 * rate);
+  let warm = Math.round(1.2 * o.t60 * rate);
   while (warm > 0) {
     const from = Math.max(0, m - warm);
     for (let i = from; i < m; i += CHUNK) {
@@ -231,7 +234,7 @@ function* reverb(L: Float32Array, R: Float32Array, sr: number, o: { t60: number;
 }
 
 /** Scales to a calm level (RMS), never above 0.89 peak. */
-function normalize(L: Float32Array, R: Float32Array, sr: number, target: number): Pcm {
+export function normalize(L: Float32Array, R: Float32Array, sr: number, target: number): Pcm {
   let sq = 0;
   let peak = 0;
   for (let i = 0; i < L.length; i += 1) {
@@ -248,7 +251,7 @@ function normalize(L: Float32Array, R: Float32Array, sr: number, target: number)
   return { sampleRate: sr, left: L, right: R };
 }
 
-const panGains = (pan: number): [number, number] => [Math.cos(((pan + 1) * Math.PI) / 4), Math.sin(((pan + 1) * Math.PI) / 4)];
+export const panGains = (pan: number): [number, number] => [Math.cos(((pan + 1) * Math.PI) / 4), Math.sin(((pan + 1) * Math.PI) / 4)];
 
 /**
  * A chord that breathes: each note is three voices — one in the centre, two
@@ -296,20 +299,22 @@ export function* tonesJob(hz: number[], seconds: number, sr: number): Job {
   return normalize(L, R, sr, 0.055);
 }
 
-interface Strike {
+export interface Strike {
   t: number;
   hz: number;
   amp: number;
   t60: number;
   pan: number;
   attack: number;
+  /** Stop once the note has decayed this many dB (default 70; 50 is plenty inside a reverb). */
+  until?: number;
 }
 
 /** Struck partials: a soft (raised-cosine) attack, then an exponential decay to −70 dB; tails wrap around the loop. */
-function addStrike(L: Float32Array, R: Float32Array, sr: number, s: Strike, phase: number) {
+export function addStrike(L: Float32Array, R: Float32Array, sr: number, s: Strike, phase: number) {
   const n = L.length;
   const k = 6.9078 / s.t60; // −60 dB at t60
-  const length = Math.min(n - 1, Math.round((s.attack + (s.t60 * 70) / 60) * sr));
+  const length = Math.min(n - 1, Math.round((s.attack + (s.t60 * (s.until ?? 70)) / 60) * sr));
   const [gainL, gainR] = panGains(s.pan);
   const env = (t: number) => s.amp * (t < s.attack ? 0.5 - 0.5 * Math.cos((Math.PI * t) / s.attack) : Math.exp(-k * (t - s.attack)));
   addVoice(L, R, sr, { hz: s.hz, phase, gainL, gainR, h2: 0, h3: 0, env, start: Math.round(s.t * sr), length });
@@ -321,7 +326,7 @@ function addStrike(L: Float32Array, R: Float32Array, sr: number, s: Strike, phas
  * slight asymmetry makes them "wah" slowly), panned apart; higher partials die
  * first. Struck softly, four times per loop, two bowls alternating.
  */
-const BOWL_MODES = [
+export const BOWL_MODES = [
   { r: 1, a: 1, t60: 14, d: 0.7 },
   { r: 2.83, a: 0.5, t60: 8, d: 1.3 },
   { r: 5.42, a: 0.24, t60: 4.5, d: 2.1 },
@@ -353,7 +358,7 @@ export function* bowlsJob(bowls: number[], seconds: number, sr: number): Job {
 }
 
 /** Small deterministic PRNG in [0, 1) (the same melody every time). */
-function rand01(seed: number) {
+export function rand01(seed: number) {
   let s = seed >>> 0 || 1;
   return () => {
     s ^= s << 13;

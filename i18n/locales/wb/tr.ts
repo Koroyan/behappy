@@ -52,7 +52,10 @@ export const wbTr = {
       "padSoft": "Yumuşak armoni (nazik)",
       "tones": "Saf tonlar",
       "bowls": "Tibet çanakları",
-      "chimes": "Hafif çan sesleri"
+      "chimes": "Hafif çan sesleri",
+      "music": "Müzik",
+      "fire": "Şömine",
+      "night": "Yaz gecesi"
     },
     "binaural": {
       "title": "Binaural ton",
@@ -74,6 +77,148 @@ export const wbTr = {
     "styleRainBells": "Yağmur ve hafif çan sesleri",
     "styleMixes": "Hazır miksler",
     "tonesNote": "Popüler meditasyon müziklerinde olduğu gibi, yumuşak bir armoni üzerinde 174 Hz ve 528 Hz saf tonlar. Bunlar yalnızca müzikal tonlardır ve her iki kulakta da aynıdır: herhangi bir frekansın iyileştirici olduğuna dair kanıt yoktur.",
+    "catalogSubtitle": "Çalmaya hazır: müzik, doğa ve frekanslar. Telefonunda üretilir, çevrimdışı çalışır.",
+    "catalog": {
+      "all": "Tümü",
+      "sleep": "Uyku",
+      "relax": "Rahatlama",
+      "meditate": "Meditasyon",
+      "focus": "Odaklanma",
+      "frequencies": "Frekanslar",
+      "nature": "Doğa",
+      "noise": "Gürültü"
+    },
+    "seeAll": "Tümünü gör",
+    "recent": "Son çalınanlar",
+    "preparing": "Ses hazırlanıyor… (yalnızca ilk seferde)",
+    "untilStopped": "sen durdurana kadar",
+    "customize": "Bu karışımı ayarla",
+    "customMix": "Kendi karışımını oluştur",
+    "customMixHint": "Sesleri seç ve her birinin düzeyini kendin ayarla.",
+    "headphonesBadge": "Kulaklık",
+    "frequencyNote": "Frekans parçaları, popüler meditasyon videolarındaki gibi, ilgili perde üzerine kurulu bir tonda müzik ve tam o frekansta hafif bir ses içerir. Bunlar yalnızca müzikal seslerdir: herhangi bir frekansın şifa verdiğine dair kanıt yoktur.",
+    "tracks": {
+      "sleepDelta": {
+        "title": "Derin uyku · Delta 2 Hz",
+        "desc": "Yavaş minör müzik, yağmur ve 2 Hz binaural ritim (kulaklık)"
+      },
+      "sleepRainPiano": {
+        "title": "Yağmur ve yumuşak piyano",
+        "desc": "Düzenli yağmur eşliğinde sakin bir noktürn"
+      },
+      "sleepOcean": {
+        "title": "Gece okyanus",
+        "desc": "Dalgalar, pes bir sürekli ton ve hafif kahverengi gürültü"
+      },
+      "sleepFire": {
+        "title": "Şömine",
+        "desc": "Sıcak, pes bir sürekli ton eşliğinde çıtırdayan ateş"
+      },
+      "sleepNight": {
+        "title": "Yaz gecesi",
+        "desc": "Cırcır böcekleri ve hafif bir esinti"
+      },
+      "relaxAlpha": {
+        "title": "Sakinlik · Alfa 10 Hz",
+        "desc": "10 Hz binaural ritim eşliğinde arp ve dalgalar (kulaklık)"
+      },
+      "relaxBowls": {
+        "title": "Tibet ses çanakları ve dere",
+        "desc": "Yumuşak akorlar, Tibet ses çanakları ve akan su"
+      },
+      "relaxPiano": {
+        "title": "Ambiyans piyano",
+        "desc": "Sıcak akorlar eşliğinde yavaş piyano"
+      },
+      "relaxStream": {
+        "title": "Orman deresi ve çanlar",
+        "desc": "Hafif çan sesleri eşliğinde şırıldayan dere"
+      },
+      "meditateTheta": {
+        "title": "Meditasyon · Teta 6 Hz",
+        "desc": "Sürekli bir ton ve 6 Hz binaural ritim eşliğinde Tibet ses çanakları (kulaklık)"
+      },
+      "meditateBowls": {
+        "title": "Tibet ses çanakları",
+        "desc": "Derin bir sürekli ton eşliğinde yavaşça vurulan Tibet ses çanakları"
+      },
+      "focusBeta": {
+        "title": "Odaklanma · Beta 15 Hz",
+        "desc": "Düzenli akorlar, hafif gürültü ve 15 Hz binaural ritim (kulaklık)"
+      },
+      "focusRain": {
+        "title": "Odaklanmak için yağmur",
+        "desc": "Sakin bir ses dokusu eşliğinde düzenli yağmur"
+      },
+      "hz174": {
+        "title": "174 Hz",
+        "desc": "174 Hz üzerine kurulu müzik, hafif bir 174 Hz tonu ve dere"
+      },
+      "hz285": {
+        "title": "285 Hz",
+        "desc": "285 Hz üzerine kurulu müzik, hafif bir ton ve yağmur"
+      },
+      "hz396": {
+        "title": "396 Hz",
+        "desc": "396 Hz üzerine kurulu müzik, Tibet ses çanakları ve hafif bir ton"
+      },
+      "hz417": {
+        "title": "417 Hz",
+        "desc": "417 Hz üzerine kurulu müzik, çanlar ve deniz"
+      },
+      "hz528": {
+        "title": "528 Hz",
+        "desc": "528 Hz üzerine kurulu müzik, piyano ve hafif bir 528 Hz tonu"
+      },
+      "hz639": {
+        "title": "639 Hz",
+        "desc": "639 Hz üzerine kurulu müzik, arp ve dere"
+      },
+      "hz741": {
+        "title": "741 Hz",
+        "desc": "741 Hz üzerine kurulu müzik, çanlar ve hafif bir ton"
+      },
+      "hz852": {
+        "title": "852 Hz",
+        "desc": "852 Hz üzerine kurulu müzik, piyano ve Tibet ses çanakları"
+      },
+      "hz963": {
+        "title": "963 Hz",
+        "desc": "963 Hz üzerine kurulu sürekli bir ton, Tibet ses çanakları ve çanlar"
+      },
+      "hz432": {
+        "title": "432 Hz müzik",
+        "desc": "A = 432 Hz akordunda piyano müziği"
+      },
+      "hz528x174": {
+        "title": "528 + 174 Hz",
+        "desc": "Yumuşak bir armoni üzerinde iki ton, Tibet ses çanakları ve çanlar"
+      },
+      "natureRain": {
+        "title": "Yağmur",
+        "desc": "Suya düşen damlalarla düzenli yağmur"
+      },
+      "natureOcean": {
+        "title": "Okyanus dalgaları",
+        "desc": "Kıyıya vurup geri çekilen dalgalar"
+      },
+      "natureStream": {
+        "title": "Dere",
+        "desc": "Şırıldayan bir dere"
+      },
+      "noiseBrown": {
+        "title": "Kahverengi gürültü",
+        "desc": "Derin, yumuşak ve düzenli"
+      },
+      "noisePink": {
+        "title": "Pembe gürültü",
+        "desc": "Dengeli, düzenli yağmur gibi"
+      },
+      "noiseWhite": {
+        "title": "Beyaz gürültü",
+        "desc": "Parlak; konuşma seslerini maskeler"
+      }
+    },
     "honesty": "Bu sesler bulunduğun ortamı daha sakin hissettirebilir veya odaklanmana yardımcı olabilir. Baş ağrısını, uyku sorunlarını ya da başka bir durumu tedavi etmez.",
     "headache": {
       "dim": "Ekranı karart",

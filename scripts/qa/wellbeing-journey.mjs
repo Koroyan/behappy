@@ -165,8 +165,8 @@ await step('Calm now: breathing guide and a dim silent screen (offline features)
   await P.click('calm-silence-overlay');
 });
 
-await step('Sound Lab: binaural 200/210 Hz measured in the playing buffers; bands; stop', async () => {
-  await P.go('/sound?mode=relax');
+await step('Sound mixer: binaural 200/210 Hz measured in the playing buffers; bands; stop', async () => {
+  await P.go('/sound/mixer?mode=relax');
   await P.wait('sound-binaural', 30000);
   await P.text('Left 200 Hz · right 210 Hz · beat 10 Hz');
   await P.click('sound-play');
@@ -212,13 +212,14 @@ await step('Sound Lab: binaural 200/210 Hz measured in the playing buffers; band
   return `left ${m.left} Hz, right ${m.right} Hz, ${m.layers} layers, context ${m.state}`;
 });
 
-await step('Sound Lab: ready mix 528 + 174 Hz plays both tones, same in both ears, with the honest note', async () => {
-  await P.go('/sound?mode=relax');
-  await P.click('sound-style-tones528-174', 30000);
-  await P.text('there is no evidence that any frequency heals');
-  await P.click('sound-play');
+await step('Sound catalog: 528 + 174 Hz plays both tones, same in both ears, with the honest note', async () => {
+  await P.go('/sound?category=frequencies');
+  await P.wait('sound-track-hz528x174', 30000);
+  await P.click('sound-track-hz528x174');
   await P.wait('sound-now', 30000);
-  await P.page.waitForTimeout(2000);
+  await P.text('there is no evidence that any frequency heals');
+  await P.page.waitForFunction(() => window.__contexts[0]?.state === 'running', null, { timeout: 30000 });
+  await P.page.waitForTimeout(1500);
   const m = await P.page.evaluate(() => {
     const power = (x, sr, f) => {
       const c = 2 * Math.cos((2 * Math.PI * f) / sr);
@@ -253,6 +254,80 @@ await step('Sound Lab: ready mix 528 + 174 Hz plays both tones, same in both ear
   await P.shot('5b-sound-tones');
   await P.click('sound-stop');
   return `left and right: ${m.low[0]} Hz + ${m.high[0]} Hz`;
+});
+
+await step('Sound catalog: every track plays with one tap; frequency and binaural tracks hold what their titles say', async () => {
+  await P.go('/sound');
+  await P.wait('sound-track-sleepDelta', 30000);
+  await P.shot('5c-sound-catalog');
+  const ids = await P.page.evaluate(() => [...new Set([...document.querySelectorAll('[data-testid^="sound-track-"]')].map((e) => e.getAttribute('data-testid').slice('sound-track-'.length)))]);
+  if (ids.length < 30) throw new Error(`only ${ids.length} tracks in the catalog`);
+  const measured = [];
+  for (const id of ids) {
+    await P.page.locator(`[data-testid="sound-track-${id}"]`).first().click();
+    // This very track is playing (not the previous one fading out).
+    await P.page.locator(`[data-testid="sound-now-state-${id}-playing"]`).first().waitFor({ timeout: 45000 }).catch(() => {
+      throw new Error(`${id} did not start`);
+    });
+    // Tracks with a pure tone (432 Hz is music tuned to A = 432, without a tone).
+    const n = Number((/^hz(\d+)$/.exec(id) || [])[1]);
+    const hz = [174, 285, 396, 417, 528, 639, 741, 852, 963].includes(n) ? n : null;
+    const bin = { sleepDelta: [200, 2], relaxAlpha: [200, 10], meditateTheta: [220, 6], focusBeta: [240, 15] }[id];
+    if (!hz && !bin) continue;
+    const r = await P.page.evaluate(
+      ({ hz, bin }) => {
+        const power = (x, sr, f, len) => {
+          const c = 2 * Math.cos((2 * Math.PI * f) / sr);
+          let s1 = 0;
+          let s2 = 0;
+          for (let i = 0; i < len; i += 1) {
+            const s0 = x[i] + c * s1 - s2;
+            s2 = s1;
+            s1 = s0;
+          }
+          return s1 * s1 + s2 * s2 - c * s1 * s2;
+        };
+        const peak = (x, sr, lo, hi) => {
+          let best = 0;
+          let bf = 0;
+          for (let f = lo; f <= hi; f += 0.5) {
+            const p = power(x, sr, f, sr * 2);
+            if (p > best) [best, bf] = [p, f];
+          }
+          return bf;
+        };
+        if (hz) {
+          // The pure tone: a 20 s buffer whose strongest line near hz is hz itself, and nothing else near it.
+          for (const b of window.__buffers) {
+            if (b.length !== b.sampleRate * 20) continue;
+            const l = b.getChannelData(0);
+            if (power(l, b.sampleRate, hz, b.sampleRate * 2) < 20 * power(l, b.sampleRate, hz * 0.94, b.sampleRate * 2)) continue;
+            return { tone: [peak(l, b.sampleRate, hz - 15, hz + 15), peak(b.getChannelData(1), b.sampleRate, hz - 15, hz + 15)] };
+          }
+          return { tone: null };
+        }
+        const [carrier, beat] = bin;
+        for (const b of window.__buffers) {
+          if (b.numberOfChannels !== 2 || b.length > b.sampleRate * 60) continue;
+          const l = peak(b.getChannelData(0), b.sampleRate, carrier - 20, carrier + beat + 20);
+          const r = peak(b.getChannelData(1), b.sampleRate, carrier - 20, carrier + beat + 20);
+          if (l === carrier && r === carrier + beat) return { ears: [l, r] };
+        }
+        return { ears: null };
+      },
+      { hz, bin }
+    );
+    if (hz) {
+      if (!r.tone || r.tone[0] !== hz || r.tone[1] !== hz) throw new Error(`${id}: tone ${JSON.stringify(r.tone)}`);
+      measured.push(`${hz}`);
+    } else {
+      if (!r.ears) throw new Error(`${id}: no ${bin[0]}/${bin[0] + bin[1]} Hz pair`);
+      measured.push(`${r.ears[0]}/${r.ears[1]}`);
+    }
+  }
+  await P.shot('5d-sound-playing');
+  await P.click('sound-stop');
+  return `${ids.length} tracks played; measured ${measured.join(', ')} Hz`;
 });
 
 await step('Sleep companion: morning self-report saved', async () => {
@@ -306,7 +381,7 @@ await step('Arabic, dark mode: Steps and Sound Lab render right to left', async 
   await A.wait('screen-steps', 60000);
   await A.shot('8-ar-steps');
   await A.go('/sound');
-  await A.wait('sound-play', 30000);
+  await A.wait('sound-track-sleepDelta', 30000);
   const dir = await A.page.evaluate(() => getComputedStyle(document.body).direction || document.documentElement.dir);
   await A.shot('9-ar-sound');
   await A.close();

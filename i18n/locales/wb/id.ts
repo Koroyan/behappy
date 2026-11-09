@@ -52,7 +52,10 @@ export const wbId = {
       "padSoft": "Harmoni lembut (halus)",
       "tones": "Nada murni",
       "bowls": "Mangkuk bernyanyi",
-      "chimes": "Lonceng lembut"
+      "chimes": "Lonceng lembut",
+      "music": "Musik",
+      "fire": "Perapian",
+      "night": "Malam musim panas"
     },
     "binaural": {
       "title": "Nada binaural",
@@ -74,6 +77,148 @@ export const wbId = {
     "styleRainBells": "Hujan & lonceng lembut",
     "styleMixes": "Campuran siap pakai",
     "tonesNote": "Nada murni pada 174 Hz dan 528 Hz di atas harmoni lembut, seperti dalam musik meditasi populer. Ini hanyalah nada musik, sama di kedua telinga: tidak ada bukti bahwa frekuensi apa pun dapat menyembuhkan.",
+    "catalogSubtitle": "Siap diputar: musik, alam, dan frekuensi. Dibuat di ponselmu, bisa diputar offline.",
+    "catalog": {
+      "all": "Semua",
+      "sleep": "Tidur",
+      "relax": "Rileks",
+      "meditate": "Meditasi",
+      "focus": "Fokus",
+      "frequencies": "Frekuensi",
+      "nature": "Alam",
+      "noise": "Noise"
+    },
+    "seeAll": "Lihat semua",
+    "recent": "Terakhir diputar",
+    "preparing": "Menyiapkan suara… (hanya pertama kali)",
+    "untilStopped": "hingga kamu menghentikannya",
+    "customize": "Atur campuran ini",
+    "customMix": "Buat campuran sendiri",
+    "customMixHint": "Pilih suara dan atur sendiri volume masing-masing.",
+    "headphonesBadge": "Headphone",
+    "frequencyNote": "Trek frekuensi adalah musik dalam tangga nada yang dibangun dari nada tersebut, dengan nada lembut tepat pada frekuensi itu, seperti dalam video meditasi populer. Ini hanyalah nada musik: tidak ada bukti bahwa frekuensi apa pun dapat menyembuhkan.",
+    "tracks": {
+      "sleepDelta": {
+        "title": "Tidur lelap · Delta 2 Hz",
+        "desc": "Musik minor lambat, hujan, dan binaural beat 2 Hz (headphone)"
+      },
+      "sleepRainPiano": {
+        "title": "Hujan dan piano lembut",
+        "desc": "Nokturno tenang diiringi hujan yang stabil"
+      },
+      "sleepOcean": {
+        "title": "Laut di malam hari",
+        "desc": "Ombak, dengung rendah, dan brown noise lembut"
+      },
+      "sleepFire": {
+        "title": "Perapian",
+        "desc": "Gemertak api dengan dengung rendah yang hangat"
+      },
+      "sleepNight": {
+        "title": "Malam musim panas",
+        "desc": "Jangkrik dan angin sepoi-sepoi"
+      },
+      "relaxAlpha": {
+        "title": "Tenang · Alfa 10 Hz",
+        "desc": "Harpa dan ombak dengan binaural beat 10 Hz (headphone)"
+      },
+      "relaxBowls": {
+        "title": "Mangkuk Tibet dan aliran air",
+        "desc": "Akor lembut, mangkuk bernyanyi Tibet, dan air mengalir"
+      },
+      "relaxPiano": {
+        "title": "Piano ambien",
+        "desc": "Piano lambat dengan latar akor hangat"
+      },
+      "relaxStream": {
+        "title": "Aliran sungai hutan dan lonceng",
+        "desc": "Gemericik sungai kecil dengan lonceng lembut"
+      },
+      "meditateTheta": {
+        "title": "Meditasi · Teta 6 Hz",
+        "desc": "Mangkuk bernyanyi Tibet dengan latar dengung dan binaural beat 6 Hz (headphone)"
+      },
+      "meditateBowls": {
+        "title": "Mangkuk Tibet",
+        "desc": "Mangkuk bernyanyi Tibet yang dipukul perlahan dengan latar dengung dalam"
+      },
+      "focusBeta": {
+        "title": "Fokus · Beta 15 Hz",
+        "desc": "Akor stabil, noise lembut, dan binaural beat 15 Hz (headphone)"
+      },
+      "focusRain": {
+        "title": "Hujan untuk fokus",
+        "desc": "Hujan stabil dengan latar nada panjang yang tenang"
+      },
+      "hz174": {
+        "title": "174 Hz",
+        "desc": "Musik berbasis 174 Hz, nada lembut 174 Hz, dan aliran air"
+      },
+      "hz285": {
+        "title": "285 Hz",
+        "desc": "Musik berbasis 285 Hz, nada lembut, dan hujan"
+      },
+      "hz396": {
+        "title": "396 Hz",
+        "desc": "Musik berbasis 396 Hz, mangkuk bernyanyi Tibet, dan nada lembut"
+      },
+      "hz417": {
+        "title": "417 Hz",
+        "desc": "Musik berbasis 417 Hz, lonceng, dan laut"
+      },
+      "hz528": {
+        "title": "528 Hz",
+        "desc": "Musik berbasis 528 Hz, piano, dan nada lembut 528 Hz"
+      },
+      "hz639": {
+        "title": "639 Hz",
+        "desc": "Musik berbasis 639 Hz, harpa, dan aliran air"
+      },
+      "hz741": {
+        "title": "741 Hz",
+        "desc": "Musik berbasis 741 Hz, lonceng, dan nada lembut"
+      },
+      "hz852": {
+        "title": "852 Hz",
+        "desc": "Musik berbasis 852 Hz, piano, dan mangkuk bernyanyi Tibet"
+      },
+      "hz963": {
+        "title": "963 Hz",
+        "desc": "Dengung berbasis 963 Hz, mangkuk bernyanyi Tibet, dan lonceng"
+      },
+      "hz432": {
+        "title": "Musik 432 Hz",
+        "desc": "Musik piano dengan setelan A = 432 Hz"
+      },
+      "hz528x174": {
+        "title": "528 + 174 Hz",
+        "desc": "Kedua nada dengan latar harmoni lembut, mangkuk bernyanyi Tibet, dan lonceng"
+      },
+      "natureRain": {
+        "title": "Hujan",
+        "desc": "Hujan stabil dengan tetesan yang jatuh ke air"
+      },
+      "natureOcean": {
+        "title": "Ombak laut",
+        "desc": "Ombak yang bergulung datang dan surut"
+      },
+      "natureStream": {
+        "title": "Aliran sungai",
+        "desc": "Gemericik sungai kecil"
+      },
+      "noiseBrown": {
+        "title": "Brown noise",
+        "desc": "Dalam, lembut, dan stabil"
+      },
+      "noisePink": {
+        "title": "Pink noise",
+        "desc": "Seimbang, seperti hujan yang stabil"
+      },
+      "noiseWhite": {
+        "title": "White noise",
+        "desc": "Terang; menyamarkan suara percakapan"
+      }
+    },
     "honesty": "Suara ini bisa membuat suasana terasa lebih tenang atau membantu kamu fokus. Suara ini tidak mengobati sakit kepala, masalah tidur, atau kondisi lainnya.",
     "headache": {
       "dim": "Redupkan layar",

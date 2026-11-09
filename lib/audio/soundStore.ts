@@ -35,6 +35,8 @@ export interface SoundSession {
   /** Layer kinds only (e.g. "noise-brown"), for history. */
   layers: string[];
   completed: boolean;
+  /** The catalog track, when one was played. */
+  trackId?: string;
 }
 
 interface SoundData {
@@ -70,17 +72,17 @@ export async function saveFavorite(name: string, mode: SoundMode, layers: MixLay
 
 export const removeFavorite = (id: string) => update((d) => ({ ...d, favorites: d.favorites.filter((f) => f.id !== id) }));
 
-const layerKey = (l: MixLayer) => (l.spec.kind === 'binaural' ? `binaural-${l.spec.leftHz}/${l.spec.rightHz}` : l.spec.kind === 'noise' ? `noise-${l.spec.color}` : l.spec.kind === 'pad' ? `pad-${l.spec.mood}` : l.spec.kind === 'tones' ? `tones-${l.spec.hz.join('+')}` : l.spec.kind === 'bowls' || l.spec.kind === 'chimes' ? `${l.spec.kind}-${l.spec.mood}` : `nature-${l.spec.scene}`);
+const layerKey = (l: MixLayer) => (l.spec.kind === 'binaural' ? `binaural-${l.spec.leftHz}/${l.spec.rightHz}` : l.spec.kind === 'noise' ? `noise-${l.spec.color}` : l.spec.kind === 'pad' ? `pad-${l.spec.mood}` : l.spec.kind === 'tones' ? `tones-${l.spec.hz.join('+')}` : l.spec.kind === 'bowls' || l.spec.kind === 'chimes' ? `${l.spec.kind}-${l.spec.mood}` : l.spec.kind === 'piece' ? `piece-${l.spec.id}` : `nature-${l.spec.scene}`);
 
 /**
  * A finished listening session (stopped by the person or by its timer).
  * Under a minute is not recorded. Focus counts as completed only when the
  * timer ran out; sleep sessions mark bedtime.
  */
-export async function recordSession(mode: SoundMode, startedAt: number, layers: MixLayer[], completed: boolean) {
+export async function recordSession(mode: SoundMode, startedAt: number, layers: MixLayer[], completed: boolean, trackId?: string | null) {
   const minutes = Math.round((Date.now() - startedAt) / 60000);
   if (minutes < 1) return null;
-  const session: SoundSession = { id: uid('snd'), mode, startedAt, minutes, layers: layers.map(layerKey), completed };
+  const session: SoundSession = { id: uid('snd'), mode, startedAt, minutes, layers: layers.map(layerKey), completed, ...(trackId ? { trackId } : {}) };
   await update((d) => ({ ...d, history: [session, ...d.history].slice(0, 200) }));
   await recordEvent('sound.session', session.id, { mode, minutes }, startedAt);
   if (mode === 'focus' && completed) await recordEvent('focus.completed', session.id, { minutes }, Date.now());

@@ -52,7 +52,10 @@ export const wbZh = {
       "padSoft": "柔和和声（轻柔）",
       "tones": "纯音",
       "bowls": "颂钵",
-      "chimes": "轻柔铃声"
+      "chimes": "轻柔铃声",
+      "music": "音乐",
+      "fire": "壁炉",
+      "night": "夏夜"
     },
     "binaural": {
       "title": "双耳节拍音",
@@ -74,6 +77,148 @@ export const wbZh = {
     "styleRainBells": "雨声与轻柔铃声",
     "styleMixes": "预设混音",
     "tonesNote": "在柔和和声的背景上播放 174 Hz 和 528 Hz 的纯音，如同常见的冥想音乐。这些只是音乐中的音调，双耳听到的完全相同：没有证据表明任何频率能治病。",
+    "catalogSubtitle": "随时播放：音乐、自然声与频率音。在手机上生成，离线也能听。",
+    "catalog": {
+      "all": "全部",
+      "sleep": "睡眠",
+      "relax": "放松",
+      "meditate": "冥想",
+      "focus": "专注",
+      "frequencies": "频率",
+      "nature": "自然",
+      "noise": "噪声"
+    },
+    "seeAll": "查看全部",
+    "recent": "最近播放",
+    "preparing": "正在准备声音…（仅首次需要）",
+    "untilStopped": "直到你停止播放",
+    "customize": "调整此混音",
+    "customMix": "制作自己的混音",
+    "customMixHint": "选择声音，分别调节音量。",
+    "headphonesBadge": "耳机",
+    "frequencyNote": "频率音轨以该频率的音高为基础创作音乐，并加入频率精确对应的轻柔音调，与常见冥想视频中的做法相同。它们只是音乐中的音调：没有证据表明任何频率具有疗愈作用。",
+    "tracks": {
+      "sleepDelta": {
+        "title": "深睡 · 德尔塔波 2 Hz",
+        "desc": "舒缓的小调音乐、雨声与 2 Hz 双耳节拍（需戴耳机）"
+      },
+      "sleepRainPiano": {
+        "title": "雨声与轻柔钢琴",
+        "desc": "绵绵雨声中的静谧夜曲"
+      },
+      "sleepOcean": {
+        "title": "夜晚的海洋",
+        "desc": "海浪、低沉持续音与柔和棕噪声"
+      },
+      "sleepFire": {
+        "title": "壁炉",
+        "desc": "噼啪炉火与温暖低沉的持续音"
+      },
+      "sleepNight": {
+        "title": "夏夜",
+        "desc": "蟋蟀鸣叫与轻柔微风"
+      },
+      "relaxAlpha": {
+        "title": "平静 · 阿尔法波 10 Hz",
+        "desc": "竖琴、海浪与 10 Hz 双耳节拍（需戴耳机）"
+      },
+      "relaxBowls": {
+        "title": "西藏颂钵与溪流",
+        "desc": "柔和和弦、西藏颂钵与流水声"
+      },
+      "relaxPiano": {
+        "title": "氛围钢琴",
+        "desc": "温暖和弦上的舒缓钢琴"
+      },
+      "relaxStream": {
+        "title": "林间溪流与铃声",
+        "desc": "潺潺溪水与轻柔铃声"
+      },
+      "meditateTheta": {
+        "title": "冥想 · 西塔波 6 Hz",
+        "desc": "持续音上的西藏颂钵与 6 Hz 双耳节拍（需戴耳机）"
+      },
+      "meditateBowls": {
+        "title": "西藏颂钵",
+        "desc": "低沉持续音上缓缓敲响的西藏颂钵"
+      },
+      "focusBeta": {
+        "title": "专注 · 贝塔波 15 Hz",
+        "desc": "平稳和弦、柔和噪声与 15 Hz 双耳节拍（需戴耳机）"
+      },
+      "focusRain": {
+        "title": "专注雨声",
+        "desc": "轻柔铺底音上的绵绵雨声"
+      },
+      "hz174": {
+        "title": "174 Hz",
+        "desc": "以 174 Hz 为基础的音乐、柔和的 174 Hz 音调与溪流声"
+      },
+      "hz285": {
+        "title": "285 Hz",
+        "desc": "以 285 Hz 为基础的音乐、柔和音调与雨声"
+      },
+      "hz396": {
+        "title": "396 Hz",
+        "desc": "以 396 Hz 为基础的音乐、西藏颂钵与柔和音调"
+      },
+      "hz417": {
+        "title": "417 Hz",
+        "desc": "以 417 Hz 为基础的音乐、铃声与海声"
+      },
+      "hz528": {
+        "title": "528 Hz",
+        "desc": "以 528 Hz 为基础的音乐、钢琴与柔和的 528 Hz 音调"
+      },
+      "hz639": {
+        "title": "639 Hz",
+        "desc": "以 639 Hz 为基础的音乐、竖琴与溪流声"
+      },
+      "hz741": {
+        "title": "741 Hz",
+        "desc": "以 741 Hz 为基础的音乐、铃声与柔和音调"
+      },
+      "hz852": {
+        "title": "852 Hz",
+        "desc": "以 852 Hz 为基础的音乐、钢琴与西藏颂钵"
+      },
+      "hz963": {
+        "title": "963 Hz",
+        "desc": "以 963 Hz 为基础的持续音、西藏颂钵与铃声"
+      },
+      "hz432": {
+        "title": "432 Hz 音乐",
+        "desc": "以 A = 432 Hz 调音的钢琴音乐"
+      },
+      "hz528x174": {
+        "title": "528 + 174 Hz",
+        "desc": "柔和和声上的两种音调，伴以西藏颂钵与铃声"
+      },
+      "natureRain": {
+        "title": "雨声",
+        "desc": "绵绵雨声，雨滴落在水面"
+      },
+      "natureOcean": {
+        "title": "海浪",
+        "desc": "海浪涌来又退去"
+      },
+      "natureStream": {
+        "title": "溪流",
+        "desc": "潺潺溪水"
+      },
+      "noiseBrown": {
+        "title": "棕噪声",
+        "desc": "低沉、柔和而平稳"
+      },
+      "noisePink": {
+        "title": "粉红噪声",
+        "desc": "均衡，如绵绵雨声"
+      },
+      "noiseWhite": {
+        "title": "白噪声",
+        "desc": "明亮，可掩盖人声"
+      }
+    },
     "honesty": "这些声音可以让周围的氛围更平静，或帮助你专注。它们不能治疗头痛、睡眠问题或其他状况。",
     "headache": {
       "dim": "调暗屏幕",

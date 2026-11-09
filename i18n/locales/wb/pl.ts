@@ -52,7 +52,10 @@ export const wbPl = {
       "padSoft": "Łagodna harmonia (delikatna)",
       "tones": "Czyste tony",
       "bowls": "Misy tybetańskie",
-      "chimes": "Delikatne dzwonki"
+      "chimes": "Delikatne dzwonki",
+      "music": "Muzyka",
+      "fire": "Kominek",
+      "night": "Letnia noc"
     },
     "binaural": {
       "title": "Ton binauralny",
@@ -74,6 +77,148 @@ export const wbPl = {
     "styleRainBells": "Deszcz i delikatne dzwonki",
     "styleMixes": "Gotowe miksy",
     "tonesNote": "Czyste tony o częstotliwościach 174 Hz i 528 Hz na tle łagodnej harmonii, jak w popularnej muzyce do medytacji. To po prostu tony muzyczne, takie same w obu uszach: nie ma dowodów na to, że jakakolwiek częstotliwość leczy.",
+    "catalogSubtitle": "Gotowe do odtworzenia: muzyka, natura i częstotliwości. Tworzone na telefonie, działają offline.",
+    "catalog": {
+      "all": "Wszystkie",
+      "sleep": "Sen",
+      "relax": "Relaks",
+      "meditate": "Medytacja",
+      "focus": "Skupienie",
+      "frequencies": "Częstotliwości",
+      "nature": "Natura",
+      "noise": "Szum"
+    },
+    "seeAll": "Zobacz wszystkie",
+    "recent": "Ostatnio odtwarzane",
+    "preparing": "Przygotowywanie dźwięku… (tylko za pierwszym razem)",
+    "untilStopped": "aż zatrzymasz",
+    "customize": "Dostosuj ten miks",
+    "customMix": "Stwórz własny miks",
+    "customMixHint": "Wybierz dźwięki i ustaw głośność każdego z nich.",
+    "headphonesBadge": "Słuchawki",
+    "frequencyNote": "Utwory z częstotliwościami to muzyka w tonacji opartej na danej wysokości dźwięku, z delikatnym tonem o dokładnie tej częstotliwości, jak w popularnych nagraniach do medytacji. To po prostu dźwięki muzyczne: nie ma dowodów, że jakakolwiek częstotliwość leczy.",
+    "tracks": {
+      "sleepDelta": {
+        "title": "Głęboki sen · Delta 2 Hz",
+        "desc": "Powolna muzyka w tonacji molowej, deszcz i dudnienie binauralne 2 Hz (słuchawki)"
+      },
+      "sleepRainPiano": {
+        "title": "Deszcz i łagodne pianino",
+        "desc": "Cichy nokturn na tle miarowego deszczu"
+      },
+      "sleepOcean": {
+        "title": "Ocean nocą",
+        "desc": "Fale, niski burdon i delikatny szum brązowy"
+      },
+      "sleepFire": {
+        "title": "Kominek",
+        "desc": "Trzaskający ogień z ciepłym, niskim burdonem"
+      },
+      "sleepNight": {
+        "title": "Letnia noc",
+        "desc": "Świerszcze i delikatny wiatr"
+      },
+      "relaxAlpha": {
+        "title": "Spokój · Alfa 10 Hz",
+        "desc": "Harfa i fale z dudnieniem binauralnym 10 Hz (słuchawki)"
+      },
+      "relaxBowls": {
+        "title": "Misy tybetańskie i strumień",
+        "desc": "Łagodne akordy, misy tybetańskie i płynąca woda"
+      },
+      "relaxPiano": {
+        "title": "Pianino ambientowe",
+        "desc": "Powolne pianino na tle ciepłych akordów"
+      },
+      "relaxStream": {
+        "title": "Leśny strumień i dzwonki",
+        "desc": "Szemrzący potok z delikatnymi dzwonkami"
+      },
+      "meditateTheta": {
+        "title": "Medytacja · Theta 6 Hz",
+        "desc": "Misy tybetańskie na tle burdonu z dudnieniem binauralnym 6 Hz (słuchawki)"
+      },
+      "meditateBowls": {
+        "title": "Misy tybetańskie",
+        "desc": "Powolne uderzenia w misy tybetańskie na tle głębokiego burdonu"
+      },
+      "focusBeta": {
+        "title": "Skupienie · Beta 15 Hz",
+        "desc": "MiARowe akordy, delikatny szum i dudnienie binauralne 15 Hz (słuchawki)"
+      },
+      "focusRain": {
+        "title": "Deszcz na skupienie",
+        "desc": "MiARowy deszcz na tle cichego podkładu"
+      },
+      "hz174": {
+        "title": "174 Hz",
+        "desc": "Muzyka oparta na 174 Hz, delikatny ton 174 Hz i strumień"
+      },
+      "hz285": {
+        "title": "285 Hz",
+        "desc": "Muzyka oparta na 285 Hz, delikatny ton i deszcz"
+      },
+      "hz396": {
+        "title": "396 Hz",
+        "desc": "Muzyka oparta na 396 Hz, misy tybetańskie i delikatny ton"
+      },
+      "hz417": {
+        "title": "417 Hz",
+        "desc": "Muzyka oparta na 417 Hz, dzwonki i morze"
+      },
+      "hz528": {
+        "title": "528 Hz",
+        "desc": "Muzyka oparta na 528 Hz, pianino i delikatny ton 528 Hz"
+      },
+      "hz639": {
+        "title": "639 Hz",
+        "desc": "Muzyka oparta na 639 Hz, harfa i strumień"
+      },
+      "hz741": {
+        "title": "741 Hz",
+        "desc": "Muzyka oparta na 741 Hz, dzwonki i delikatny ton"
+      },
+      "hz852": {
+        "title": "852 Hz",
+        "desc": "Muzyka oparta na 852 Hz, pianino i misy tybetańskie"
+      },
+      "hz963": {
+        "title": "963 Hz",
+        "desc": "Burdon oparty na 963 Hz, misy tybetańskie i dzwonki"
+      },
+      "hz432": {
+        "title": "Muzyka 432 Hz",
+        "desc": "Muzyka fortepianowa w stroju A = 432 Hz"
+      },
+      "hz528x174": {
+        "title": "528 + 174 Hz",
+        "desc": "Oba tony na tle łagodnej harmonii, z misami tybetańskimi i dzwonkami"
+      },
+      "natureRain": {
+        "title": "Deszcz",
+        "desc": "MiARowy deszcz z kroplami spadającymi na wodę"
+      },
+      "natureOcean": {
+        "title": "Fale oceanu",
+        "desc": "Fale napływające i cofające się"
+      },
+      "natureStream": {
+        "title": "Strumień",
+        "desc": "Szemrzący potok"
+      },
+      "noiseBrown": {
+        "title": "Szum brązowy",
+        "desc": "Głęboki, łagodny i jednostajny"
+      },
+      "noisePink": {
+        "title": "Szum różowy",
+        "desc": "Zrównoważony, jak miarowy deszcz"
+      },
+      "noiseWhite": {
+        "title": "Szum biały",
+        "desc": "Jasny; maskuje głosy"
+      }
+    },
     "honesty": "Te dźwięki mogą sprawić, że otoczenie wyda się spokojniejsze, lub pomóc w skupieniu. Nie leczą bólu głowy, problemów ze snem ani innych dolegliwości.",
     "headache": {
       "dim": "Przyciemnij ekran",

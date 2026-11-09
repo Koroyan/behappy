@@ -1,42 +1,49 @@
 /**
- * Sound Lab: Focus, Sleep, Relax, Headache comfort and a mixer. All sounds are
- * generated on the device (lib/audio/synth): noise colours, nature-like
- * textures and true stereo binaural tones. No health claims (docs/ETHICS.md).
+ * Sounds: a catalog of finished tracks, one tap to play (lib/audio/tracks).
+ * Sleep, relax, meditate, focus, frequency, nature and noise tracks, each a
+ * designed, level-matched mix with its own timer. Nothing to set up; the
+ * mixer ("Make your own mix") stays one tap away. All sounds are generated on
+ * the device. No health claims (docs/ETHICS.md).
  */
-import { useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Chip, Icon, IconButton, ProgressBar, Screen, SectionHeader, Sheet, space, TextField, ToggleRow, useFeedback } from '@/design';
+import { AppText, Banner, Button, Card, Chip, Icon, IconButton, Press, radius, Screen, SectionHeader, space, ToggleRow, useLayout } from '@/design';
 import { useT } from '@/i18n';
-import { bandOf, binauralLayer, HEADACHE_MAX_VOLUME, layerFor, LIBRARY, nameKey, noiseLayer, PRESETS, STYLE_MIXES } from '@/lib/audio/presets';
-import { lastFinished, pauseSound, prepareSounds, resumeSound, setLayerVolume, setMasterVolume, startSound, stopSound, updateLayers, useSoundSession } from '@/lib/audio/session';
-import { loadSound, MixLayer, removeFavorite, saveFavorite, setSoundPrefs, SOUND_TOPIC, SoundMode } from '@/lib/audio/soundStore';
-import { BEAT_BANDS, BeatBand, binaural, CARRIER } from '@/lib/audio/synth';
+import { lastFinished, pauseSound, prepareSounds, resumeSound, setMasterVolume, setSoundTimer, startSound, stopSound, useSoundSession } from '@/lib/audio/session';
+import { loadSound, setSoundPrefs, SOUND_TOPIC } from '@/lib/audio/soundStore';
+import { CATEGORIES, Track, TrackCategory, trackById, trackLayers, tracksIn } from '@/lib/audio/tracks';
 import { subscribe } from '@/lib/storage/json';
 
-const MODES: SoundMode[] = ['focus', 'sleep', 'relax', 'headache', 'mix'];
-const sameLayers = (a: MixLayer[], b: MixLayer[]) => a.length === b.length && b.every((l) => a.some((x) => x.id === l.id));
+type Filter = 'all' | TrackCategory;
+const TIMERS = [15, 30, 45, 60, 90];
 const clamp01 = (v: number) => Math.max(0, Math.min(1, Math.round(v * 10) / 10));
 const mmss = (ms: number) => {
   const s = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
+/** Old links (?mode=sleep|focus|relax|mix) open the matching shelf. */
+const filterFrom = (mode?: string, category?: string): Filter => {
+  if (category && (CATEGORIES as string[]).includes(category)) return category as TrackCategory;
+  if (mode === 'sleep' || mode === 'focus' || mode === 'relax') return mode;
+  return 'all';
+};
 
-export default function SoundLabScreen() {
-  const params = useLocalSearchParams<{ mode?: string }>();
-  const { t, formatDate } = useT();
-  const { toast } = useFeedback();
+export default function SoundsScreen() {
+  const params = useLocalSearchParams<{ mode?: string; category?: string }>();
+  const { t } = useT();
+  const { width } = useLayout();
   const session = useSoundSession();
-  const initial = (MODES.includes(params.mode as SoundMode) ? params.mode : session?.mode || 'focus') as SoundMode;
-  const [mode, setMode] = useState<SoundMode>(initial);
-  const [layers, setLayers] = useState<MixLayer[]>(PRESETS[initial].layers);
-  const [minutes, setMinutes] = useState<number | null>(PRESETS[initial].minutes);
+  const [filter, setFilter] = useState<Filter>(() => filterFrom(params.mode, params.category));
   const [store, setStore] = useState<Awaited<ReturnType<typeof loadSound>> | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [mixName, setMixName] = useState('');
-  const [dim, setDim] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+
+  // Headache comfort lives with the mixer (silence first, a dim screen).
+  useEffect(() => {
+    if (params.mode === 'headache') router.replace('/sound/mixer?mode=headache' as any);
+  }, [params.mode]);
 
   const refresh = useCallback(() => {
     loadSound().then(setStore).catch(() => {});
@@ -45,63 +52,37 @@ export default function SoundLabScreen() {
     refresh();
     return subscribe(SOUND_TOPIC, refresh);
   }, [refresh]);
-  // A clock for the remaining time (only while something is playing).
   useEffect(() => {
     if (!session) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [session]);
 
-  const live = session && session.mode === mode ? session : null;
-  const shown = live ? live.layers : layers;
-  // Generate this mix's sounds in the background while the person looks, so Play starts at once.
-  const shownKey = shown.map((l) => l.id).join('|');
+  const recent = useMemo(() => {
+    const ids: string[] = [];
+    for (const h of store?.history || []) if (h.trackId && !ids.includes(h.trackId) && trackById(h.trackId)) ids.push(h.trackId);
+    return ids.slice(0, 6).map((id) => trackById(id)!);
+  }, [store]);
+
+  // Prepare the likeliest next track in the background (sounds are generated once, then cached).
+  const likely = recent[0] ?? (filter === 'all' ? null : tracksIn(filter)[0]);
   useEffect(() => {
-    const timer = setTimeout(() => prepareSounds(shown.map((l) => l.spec)), 600);
+    if (!likely || session) return;
+    const timer = setTimeout(() => prepareSounds(trackLayers(likely).map((l) => l.spec)), 900);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shownKey]);
-  const cap = mode === 'headache' ? HEADACHE_MAX_VOLUME : 1;
+  }, [likely?.id]);
 
-  const chooseMode = (m: SoundMode) => {
-    setMode(m);
-    if (!(session && session.mode === m)) {
-      setLayers(PRESETS[m].layers);
-      setMinutes(PRESETS[m].minutes);
+  const playing = trackById(session?.trackId);
+  const title = (tr: Track) => t(`wb.sound.tracks.${tr.id}.title`);
+
+  const tap = async (tr: Track) => {
+    if (session?.trackId === tr.id) {
+      if (session.state === 'paused') await resumeSound();
+      else if (session.state === 'playing') await pauseSound();
+      return;
     }
-  };
-
-  const change = (next: MixLayer[]) => {
-    const capped = next.map((l) => ({ ...l, volume: Math.min(cap, l.volume) }));
-    if (live) updateLayers(capped).catch(() => {});
-    else setLayers(capped);
-  };
-  const setVol = (id: string, v: number) => {
-    const volume = Math.min(cap, clamp01(v));
-    if (live) setLayerVolume(id, volume);
-    else setLayers((ls) => ls.map((l) => (l.id === id ? { ...l, volume } : l)));
-  };
-
-  const hasBinaural = shown.some((l) => l.spec.kind === 'binaural');
-  const needsHeadphonesNote = hasBinaural && store && !store.headphonesNoted;
-
-  const play = async () => {
-    try {
-      await startSound({ mode, title: t(`wb.sound.modes.${mode}`), layers: shown, minutes });
-    } catch {
-      toast(t('errors.saveFailed'));
-    }
-  };
-
-  const binauralLayerNow = shown.find((l) => l.spec.kind === 'binaural');
-  const bin = binauralLayerNow?.spec.kind === 'binaural' ? binauralLayerNow.spec : null;
-  const setBinaural = (carrier: number, beat: number) => {
-    try {
-      const spec = binaural(carrier, beat);
-      change(shown.map((l) => (l.spec.kind === 'binaural' ? { ...l, spec } : l)));
-    } catch {
-      // outside the safe range: ignore the tap
-    }
+    await startSound({ mode: tr.mode, title: title(tr), layers: trackLayers(tr), minutes: tr.minutes, trackId: tr.id }).catch(() => {});
   };
 
   const master = store?.master ?? 0.5;
@@ -111,251 +92,183 @@ export default function SoundLabScreen() {
     setSoundPrefs({ master: m }).catch(() => {});
   };
 
+  const cols = width >= 900 ? 4 : width >= 600 ? 3 : 2;
+  const tileWidth: `${number}%` = cols === 4 ? '23.5%' : cols === 3 ? '31.5%' : '48%';
   const focusDone = lastFinished && lastFinished.mode === 'focus' && now - lastFinished.at < 10 * 60000 && !session;
-  const addable = LIBRARY.filter((s) => !shown.some((l) => l.id === layerFor(s).id));
-  const timers = PRESETS[mode].timers;
-  const recent = (store?.history || []).slice(0, 6);
+  const shelves: TrackCategory[] = filter === 'all' ? CATEGORIES : [filter];
 
-  const levelRow = (label: string, value: number, onChange: (v: number) => void, max = 1, testID?: string) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} testID={testID}>
-      <IconButton icon="remove" label={`${t('wb.sound.quieter')}: ${label}`} onPress={() => onChange(value - 0.1)} size={36} variant="soft" />
-      <View style={{ flex: 1, gap: 4 }}>
-        <ProgressBar value={max ? value / max : 0} label={t('wb.sound.level', { n: Math.round((value / max) * 10) })} />
+  const tile = (tr: Track, w: number | `${number}%`) => {
+    const active = session?.trackId === tr.id;
+    const state = active ? session!.state : null;
+    return (
+      <Press
+        key={tr.id}
+        onPress={() => tap(tr)}
+        feedback="scale"
+        focusRadius={radius.lg}
+        accessibilityRole="button"
+        accessibilityLabel={`${title(tr)}. ${t(`wb.sound.tracks.${tr.id}.desc`)}`}
+        accessibilityState={{ selected: active }}
+        testID={`sound-track-${tr.id}`}
+        style={{ width: w, gap: 6 }}
+      >
+        <LinearGradient colors={tr.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ aspectRatio: 1.25, borderRadius: radius.lg, padding: 12, justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+            <Icon name={tr.icon} size={22} color="#FFFFFF" />
+            {tr.binaural ? <Icon name="headset-outline" size={16} color="rgba(255,255,255,0.85)" accessibilityLabel={t('wb.sound.headphonesBadge')} /> : null}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6 }}>
+            {tr.badge ? (
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 1 }}>
+                <AppText variant="caption" style={{ color: '#FFFFFF' }} numberOfLines={1}>
+                  {tr.badge}
+                </AppText>
+              </View>
+            ) : (
+              <View />
+            )}
+            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: active ? '#FFFFFF' : 'rgba(255,255,255,0.28)', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name={state === 'loading' ? 'hourglass-outline' : active && state === 'playing' ? 'pause' : 'play'} size={17} color={active ? tr.colors[0] : '#FFFFFF'} />
+            </View>
+          </View>
+        </LinearGradient>
+        <AppText variant="smallStrong" numberOfLines={2}>
+          {title(tr)}
+        </AppText>
+        <AppText variant="caption" color="textTertiary" numberOfLines={2}>
+          {t(`wb.sound.tracks.${tr.id}.desc`)}
+        </AppText>
+      </Press>
+    );
+  };
+
+  const shelf = (tracks: Track[], key: string) =>
+    filter === 'all' ? (
+      <ScrollView key={key} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: space[2] }}>
+        {tracks.map((tr) => tile(tr, 150))}
+      </ScrollView>
+    ) : (
+      <View key={key} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' }}>
+        {tracks.map((tr) => tile(tr, tileWidth))}
       </View>
-      <IconButton icon="add" label={`${t('wb.sound.louder')}: ${label}`} onPress={() => onChange(Math.min(max, value + 0.1))} size={36} variant="soft" />
-    </View>
-  );
+    );
 
   return (
-    <Screen back title={t('wb.sound.title')} subtitle={t('wb.sound.subtitle')} width="reading" testID="screen-sound">
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: space[2] }}>
-        {MODES.map((m) => (
-          <Chip key={m} label={t(`wb.sound.modes.${m}`)} selected={mode === m} onPress={() => chooseMode(m)} testID={`sound-mode-${m}`} />
+    <Screen back title={t('wb.sound.title')} subtitle={t('wb.sound.catalogSubtitle')} width="reading" testID="screen-sound">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: space[3] }}>
+        {(['all', ...CATEGORIES] as Filter[]).map((c) => (
+          <Chip key={c} label={t(`wb.sound.catalog.${c}`)} selected={filter === c} onPress={() => setFilter(c)} testID={`sound-cat-${c}`} />
         ))}
       </ScrollView>
-      <AppText variant="body" color="textSecondary" style={{ marginBottom: space[3] }}>
-        {t(`wb.sound.modeHints.${mode}`)}
-      </AppText>
-
-      {mode === 'relax' || mode === 'mix' ? (
-        <View style={{ gap: 6, marginBottom: space[3] }}>
-          <AppText variant="smallStrong" color="textSecondary">
-            {t('wb.sound.styleMixes')}
-          </AppText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {STYLE_MIXES.map((m) => (
-              <Chip key={m.id} label={m.label ?? t(`wb.sound.${m.labelKey}`)} icon="musical-notes-outline" selected={sameLayers(shown, m.layers())} onPress={() => change(m.layers())} testID={`sound-style-${m.id}`} />
-            ))}
-          </View>
-          {shown.some((l) => l.id === 'tones') ? (
-            <AppText variant="caption" color="textTertiary">
-              {t('wb.sound.tonesNote')}
-            </AppText>
-          ) : null}
-        </View>
-      ) : null}
 
       {focusDone ? <Banner tone="success" icon="checkmark-circle-outline" body={t('wb.sound.focusDone')} /> : null}
-      {mode === 'headache' ? <Banner tone="info" icon="moon-outline" body={t('wb.sound.headache.silenceNote')} /> : null}
 
       {session ? (
-        <Card tone="primary" padding={20} style={{ marginBottom: space[4] }} testID="sound-now">
+        <Card tone="primary" padding={18} style={{ marginBottom: space[4], gap: 10 }} testID="sound-now">
           <AppText variant="caption" color="onPrimarySoft">
-            {t('wb.sound.nowPlaying')} · {t(`wb.sound.modes.${session.mode}`)}
+            {t('wb.sound.nowPlaying')}
           </AppText>
-          <AppText variant="title2" style={{ marginTop: 4 }}>
-            {session.state === 'loading' ? t('wb.sound.loading') : session.state === 'paused' ? t('wb.sound.paused') : t('wb.sound.playing')}
-            {session.endsAt ? ` · ${t('wb.sound.remaining', { time: mmss(session.endsAt - now) })}` : ''}
+          <AppText variant="title3" numberOfLines={2}>
+            {playing ? title(playing) : session.title}
           </AppText>
-          {session.interrupted ? (
-            <AppText variant="small" style={{ marginTop: 6 }}>
-              {t('wb.sound.pausedBySystem')}
-            </AppText>
-          ) : null}
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: space[4], flexWrap: 'wrap' }}>
+          <AppText variant="small" testID={`sound-now-state-${session.trackId ?? 'mix'}-${session.state}`}>
+            {session.state === 'stopped' ? '…' : session.state === 'loading' ? t('wb.sound.preparing') : session.state === 'paused' ? t('wb.sound.paused') : t('wb.sound.playing')}
+            {session.state === 'stopped' ? '' : session.endsAt ? ` · ${t('wb.sound.remaining', { time: mmss(session.endsAt - now) })}` : ` · ${t('wb.sound.untilStopped')}`}
+          </AppText>
+          {session.interrupted ? <AppText variant="small">{t('wb.sound.pausedBySystem')}</AppText> : null}
+          <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             {session.state === 'paused' ? (
               <Button label={t('wb.sound.resume')} icon="play" onPress={() => resumeSound()} testID="sound-resume" />
             ) : (
               <Button label={t('wb.sound.pause')} icon="pause" onPress={() => pauseSound()} disabled={session.state === 'loading'} testID="sound-pause" />
             )}
             <Button label={t('wb.sound.stop')} icon="stop" variant="quiet" onPress={() => stopSound({ completed: false })} testID="sound-stop" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginStart: 'auto' }}>
+              <IconButton icon="volume-low-outline" label={t('wb.sound.quieter')} onPress={() => setMaster(master - 0.1)} size={36} variant="soft" testID="sound-quieter" />
+              <AppText variant="caption" style={{ minWidth: 22, textAlign: 'center' }}>
+                {Math.round((master / 0.8) * 10)}
+              </AppText>
+              <IconButton icon="volume-high-outline" label={t('wb.sound.louder')} onPress={() => setMaster(Math.min(0.8, master + 0.1))} size={36} variant="soft" testID="sound-louder" />
+            </View>
           </View>
-          <AppText variant="caption" color="textTertiary" style={{ marginTop: space[3] }}>
-            {t('wb.sound.background')}
-          </AppText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {TIMERS.map((m) => (
+              <Chip key={m} label={t('wb.sound.minutes', { n: m })} onPress={() => setSoundTimer(m)} testID={`sound-timer-${m}`} />
+            ))}
+            <Chip label={t('wb.sound.noTimer')} selected={!session.endsAt} onPress={() => setSoundTimer(null)} testID="sound-timer-off" />
+          </ScrollView>
+          {playing?.binaural && store && !store.headphonesNoted ? (
+            <Banner tone="info" icon="headset-outline" body={t('wb.sound.binaural.headphones')} action={<Button label={t('wb.sound.binaural.gotIt')} size="sm" variant="quiet" onPress={() => setSoundPrefs({ headphonesNoted: true })} />} />
+          ) : null}
+          {playing?.binaural ? (
+            <AppText variant="caption" color="textTertiary" testID="sound-binaural-ears">
+              {t('wb.sound.binaural.ears', { left: playing.binaural.carrier, right: playing.binaural.carrier + playing.binaural.beat, beat: playing.binaural.beat })} · {t('wb.sound.binaural.explain')}
+            </AppText>
+          ) : null}
+          {playing?.categories.includes('frequencies') ? (
+            <AppText variant="caption" color="textTertiary" testID="sound-frequency-note">
+              {t('wb.sound.frequencyNote')}
+            </AppText>
+          ) : null}
+          {session.mode === 'sleep' ? (
+            <>
+              <AppText variant="caption" color="textTertiary">
+                {t('wb.sound.sleep.fadeNote')}
+              </AppText>
+              <ToggleRow label={t('wb.sound.sleep.morning')} value={store?.morningCheckIn ?? true} onValueChange={(v) => setSoundPrefs({ morningCheckIn: v })} />
+            </>
+          ) : null}
+          <Button label={t('wb.sound.customize')} icon="options-outline" variant="quiet" size="sm" onPress={() => router.push(`/sound/mixer?mode=${session.mode}` as any)} testID="sound-customize" />
         </Card>
       ) : null}
 
-      {mode === 'headache' ? (
-        <View style={{ gap: space[3], marginBottom: space[4] }}>
-          <Button label={t('wb.sound.headache.dim')} icon="moon" onPress={() => setDim(true)} testID="sound-dim" />
-          <ToggleRow
-            label={t('wb.sound.headache.softSound')}
-            value={shown.some((l) => l.id === 'noise-brown')}
-            onValueChange={(on) => change(on ? [noiseLayer('brown', 0.1)] : [])}
-            testID="sound-headache-soft"
-          />
+      {filter === 'all' && recent.length ? (
+        <View style={{ marginBottom: space[4] }}>
+          <SectionHeader title={t('wb.sound.recent')} />
+          {shelf(recent, 'recent')}
         </View>
       ) : null}
 
-      {shown.length ? (
-        <View style={{ gap: space[3], marginBottom: space[4] }}>
-          <SectionHeader title={t('wb.sound.layers')} />
-          {shown.map((l) => (
-            <Card key={l.id} padding={16} testID={`sound-layer-${l.id}`}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                <Icon name={l.spec.kind === 'binaural' ? 'headset-outline' : l.spec.kind === 'noise' ? 'radio-outline' : l.spec.kind === 'pad' || l.spec.kind === 'tones' ? 'musical-note-outline' : l.spec.kind === 'bowls' || l.spec.kind === 'chimes' ? 'notifications-outline' : 'rainy-outline'} size={20} color="textSecondary" />
-                <AppText variant="bodyStrong" style={{ flex: 1 }}>
-                  {t(`wb.sound.names.${nameKey(l.spec)}`)}
-                </AppText>
-                {mode !== 'headache' ? <IconButton icon="close" label={`${t('wb.sound.remove')}: ${t(`wb.sound.names.${nameKey(l.spec)}`)}`} onPress={() => change(shown.filter((x) => x.id !== l.id))} size={32} variant="soft" /> : null}
-              </View>
-              {levelRow(t(`wb.sound.names.${nameKey(l.spec)}`), l.volume, (v) => setVol(l.id, v), cap)}
-            </Card>
-          ))}
+      {shelves.map((c) => (
+        <View key={c} style={{ marginBottom: space[5] }}>
+          {filter === 'all' ? <SectionHeader title={t(`wb.sound.catalog.${c}`)} actionLabel={t('wb.sound.seeAll')} onAction={() => setFilter(c)} /> : null}
+          {shelf(tracksIn(c), c)}
         </View>
-      ) : null}
+      ))}
 
-      {bin ? (
-        <Card padding={18} style={{ marginBottom: space[4], gap: 10 }} testID="sound-binaural">
-          <AppText variant="bodyStrong">{t('wb.sound.binaural.title')}</AppText>
-          <AppText variant="small" color="textSecondary">
-            {t('wb.sound.binaural.explain')}
-          </AppText>
-          <AppText variant="smallStrong" testID="sound-binaural-ears">
-            {t('wb.sound.binaural.ears', { left: bin.leftHz, right: bin.rightHz, beat: Math.round((bin.rightHz - bin.leftHz) * 10) / 10 })}
-          </AppText>
-          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            {(Object.keys(BEAT_BANDS) as BeatBand[]).map((b) => (
-              <Chip
-                key={b}
-                label={`${t(`wb.sound.binaural.bands.${b}`)} · ${t('wb.sound.binaural.bandHint', { min: BEAT_BANDS[b].min, max: BEAT_BANDS[b].max })}`}
-                selected={bandOf(bin.rightHz - bin.leftHz) === b}
-                onPress={() => setBinaural(bin.leftHz, BEAT_BANDS[b].preset)}
-                testID={`sound-band-${b}`}
-              />
-            ))}
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <AppText variant="small" style={{ flex: 1 }}>
-              {t('wb.sound.binaural.carrier')}: {bin.leftHz} Hz
-            </AppText>
-            <IconButton icon="remove" label={`${t('wb.sound.binaural.carrier')} −10 Hz`} onPress={() => setBinaural(Math.max(CARRIER.min, bin.leftHz - 10), bin.rightHz - bin.leftHz)} size={34} variant="soft" />
-            <IconButton icon="add" label={`${t('wb.sound.binaural.carrier')} +10 Hz`} onPress={() => setBinaural(Math.min(CARRIER.max, bin.leftHz + 10), bin.rightHz - bin.leftHz)} size={34} variant="soft" />
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <AppText variant="small" style={{ flex: 1 }}>
-              {t('wb.sound.binaural.beat')}: {Math.round((bin.rightHz - bin.leftHz) * 10) / 10} Hz
-            </AppText>
-            <IconButton icon="remove" label={`${t('wb.sound.binaural.beat')} −0.5 Hz`} onPress={() => setBinaural(bin.leftHz, bin.rightHz - bin.leftHz - 0.5)} size={34} variant="soft" testID="sound-beat-down" />
-            <IconButton icon="add" label={`${t('wb.sound.binaural.beat')} +0.5 Hz`} onPress={() => setBinaural(bin.leftHz, bin.rightHz - bin.leftHz + 0.5)} size={34} variant="soft" testID="sound-beat-up" />
+      <View style={{ gap: 10, marginBottom: space[4] }}>
+        <Card padding={16} onPress={() => router.push('/sound/mixer?mode=headache' as any)} accessibilityLabel={t('wb.sound.modes.headache')} testID="sound-headache">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Icon name="moon-outline" size={22} color="textSecondary" />
+            <View style={{ flex: 1 }}>
+              <AppText variant="bodyStrong">{t('wb.sound.modes.headache')}</AppText>
+              <AppText variant="caption" color="textTertiary">
+                {t('wb.sound.modeHints.headache')}
+              </AppText>
+            </View>
+            <Icon name="chevron-forward" size={18} color="textTertiary" />
           </View>
         </Card>
-      ) : null}
-      {needsHeadphonesNote ? (
-        <Banner tone="info" icon="headset-outline" body={t('wb.sound.binaural.headphones')} action={<Button label={t('wb.sound.binaural.gotIt')} size="sm" variant="quiet" onPress={() => setSoundPrefs({ headphonesNoted: true })} />} />
-      ) : null}
-
-      {mode !== 'headache' ? (
-        <View style={{ gap: 8, marginBottom: space[4] }}>
-          <AppText variant="smallStrong" color="textSecondary">
-            {t('wb.sound.add')}
-          </AppText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {addable.map((s) => (
-              <Chip key={layerFor(s).id} label={t(`wb.sound.names.${nameKey(s)}`)} icon="add" onPress={() => change([...shown, layerFor(s, 0.3)])} testID={`sound-add-${layerFor(s).id}`} />
-            ))}
-            {!hasBinaural ? <Chip label={t('wb.sound.names.binaural')} icon="headset-outline" onPress={() => change([...shown, binauralLayer(200, 10, 0.2)])} testID="sound-add-binaural" /> : null}
+        <Card padding={16} onPress={() => router.push('/sound/mixer?mode=mix' as any)} accessibilityLabel={t('wb.sound.customMix')} testID="sound-mixer">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Icon name="options-outline" size={22} color="textSecondary" />
+            <View style={{ flex: 1 }}>
+              <AppText variant="bodyStrong">{t('wb.sound.customMix')}</AppText>
+              <AppText variant="caption" color="textTertiary">
+                {t('wb.sound.customMixHint')}
+              </AppText>
+            </View>
+            <Icon name="chevron-forward" size={18} color="textTertiary" />
           </View>
-        </View>
-      ) : null}
-
-      <View style={{ gap: 8, marginBottom: space[4] }}>
-        <AppText variant="smallStrong" color="textSecondary">
-          {t('wb.sound.timer')}
-        </AppText>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          <Chip label={t('wb.sound.noTimer')} selected={minutes === null} onPress={() => setMinutes(null)} />
-          {timers.map((m) => (
-            <Chip key={m} label={t('wb.sound.minutes', { n: m })} selected={minutes === m} onPress={() => setMinutes(m)} testID={`sound-timer-${m}`} />
-          ))}
-          <Chip label={`${t('wb.sound.custom')}${minutes && !timers.includes(minutes) ? `: ${t('wb.sound.minutes', { n: minutes })}` : ''}`} selected={Boolean(minutes && !timers.includes(minutes))} onPress={() => setMinutes((m) => Math.min(180, (m && !timers.includes(m) ? m : 0) + 5))} />
-        </View>
-        {mode === 'sleep' ? (
-          <>
-            <AppText variant="caption" color="textTertiary">
-              {t('wb.sound.sleep.fadeNote')}
-            </AppText>
-            <ToggleRow label={t('wb.sound.sleep.morning')} value={store?.morningCheckIn ?? true} onValueChange={(v) => setSoundPrefs({ morningCheckIn: v })} />
-          </>
-        ) : null}
+        </Card>
       </View>
 
-      <View style={{ gap: 6, marginBottom: space[4] }}>
-        <AppText variant="smallStrong" color="textSecondary">
-          {t('wb.sound.master')}
-        </AppText>
-        {levelRow(t('wb.sound.master'), master, setMaster, 0.8, 'sound-master')}
-      </View>
-
-      {!live ? <Button label={t('wb.sound.play')} icon="play" onPress={play} disabled={!shown.length} fullWidth testID="sound-play" /> : null}
-
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: space[4], flexWrap: 'wrap' }}>
-        {shown.length ? <Button label={t('wb.sound.saveMix')} icon="heart-outline" variant="quiet" size="sm" onPress={() => setSaving(true)} testID="sound-save" /> : null}
-      </View>
-
-      <SectionHeader title={t('wb.sound.favorites')} style={{ marginTop: space[5] }} />
-      {store?.favorites.length ? (
-        <View style={{ gap: 8 }}>
-          {store.favorites.map((f) => (
-            <Card key={f.id} padding={14} onPress={() => { setMode(f.mode); setLayers(f.layers); }} accessibilityLabel={f.name}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Icon name="heart" size={18} color="textSecondary" />
-                <AppText variant="bodyStrong" style={{ flex: 1 }} numberOfLines={1}>
-                  {f.name}
-                </AppText>
-                <AppText variant="caption" color="textTertiary">
-                  {t(`wb.sound.modes.${f.mode}`)}
-                </AppText>
-                <IconButton icon="trash-outline" label={`${t('wb.sound.delete')}: ${f.name}`} onPress={() => removeFavorite(f.id)} size={32} variant="soft" />
-              </View>
-            </Card>
-          ))}
-        </View>
-      ) : (
-        <AppText variant="small" color="textTertiary">
-          {t('wb.sound.noFavorites')}
-        </AppText>
-      )}
-
-      <SectionHeader title={t('wb.sound.history')} style={{ marginTop: space[5] }} />
-      {recent.length ? (
-        recent.map((h) => (
-          <AppText key={h.id} variant="small" color="textSecondary" style={{ paddingVertical: 4 }}>
-            {formatDate(h.startedAt, { day: 'numeric', month: 'short' })} · {t('wb.sound.sessionLine', { mode: t(`wb.sound.modes.${h.mode}`), minutes: h.minutes })}
-          </AppText>
-        ))
-      ) : (
-        <AppText variant="small" color="textTertiary">
-          {t('wb.sound.noHistory')}
-        </AppText>
-      )}
-
-      <AppText variant="caption" color="textTertiary" style={{ marginTop: space[5] }}>
+      <AppText variant="caption" color="textTertiary" style={{ marginBottom: 6 }}>
+        {t('wb.sound.background')}
+      </AppText>
+      <AppText variant="caption" color="textTertiary">
         {t('wb.sound.honesty')}
       </AppText>
-
-      <Sheet visible={saving} onClose={() => setSaving(false)} title={t('wb.sound.saveMix')} footer={<Button label={t('wb.sound.save')} fullWidth onPress={async () => { await saveFavorite(mixName || t(`wb.sound.modes.${mode}`), mode, shown); setSaving(false); setMixName(''); toast(t('wb.sound.saved')); }} testID="sound-save-confirm" />}>
-        <TextField value={mixName} onChangeText={setMixName} placeholder={t('wb.sound.mixName')} />
-      </Sheet>
-
-      <Modal visible={dim} transparent animationType="fade" onRequestClose={() => setDim(false)} statusBarTranslucent>
-        <Pressable onPress={() => setDim(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.94)', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 48 }} accessibilityLabel={t('wb.sound.headache.undim')} testID="sound-dim-overlay">
-          <AppText variant="caption" style={{ color: 'rgba(255,255,255,0.35)' }}>
-            {t('wb.sound.headache.undim')}
-          </AppText>
-        </Pressable>
-      </Modal>
     </Screen>
   );
 }

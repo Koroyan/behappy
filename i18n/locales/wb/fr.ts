@@ -52,7 +52,10 @@ export const wbFr = {
       "padSoft": "Harmonie douce (délicate)",
       "tones": "Sons purs",
       "bowls": "Bols chantants",
-      "chimes": "Cloches douces"
+      "chimes": "Cloches douces",
+      "music": "Musique",
+      "fire": "Feu de cheminée",
+      "night": "Nuit d’été"
     },
     "binaural": {
       "title": "Son binaural",
@@ -74,6 +77,148 @@ export const wbFr = {
     "styleRainBells": "Pluie et cloches douces",
     "styleMixes": "Mix prêts à l’emploi",
     "tonesNote": "Des sons purs à 174 Hz et 528 Hz sur une harmonie douce, comme dans les musiques de méditation populaires. Ce sont simplement des sons musicaux, identiques dans les deux oreilles : rien ne prouve qu’une quelconque fréquence ait un pouvoir de guérison.",
+    "catalogSubtitle": "À écouter : musique, nature et fréquences. Créé sur votre téléphone, disponible hors ligne.",
+    "catalog": {
+      "all": "Tout",
+      "sleep": "Sommeil",
+      "relax": "Détente",
+      "meditate": "Méditation",
+      "focus": "Concentration",
+      "frequencies": "Fréquences",
+      "nature": "Nature",
+      "noise": "Bruits"
+    },
+    "seeAll": "Tout voir",
+    "recent": "Écoutés récemment",
+    "preparing": "Préparation du son… (la première fois seulement)",
+    "untilStopped": "jusqu’à votre arrêt",
+    "customize": "Ajuster ce mix",
+    "customMix": "Créer votre mix",
+    "customMixHint": "Choisissez les sons et réglez le volume de chacun.",
+    "headphonesBadge": "Casque",
+    "frequencyNote": "Les pistes de fréquences sont des musiques dont la tonalité repose sur cette hauteur, accompagnées d’un son doux à cette fréquence exacte, comme dans les vidéos de méditation populaires. Ce sont simplement des sons musicaux : rien ne prouve qu’une quelconque fréquence guérisse.",
+    "tracks": {
+      "sleepDelta": {
+        "title": "Sommeil profond · Delta 2 Hz",
+        "desc": "Musique lente en mineur, pluie et battement binaural de 2 Hz (casque)"
+      },
+      "sleepRainPiano": {
+        "title": "Pluie et piano doux",
+        "desc": "Un nocturne paisible sous une pluie régulière"
+      },
+      "sleepOcean": {
+        "title": "Océan de nuit",
+        "desc": "Vagues, bourdon grave et doux bruit brun"
+      },
+      "sleepFire": {
+        "title": "Feu de cheminée",
+        "desc": "Un feu crépitant sur un bourdon grave et chaleureux"
+      },
+      "sleepNight": {
+        "title": "Nuit d’été",
+        "desc": "Des grillons et une brise légère"
+      },
+      "relaxAlpha": {
+        "title": "Calme · Alpha 10 Hz",
+        "desc": "Harpe et vagues avec un battement binaural de 10 Hz (casque)"
+      },
+      "relaxBowls": {
+        "title": "Bols chantants tibétains et ruisseau",
+        "desc": "Accords doux, bols chantants tibétains et eau vive"
+      },
+      "relaxPiano": {
+        "title": "Piano d’ambiance",
+        "desc": "Piano lent sur des accords chaleureux"
+      },
+      "relaxStream": {
+        "title": "Ruisseau en forêt et clochettes",
+        "desc": "Un ruisseau qui murmure avec de douces clochettes"
+      },
+      "meditateTheta": {
+        "title": "Méditation · Thêta 6 Hz",
+        "desc": "Bols chantants tibétains sur un bourdon avec un battement binaural de 6 Hz (casque)"
+      },
+      "meditateBowls": {
+        "title": "Bols tibétains",
+        "desc": "Bols chantants tibétains frappés lentement sur un bourdon profond"
+      },
+      "focusBeta": {
+        "title": "Concentration · Bêta 15 Hz",
+        "desc": "Accords réguliers, bruit doux et battement binaural de 15 Hz (casque)"
+      },
+      "focusRain": {
+        "title": "Pluie pour se concentrer",
+        "desc": "Pluie régulière sur une nappe discrète"
+      },
+      "hz174": {
+        "title": "174 Hz",
+        "desc": "Musique basée sur 174 Hz, son doux à 174 Hz et ruisseau"
+      },
+      "hz285": {
+        "title": "285 Hz",
+        "desc": "Musique basée sur 285 Hz, son doux et pluie"
+      },
+      "hz396": {
+        "title": "396 Hz",
+        "desc": "Musique basée sur 396 Hz, bols chantants tibétains et son doux"
+      },
+      "hz417": {
+        "title": "417 Hz",
+        "desc": "Musique basée sur 417 Hz, clochettes et mer"
+      },
+      "hz528": {
+        "title": "528 Hz",
+        "desc": "Musique basée sur 528 Hz, piano et son doux à 528 Hz"
+      },
+      "hz639": {
+        "title": "639 Hz",
+        "desc": "Musique basée sur 639 Hz, harpe et ruisseau"
+      },
+      "hz741": {
+        "title": "741 Hz",
+        "desc": "Musique basée sur 741 Hz, clochettes et son doux"
+      },
+      "hz852": {
+        "title": "852 Hz",
+        "desc": "Musique basée sur 852 Hz, piano et bols chantants tibétains"
+      },
+      "hz963": {
+        "title": "963 Hz",
+        "desc": "Bourdon basé sur 963 Hz, bols chantants tibétains et clochettes"
+      },
+      "hz432": {
+        "title": "Musique à 432 Hz",
+        "desc": "Musique au piano accordé à A = 432 Hz"
+      },
+      "hz528x174": {
+        "title": "528 + 174 Hz",
+        "desc": "Les deux sons sur une harmonie douce, avec bols chantants tibétains et clochettes"
+      },
+      "natureRain": {
+        "title": "Pluie",
+        "desc": "Pluie régulière et gouttes tombant sur l’eau"
+      },
+      "natureOcean": {
+        "title": "Vagues de l’océan",
+        "desc": "Des vagues qui déferlent et se retirent"
+      },
+      "natureStream": {
+        "title": "Ruisseau",
+        "desc": "Un ruisseau qui murmure"
+      },
+      "noiseBrown": {
+        "title": "Bruit brun",
+        "desc": "Profond, doux et régulier"
+      },
+      "noisePink": {
+        "title": "Bruit rose",
+        "desc": "Équilibré, comme une pluie régulière"
+      },
+      "noiseWhite": {
+        "title": "Bruit blanc",
+        "desc": "Clair ; masque les voix"
+      }
+    },
     "honesty": "Ces sons peuvent rendre un lieu plus calme ou vous aider à vous concentrer. Ils ne traitent ni les maux de tête, ni les troubles du sommeil, ni aucun autre problème.",
     "headache": {
       "dim": "Tamiser l’écran",

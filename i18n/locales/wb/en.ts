@@ -36,7 +36,7 @@ export const wbEn = {
     louder: 'Louder',
     quieter: 'Quieter',
     level: 'Level {n} of 10',
-    names: { pink: 'Pink noise', brown: 'Brown noise', white: 'White noise', rain: 'Rain', ocean: 'Ocean', wind: 'Wind', stream: 'Stream', binaural: 'Binaural tone', padWarm: 'Soft harmony (warm)', padSoft: 'Soft harmony (gentle)', bowls: 'Singing bowls', chimes: 'Soft bells', tones: 'Pure tones', padDeep: 'Soft harmony (deep)' },
+    names: { pink: 'Pink noise', brown: 'Brown noise', white: 'White noise', rain: 'Rain', ocean: 'Ocean', wind: 'Wind', stream: 'Stream', binaural: 'Binaural tone', padWarm: 'Soft harmony (warm)', padSoft: 'Soft harmony (gentle)', music: 'Music', fire: 'Fireplace', night: 'Summer night', bowls: 'Singing bowls', chimes: 'Soft bells', tones: 'Pure tones', padDeep: 'Soft harmony (deep)' },
     binaural: {
       title: 'Binaural tone',
       explain: 'Two pure tones, one in each ear. With headphones the small difference between them is heard as a slow beat. That is all it is: not a treatment.',
@@ -52,6 +52,148 @@ export const wbEn = {
     styleRainBells: 'Rain & soft bells',
     styleMixes: 'Ready mixes',
     tonesNote: 'Pure tones at 174 Hz and 528 Hz over a soft harmony, as in popular meditation music. They are simply musical tones, the same in both ears: there is no evidence that any frequency heals.',
+    catalogSubtitle: 'Ready to play: music, nature and frequencies. Made on your phone, works offline.',
+    catalog: {
+      all: 'All',
+      sleep: 'Sleep',
+      relax: 'Relax',
+      meditate: 'Meditate',
+      focus: 'Focus',
+      frequencies: 'Frequencies',
+      nature: 'Nature',
+      noise: 'Noise',
+    },
+    seeAll: 'See all',
+    recent: 'Recently played',
+    preparing: 'Preparing the sound… (only the first time)',
+    untilStopped: 'until you stop it',
+    customize: 'Adjust this mix',
+    customMix: 'Make your own mix',
+    customMixHint: 'Choose the sounds and set each one’s volume yourself.',
+    headphonesBadge: 'Headphones',
+    frequencyNote: 'Frequency tracks are music in a key built on that pitch, with a soft tone at exactly that frequency, as in popular meditation videos. They are simply musical tones: there is no evidence that any frequency heals.',
+    tracks: {
+      sleepDelta: {
+        title: 'Deep sleep · Delta 2 Hz',
+        desc: 'Slow minor music, rain and a 2 Hz binaural beat (headphones)',
+      },
+      sleepRainPiano: {
+        title: 'Rain and soft piano',
+        desc: 'A quiet nocturne under steady rain',
+      },
+      sleepOcean: {
+        title: 'Ocean at night',
+        desc: 'Waves, a low drone and soft brown noise',
+      },
+      sleepFire: {
+        title: 'Fireplace',
+        desc: 'A crackling fire with a warm, low drone',
+      },
+      sleepNight: {
+        title: 'Summer night',
+        desc: 'Crickets and a soft breeze',
+      },
+      relaxAlpha: {
+        title: 'Calm · Alpha 10 Hz',
+        desc: 'Harp and waves with a 10 Hz binaural beat (headphones)',
+      },
+      relaxBowls: {
+        title: 'Singing bowls and stream',
+        desc: 'Soft chords, singing bowls and running water',
+      },
+      relaxPiano: {
+        title: 'Ambient piano',
+        desc: 'Slow piano over warm chords',
+      },
+      relaxStream: {
+        title: 'Forest stream and bells',
+        desc: 'A babbling brook with gentle bells',
+      },
+      meditateTheta: {
+        title: 'Meditation · Theta 6 Hz',
+        desc: 'Singing bowls over a drone with a 6 Hz binaural beat (headphones)',
+      },
+      meditateBowls: {
+        title: 'Tibetan bowls',
+        desc: 'Singing bowls struck slowly over a deep drone',
+      },
+      focusBeta: {
+        title: 'Focus · Beta 15 Hz',
+        desc: 'Steady chords, soft noise and a 15 Hz binaural beat (headphones)',
+      },
+      focusRain: {
+        title: 'Rain for focus',
+        desc: 'Steady rain over a quiet pad',
+      },
+      hz174: {
+        title: '174 Hz',
+        desc: 'Music built on 174 Hz, a soft 174 Hz tone and a stream',
+      },
+      hz285: {
+        title: '285 Hz',
+        desc: 'Music built on 285 Hz, a soft tone and rain',
+      },
+      hz396: {
+        title: '396 Hz',
+        desc: 'Music built on 396 Hz, singing bowls and a soft tone',
+      },
+      hz417: {
+        title: '417 Hz',
+        desc: 'Music built on 417 Hz, bells and the sea',
+      },
+      hz528: {
+        title: '528 Hz',
+        desc: 'Music built on 528 Hz, piano and a soft 528 Hz tone',
+      },
+      hz639: {
+        title: '639 Hz',
+        desc: 'Music built on 639 Hz, harp and a stream',
+      },
+      hz741: {
+        title: '741 Hz',
+        desc: 'Music built on 741 Hz, bells and a soft tone',
+      },
+      hz852: {
+        title: '852 Hz',
+        desc: 'Music built on 852 Hz, piano and singing bowls',
+      },
+      hz963: {
+        title: '963 Hz',
+        desc: 'A drone built on 963 Hz, singing bowls and bells',
+      },
+      hz432: {
+        title: '432 Hz music',
+        desc: 'Piano music tuned to A = 432 Hz',
+      },
+      hz528x174: {
+        title: '528 + 174 Hz',
+        desc: 'Both tones over a soft harmony, with singing bowls and bells',
+      },
+      natureRain: {
+        title: 'Rain',
+        desc: 'Steady rain with drops falling on water',
+      },
+      natureOcean: {
+        title: 'Ocean waves',
+        desc: 'Waves rolling in and drawing back',
+      },
+      natureStream: {
+        title: 'Stream',
+        desc: 'A babbling brook',
+      },
+      noiseBrown: {
+        title: 'Brown noise',
+        desc: 'Deep, soft and steady',
+      },
+      noisePink: {
+        title: 'Pink noise',
+        desc: 'Balanced, like steady rain',
+      },
+      noiseWhite: {
+        title: 'White noise',
+        desc: 'Bright; masks voices',
+      },
+    },
     honesty: 'These sounds can make a space feel calmer or help you focus. They don’t treat headaches, sleep problems or anything else.',
     headache: {
       dim: 'Dim the screen',

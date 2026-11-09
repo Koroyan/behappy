@@ -13,13 +13,16 @@
  * Music-like layers (harmonies, tones, bowls, bells) are built in ambient.ts.
  */
 import { bowlsJob, chimesJob, Job, MUSIC_RATE, padJob, runJob, runJobAsync, tonesJob } from './ambient';
+import { loopOf, pieceJob } from './music';
+import { PieceId, PIECES } from './pieces';
+import { fireJob, nightJob, rainJob, streamJob } from './textures';
 
 export const SAMPLE_RATE = 24000;
 
 export type NoiseColor = 'white' | 'pink' | 'brown';
-export type NatureScene = 'rain' | 'ocean' | 'wind' | 'stream';
+export type NatureScene = 'rain' | 'ocean' | 'wind' | 'stream' | 'fire' | 'night';
 export type PadMood = 'warm' | 'deep' | 'soft';
-export type SoundSpec = { kind: 'binaural'; leftHz: number; rightHz: number } | { kind: 'noise'; color: NoiseColor } | { kind: 'nature'; scene: NatureScene } | { kind: 'pad'; mood: PadMood } | { kind: 'tones'; hz: number[] } | { kind: 'bowls'; mood: PadMood } | { kind: 'chimes'; mood: PadMood };
+export type SoundSpec = { kind: 'binaural'; leftHz: number; rightHz: number } | { kind: 'noise'; color: NoiseColor } | { kind: 'nature'; scene: NatureScene } | { kind: 'pad'; mood: PadMood } | { kind: 'tones'; hz: number[] } | { kind: 'bowls'; mood: PadMood } | { kind: 'chimes'; mood: PadMood } | { kind: 'piece'; id: PieceId };
 
 /**
  * A soft, slowly breathing chord to listen to (and to carry a binaural tone or
@@ -47,7 +50,7 @@ export const PADS: Record<PadMood, { hz: number[]; amp: number[]; h2: number[]; 
 export const BOWLS: Record<PadMood, number[]> = { warm: [330, 277.2], soft: [264, 174], deep: [164.8, 247] };
 export const CHIMES: Record<PadMood, number[]> = { warm: [330, 440, 495, 554.4, 660, 880], soft: [264, 348, 396, 440, 528, 696], deep: [247, 329.6, 412, 494.4, 659.2] };
 
-const MUSIC = new Set(['pad', 'tones', 'bowls', 'chimes']);
+const MUSIC = new Set(['pad', 'tones', 'bowls', 'chimes', 'piece']);
 /** Sample rate per sound: musical layers have nothing above ~4 kHz. */
 export const rateFor = (s: SoundSpec) => (MUSIC.has(s.kind) ? MUSIC_RATE : SAMPLE_RATE);
 
@@ -83,7 +86,9 @@ export function binaural(carrierHz: number, beatHz: number): SoundSpec {
   return { kind: 'binaural', leftHz: c, rightHz: Math.round((c + b) * 10) / 10 };
 }
 
-export const specKey = (s: SoundSpec) => (s.kind === 'binaural' ? `bin-${s.leftHz}-${s.rightHz}` : s.kind === 'noise' ? `noise-${s.color}` : s.kind === 'pad' ? `pad-${s.mood}-v4` : s.kind === 'tones' ? `tones-${s.hz.join('-')}-v3` : s.kind === 'bowls' ? `bowls-${s.mood}-v2` : s.kind === 'chimes' ? `chimes-${s.mood}-v2` : `nature-${s.scene}-v2`);
+export const specKey = (s: SoundSpec) => (s.kind === 'binaural' ? `bin-${s.leftHz}-${s.rightHz}` : s.kind === 'noise' ? `noise-${s.color}` : s.kind === 'pad' ? `pad-${s.mood}-v5` : s.kind === 'tones' ? `tones-${s.hz.join('-')}-v4` : s.kind === 'bowls' ? `bowls-${s.mood}-v3` : s.kind === 'chimes' ? `chimes-${s.mood}-v3` : s.kind === 'piece' ? `piece-${s.id}-v3` : `nature-${s.scene}-${NATURE_VERSION[s.scene]}`);
+/** Bumped when a texture changes, so devices regenerate it. */
+const NATURE_VERSION: Record<NatureScene, string> = { rain: 'v3', stream: 'v3', fire: 'v1', night: 'v1', ocean: 'v2', wind: 'v2' };
 
 /** Loop length: tones need whole cycles of both frequencies (0.1 Hz resolution → 10 s). */
 export function loopSeconds(s: SoundSpec): number {
@@ -94,10 +99,13 @@ export function loopSeconds(s: SoundSpec): number {
   if (s.kind === 'pad' || s.kind === 'tones') return 20;
   if (s.kind === 'bowls') return 30;
   if (s.kind === 'chimes') return 36;
-  if (s.kind === 'nature' && s.scene === 'ocean') return 24;
+  if (s.kind === 'piece') return loopOf(PIECES[s.id]);
+  if (s.kind === 'nature') return NATURE_LOOP[s.scene];
   return 12;
 }
 const isWhole = (x: number) => Math.abs(x - Math.round(x)) < 1e-6;
+/** Event textures get long loops, so no crackle or plink pattern is heard repeating. */
+const NATURE_LOOP: Record<NatureScene, number> = { rain: 30, stream: 30, fire: 40, night: 36, ocean: 24, wind: 12 };
 
 /** Small deterministic PRNG (same sound every time, testable). */
 function rng(seed: number) {
@@ -117,6 +125,13 @@ export interface Pcm {
 }
 
 function musicJob(s: SoundSpec, seconds: number, sr: number): Job | null {
+  if (s.kind === 'piece') return pieceJob(PIECES[s.id], seconds, sr);
+  if (s.kind === 'nature') {
+    if (s.scene === 'rain') return rainJob(seconds, sr);
+    if (s.scene === 'stream') return streamJob(seconds, sr);
+    if (s.scene === 'fire') return fireJob(seconds, sr);
+    if (s.scene === 'night') return nightJob(seconds, sr);
+  }
   if (s.kind === 'pad') {
     const p = PADS[s.mood];
     return padJob(p.hz.map((hz, k) => ({ hz, amp: p.amp[k], h2: p.h2[k], h3: p.h3[k] })), seconds, sr);
@@ -243,34 +258,8 @@ function channel(s: Extract<SoundSpec, { kind: 'noise' } | { kind: 'nature' }>, 
       }
       return out;
     }
-    case 'stream': {
-      // Running water: pink noise, gently filtered, with a soft uneven babble.
-      const src = lowpass(noise('pink', n, rand), 0.45);
-      const out = new Float32Array(n);
-      for (let i = 0; i < n; i += 1) {
-        const babble = 0.75 + 0.25 * Math.sin((i / n) * 2 * Math.PI * 37 + seed) * Math.sin((i / n) * 2 * Math.PI * 11);
-        out[i] = src[i] * 1.8 * babble;
-      }
-      return out;
-    }
-    case 'rain':
-    default: {
-      // Steady rain: a muffled pink bed (no hiss) plus many small, soft drops:
-      // short bursts smoothed by a low-pass so they patter instead of crackle.
-      const bed = lowpass(noise('pink', n, rand), 0.35);
-      const drops = new Float32Array(n);
-      const count = Math.round(period * 40);
-      for (let d = 0; d < count; d += 1) {
-        const start = Math.floor(((rand() + 1) / 2) * (n - sr * 0.05));
-        const len = Math.floor(sr * (0.006 + 0.012 * ((rand() + 1) / 2)));
-        const amp = 0.02 + 0.04 * ((rand() + 1) / 2);
-        for (let k = 0; k < len; k += 1) drops[start + k] += rand() * amp * Math.exp((-5 * k) / len);
-      }
-      const soft = lowpass(drops, 0.5);
-      const out = new Float32Array(n);
-      for (let i = 0; i < n; i += 1) out[i] = bed[i] * 0.9 + soft[i] * 1.4;
-      return out;
-    }
+    default:
+      throw new Error(`no noise renderer for ${s.scene}`);
   }
 }
 

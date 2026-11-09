@@ -52,7 +52,10 @@ export const wbAz = {
       "padSoft": "Yumşaq harmoniya (zərif)",
       "tones": "Saf tonlar",
       "bowls": "Tibet kasaları",
-      "chimes": "Zərif zəng səsləri"
+      "chimes": "Zərif zəng səsləri",
+      "music": "Musiqi",
+      "fire": "Kamin",
+      "night": "Yay gecəsi"
     },
     "binaural": {
       "title": "Binaural ton",
@@ -74,6 +77,148 @@ export const wbAz = {
     "styleRainBells": "Yağış və zərif zəng səsləri",
     "styleMixes": "Hazır mikslər",
     "tonesNote": "Populyar meditasiya musiqisində olduğu kimi, yumşaq harmoniya fonunda 174 Hz və 528 Hz tezlikli saf tonlar. Bunlar sadəcə musiqi tonlarıdır və hər iki qulaqda eynidir: hər hansı tezliyin sağaltdığına dair sübut yoxdur.",
+    "catalogSubtitle": "Dinləməyə hazır: musiqi, təbiət və tezliklər. Telefonunuzda yaradılır, oflayn işləyir.",
+    "catalog": {
+      "all": "Hamısı",
+      "sleep": "Yuxu",
+      "relax": "Rahatlıq",
+      "meditate": "Meditasiya",
+      "focus": "Diqqət",
+      "frequencies": "Tezliklər",
+      "nature": "Təbiət",
+      "noise": "Küy"
+    },
+    "seeAll": "Hamısına bax",
+    "recent": "Son dinlənilənlər",
+    "preparing": "Səs hazırlanır… (yalnız ilk dəfə)",
+    "untilStopped": "siz dayandırana qədər",
+    "customize": "Bu miksi tənzimlə",
+    "customMix": "Öz miksini yarat",
+    "customMixHint": "Səsləri seçin və hər birinin səviyyəsini özünüz tənzimləyin.",
+    "headphonesBadge": "Qulaqlıq",
+    "frequencyNote": "Tezlik trekləri həmin səs yüksəkliyinə əsaslanan tonallıqda musiqidir və populyar meditasiya videolarındakı kimi, məhz həmin tezlikdə yumşaq bir tonla səslənir. Bunlar sadəcə musiqi tonlarıdır: hər hansı tezliyin şəfa verdiyinə dair heç bir sübut yoxdur.",
+    "tracks": {
+      "sleepDelta": {
+        "title": "Dərin yuxu · Delta 2 Hz",
+        "desc": "Yavaş minor musiqisi, yağış və 2 Hz binaural ritm (qulaqlıqla)"
+      },
+      "sleepRainPiano": {
+        "title": "Yağış və həzin piano",
+        "desc": "Aramsız yağış altında sakit noktürn"
+      },
+      "sleepOcean": {
+        "title": "Gecə okeanı",
+        "desc": "Dalğalar, alçaq davamlı ton və yumşaq qəhvəyi küy"
+      },
+      "sleepFire": {
+        "title": "Kamin",
+        "desc": "İsti, alçaq davamlı tonla çırtıldayan od"
+      },
+      "sleepNight": {
+        "title": "Yay gecəsi",
+        "desc": "Cırcıramalar və yüngül meh"
+      },
+      "relaxAlpha": {
+        "title": "Sakitlik · Alfa 10 Hz",
+        "desc": "Arfa, dalğalar və 10 Hz binaural ritm (qulaqlıqla)"
+      },
+      "relaxBowls": {
+        "title": "Tibet oxuyan kasaları və çay",
+        "desc": "Yumşaq akkordlar, Tibet oxuyan kasaları və axar su"
+      },
+      "relaxPiano": {
+        "title": "Ambient piano",
+        "desc": "İsti akkordlar üzərində yavaş piano"
+      },
+      "relaxStream": {
+        "title": "Meşə çayı və zənglər",
+        "desc": "Şırıldayan çay və zərif zəng səsləri"
+      },
+      "meditateTheta": {
+        "title": "Meditasiya · Teta 6 Hz",
+        "desc": "Davamlı ton üzərində Tibet oxuyan kasaları və 6 Hz binaural ritm (qulaqlıqla)"
+      },
+      "meditateBowls": {
+        "title": "Tibet kasaları",
+        "desc": "Dərin davamlı ton üzərində aramla vurulan Tibet oxuyan kasaları"
+      },
+      "focusBeta": {
+        "title": "Diqqət · Beta 15 Hz",
+        "desc": "Sabit akkordlar, yumşaq küy və 15 Hz binaural ritm (qulaqlıqla)"
+      },
+      "focusRain": {
+        "title": "Diqqət üçün yağış",
+        "desc": "Sakit fon akkordu üzərində aramsız yağış"
+      },
+      "hz174": {
+        "title": "174 Hz",
+        "desc": "174 Hz əsasında musiqi, yumşaq 174 Hz tonu və çay"
+      },
+      "hz285": {
+        "title": "285 Hz",
+        "desc": "285 Hz əsasında musiqi, yumşaq ton və yağış"
+      },
+      "hz396": {
+        "title": "396 Hz",
+        "desc": "396 Hz əsasında musiqi, Tibet oxuyan kasaları və yumşaq ton"
+      },
+      "hz417": {
+        "title": "417 Hz",
+        "desc": "417 Hz əsasında musiqi, zənglər və dəniz"
+      },
+      "hz528": {
+        "title": "528 Hz",
+        "desc": "528 Hz əsasında musiqi, piano və yumşaq 528 Hz tonu"
+      },
+      "hz639": {
+        "title": "639 Hz",
+        "desc": "639 Hz əsasında musiqi, arfa və çay"
+      },
+      "hz741": {
+        "title": "741 Hz",
+        "desc": "741 Hz əsasında musiqi, zənglər və yumşaq ton"
+      },
+      "hz852": {
+        "title": "852 Hz",
+        "desc": "852 Hz əsasında musiqi, piano və Tibet oxuyan kasaları"
+      },
+      "hz963": {
+        "title": "963 Hz",
+        "desc": "963 Hz əsasında davamlı ton, Tibet oxuyan kasaları və zənglər"
+      },
+      "hz432": {
+        "title": "432 Hz musiqi",
+        "desc": "A = 432 Hz köklənməsində piano musiqisi"
+      },
+      "hz528x174": {
+        "title": "528 + 174 Hz",
+        "desc": "Yumşaq harmoniya üzərində hər iki ton, Tibet oxuyan kasaları və zənglər"
+      },
+      "natureRain": {
+        "title": "Yağış",
+        "desc": "Suya düşən damcılarla aramsız yağış"
+      },
+      "natureOcean": {
+        "title": "Okean dalğaları",
+        "desc": "Sahilə yayılıb geri çəkilən dalğalar"
+      },
+      "natureStream": {
+        "title": "Çay",
+        "desc": "Şırıldayan çay"
+      },
+      "noiseBrown": {
+        "title": "Qəhvəyi küy",
+        "desc": "Dərin, yumşaq və sabit"
+      },
+      "noisePink": {
+        "title": "Çəhrayı küy",
+        "desc": "Aramsız yağış kimi tarazlı"
+      },
+      "noiseWhite": {
+        "title": "Ağ küy",
+        "desc": "Parlaq səslənir; danışıq səslərini örtür"
+      }
+    },
     "honesty": "Bu səslər mühiti daha sakit hiss etməyə və ya diqqətinizi toplamağa kömək edə bilər. Baş ağrısını, yuxu problemlərini və ya başqa bir halı müalicə etmir.",
     "headache": {
       "dim": "Ekranı tutqunlaşdır",

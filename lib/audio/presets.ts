@@ -47,8 +47,8 @@ export const LIBRARY: SoundSpec[] = [
   { kind: 'nature', scene: 'stream' },
 ];
 
-export const layerFor = (spec: SoundSpec, volume = 0.35): MixLayer => (spec.kind === 'noise' ? noiseLayer(spec.color, volume) : spec.kind === 'nature' ? natureLayer(spec.scene, volume) : spec.kind === 'pad' ? padLayer(spec.mood, volume) : spec.kind === 'tones' ? { id: 'tones', spec, volume } : spec.kind === 'bowls' ? bowlsLayer(spec.mood, volume) : spec.kind === 'chimes' ? chimesLayer(spec.mood, volume) : { id: 'binaural', spec, volume });
+export const layerFor = (spec: SoundSpec, volume = 0.35): MixLayer => (spec.kind === 'noise' ? noiseLayer(spec.color, volume) : spec.kind === 'nature' ? natureLayer(spec.scene, volume) : spec.kind === 'pad' ? padLayer(spec.mood, volume) : spec.kind === 'tones' ? { id: 'tones', spec, volume } : spec.kind === 'bowls' ? bowlsLayer(spec.mood, volume) : spec.kind === 'chimes' ? chimesLayer(spec.mood, volume) : spec.kind === 'piece' ? { id: `piece-${spec.id}`, spec, volume } : { id: 'binaural', spec, volume });
 
-export const nameKey = (spec: SoundSpec) => (spec.kind === 'noise' ? spec.color : spec.kind === 'nature' ? spec.scene : spec.kind === 'pad' ? (spec.mood === 'warm' ? 'padWarm' : spec.mood === 'deep' ? 'padDeep' : 'padSoft') : spec.kind === 'tones' ? 'tones' : spec.kind === 'bowls' ? 'bowls' : spec.kind === 'chimes' ? 'chimes' : 'binaural');
+export const nameKey = (spec: SoundSpec) => (spec.kind === 'noise' ? spec.color : spec.kind === 'nature' ? spec.scene : spec.kind === 'pad' ? (spec.mood === 'warm' ? 'padWarm' : spec.mood === 'deep' ? 'padDeep' : 'padSoft') : spec.kind === 'tones' ? 'tones' : spec.kind === 'bowls' ? 'bowls' : spec.kind === 'chimes' ? 'chimes' : spec.kind === 'piece' ? 'music' : 'binaural');
 
 export const bandOf = (beat: number): BeatBand | null => (Object.keys(BEAT_BANDS) as BeatBand[]).find((b) => beat >= BEAT_BANDS[b].min && beat <= BEAT_BANDS[b].max) ?? null;
