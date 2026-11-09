@@ -11,6 +11,7 @@ import { layout, space } from '../tokens';
 import { useLayout } from '../useLayout';
 import { AppText } from './AppText';
 import { IconButton } from './Button';
+import { BrandLockup } from './Graphics';
 import { Icon } from './Icon';
 import { Press } from './Press';
 
@@ -21,6 +22,8 @@ export interface ScreenProps {
   /** Show a back control (stack screens). */
   back?: boolean | (() => void);
   headerRight?: React.ReactNode;
+  /** Phones: the BeHappy logo and name at the left of the top bar (main tabs; wide screens show it in the sidebar). */
+  brand?: boolean;
   /** Small title in the top bar instead of a large page title (dense tools like chat). */
   compactHeader?: boolean;
   /** Width of the main column. */
@@ -45,6 +48,7 @@ export function Screen({
   eyebrow,
   back,
   headerRight,
+  brand,
   compactHeader,
   width = 'content',
   scroll = true,
@@ -78,7 +82,8 @@ export function Screen({
     else router.replace('/');
   };
 
-  const showTopRow = Boolean(back || headerRight || (compactHeader && title));
+  const showBrand = Boolean(brand) && isPhone && !back && !compactHeader;
+  const showTopRow = Boolean(back || headerRight || showBrand || (compactHeader && title));
   // Phones: the back button and actions stay pinned while content scrolls.
   const pinTopRow = isPhone && showTopRow;
   const topRow = showTopRow ? (
@@ -105,6 +110,10 @@ export function Screen({
               {subtitle}
             </AppText>
           ) : null}
+        </View>
+      ) : showBrand ? (
+        <View style={{ flex: 1, minWidth: 0 }} testID="screen-brand">
+          <BrandLockup size={32} />
         </View>
       ) : (
         <View style={{ flex: 1 }} />

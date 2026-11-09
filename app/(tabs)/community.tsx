@@ -144,7 +144,7 @@ export default function CommunityHome() {
   ) : null;
 
   return (
-    <Screen tab title={t('community.title')} subtitle={t('community.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} aside={aside} asideOnNarrow="below" testID="screen-community">
+    <Screen tab brand title={t('community.title')} subtitle={t('community.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} aside={aside} asideOnNarrow="below" testID="screen-community">
       <View style={{ gap: space[5] }}>
         {peer}
         {!identity.registered ? (

@@ -126,6 +126,9 @@ export function resolveVariant(variant: TextVariant, script: ScriptGroup, wide: 
   };
 }
 
+/** Font family of the "BeHappy" wordmark (only its letters are in the file). */
+export const BRAND_FONT = 'BeHappyWordmark';
+
 /** Font files to load for a script group (Latin is always loaded for digits/UI). */
 export function fontAssetsFor(script: ScriptGroup): Record<string, any> {
   /* eslint-disable @typescript-eslint/no-require-imports */
@@ -135,6 +138,8 @@ export function fontAssetsFor(script: ScriptGroup): Record<string, any> {
     Inter_600SemiBold: require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
     Lora_400Regular: require('@expo-google-fonts/lora/400Regular/Lora_400Regular.ttf'),
     Lora_600SemiBold: require('@expo-google-fonts/lora/600SemiBold/Lora_600SemiBold.ttf'),
+    // The "BeHappy" wordmark: Pacifico (SIL OFL, assets/fonts/Pacifico-OFL.txt), cut down to its six letters (10 KB).
+    [BRAND_FONT]: require('../assets/fonts/Pacifico-BeHappy.ttf'),
   };
   if (script === 'georgian') {
     return {

@@ -59,7 +59,7 @@ export default function Specialists() {
   );
 
   return (
-    <Screen tab title={t('specialists.title')} subtitle={t('specialists.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} testID="screen-specialists">
+    <Screen tab brand title={t('specialists.title')} subtitle={t('specialists.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} testID="screen-specialists">
       <View style={{ gap: space[4] }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
           {filterChip(lang ? LANGUAGE_NAMES[lang] : t('specialists.anyLanguage'), Boolean(lang), () => setSheet('language'), 'filter-language')}

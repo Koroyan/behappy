@@ -1,9 +1,9 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { useTheme } from '../ThemeProvider';
-import { AppText } from './AppText';
+import { BRAND_FONT } from '../typography';
 
 /**
  * BeHappy mark: a sun rising over a smile-shaped horizon, soft rays, still
@@ -43,13 +43,19 @@ export function BrandMark({ size = 32 }: { size?: number }) {
   );
 }
 
+/** The mark and the "BeHappy" wordmark ("Be" in the brand teal), as in the phone top bar. */
 export function BrandLockup({ size = 30 }: { size?: number }) {
+  const { colors } = useTheme();
+  // Pacifico, a brush script (like the wordmarks of social apps); the file holds only these letters.
+  const fontSize = Math.round(size * 0.8);
+  const word = { fontFamily: BRAND_FONT, fontWeight: '400' as const, fontSize, lineHeight: Math.round(fontSize * 1.5), letterSpacing: 0 };
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+    <View accessible accessibilityRole="header" accessibilityLabel="BeHappy" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <BrandMark size={size} />
-      <AppText variant="title3" style={{ letterSpacing: 0.2 }}>
-        BeHappy
-      </AppText>
+      <Text allowFontScaling={false} style={[word, { color: colors.text, includeFontPadding: false }]}>
+        <Text style={{ color: colors.primary }}>Be</Text>
+        Happy
+      </Text>
     </View>
   );
 }

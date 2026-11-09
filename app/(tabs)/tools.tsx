@@ -109,7 +109,7 @@ export default function ToolsScreen() {
   );
 
   return (
-    <Screen tab title={t('tools.title')} subtitle={t('tools.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} testID="screen-tools">
+    <Screen tab brand title={t('tools.title')} subtitle={t('tools.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} testID="screen-tools">
       <View style={{ gap: space[6] }}>
         <TextField value={q} onChangeText={setQ} placeholder={t('tools.search')} accessibilityLabel={t('tools.search')} returnKeyType="search" testID="tools-search" />
         {results ? (

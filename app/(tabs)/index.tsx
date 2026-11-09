@@ -453,6 +453,7 @@ export default function TodayScreen() {
   return (
     <Screen
       tab
+      brand
       eyebrow={formatDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long' })}
       title={title}
       subtitle={t('today.intro')}
