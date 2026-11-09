@@ -292,7 +292,10 @@ if (!skipPay) {
   await step('purchases list and recovery code', async () => {
     await go('/purchases');
     await page.waitForSelector(tid('screen-purchases'), { timeout: 15000 });
+    // Wait for the orders to load (counting at once raced the request); this account paid once and was declined once.
+    await page.waitForSelector(tid('order-row'), { timeout: 15000 });
     const rows = await page.locator(tid('order-row')).count();
+    if (rows < 2) throw new Error(`expected the declined and the approved order, saw ${rows}`);
     await page.getByText('Show recovery code').click();
     recovery = oneLine(await page.textContent(tid('recovery-code')));
     if (recovery.replace(/[^0-9a-z]/gi, '').length < 16) throw new Error(`odd recovery code "${recovery}"`);

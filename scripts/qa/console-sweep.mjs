@@ -48,7 +48,7 @@ const USER_ROUTES = [
 const ADMIN_ROUTES = [
   '/admin', '/admin/analytics', '/admin/users', '/admin/support', '/admin/applications', '/admin/professionals', '/admin/policies', '/admin/appointments',
   '/admin/community', '/admin/moderation', '/admin/moderation/stats', '/admin/safety', '/admin/ai', '/admin/finance', '/admin/security', '/admin/staff',
-  '/admin/settings', '/admin/protected', '/admin/audit', '/admin/system', '/admin/me',
+  '/admin/settings', '/admin/protected', '/admin/audit', '/admin/system', '/admin/me', '/admin/economics',
 ];
 
 const browser = await chromium.launch({ headless: true, channel: 'chrome' });
