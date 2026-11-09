@@ -33,11 +33,11 @@ function costTable() {
   const nocache = unitCosts(A, { cacheShare: 0 });
   const heavy = unitCosts(A, { cacheShare: 0, percentile: 'p95', contextGrowth: 1.5 });
   const rows = [
-    ['Anulia: one message', 'anuliaMessage'],
-    ['Anulia: 10-message conversation', 'anulia10'],
-    ['Anulia: 20-message conversation', 'anulia20'],
-    ['Anulia: 40-message conversation', 'anulia40'],
-    ['Anulia memory block (per message, max 4,500 chars)', 'memoryBlockPerMessage'],
+    ['Bea: one message', 'anuliaMessage'],
+    ['Bea: 10-message conversation', 'anulia10'],
+    ['Bea: 20-message conversation', 'anulia20'],
+    ['Bea: 40-message conversation', 'anulia40'],
+    ['Bea memory block (per message, max 4,500 chars)', 'memoryBlockPerMessage'],
     ['Conversation summary', 'summary'],
     ['Daily reflection', 'reflection'],
     ['Daily reflection with its correction round', 'reflectionWithCorrection'],

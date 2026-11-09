@@ -121,11 +121,11 @@ Measured token counts (ai_usage, p50; heavy = p95 with +50% context). USD list p
 
 | Feature | Typical (50% cached) | No caching | Heavy, no caching | Heavy in GEL |
 |---|---|---|---|---|
-| Anulia: one message | $0.0014 | $0.0021 | $0.0038 | 0.01 |
-| Anulia: 10-message conversation | $0.020 | $0.032 | $0.054 | 0.16 |
-| Anulia: 20-message conversation | $0.054 | $0.089 | $0.146 | 0.42 |
-| Anulia: 40-message conversation | $0.163 | $0.277 | $0.440 | 1.26 |
-| Anulia memory block (per message, max 4,500 chars) | $0.0006 | $0.0011 | $0.0017 | 0.00 |
+| Bea: one message | $0.0014 | $0.0021 | $0.0038 | 0.01 |
+| Bea: 10-message conversation | $0.020 | $0.032 | $0.054 | 0.16 |
+| Bea: 20-message conversation | $0.054 | $0.089 | $0.146 | 0.42 |
+| Bea: 40-message conversation | $0.163 | $0.277 | $0.440 | 1.26 |
+| Bea memory block (per message, max 4,500 chars) | $0.0006 | $0.0011 | $0.0017 | 0.00 |
 | Conversation summary | $0.0009 | $0.0011 | $0.0019 | 0.01 |
 | Daily reflection | $0.0011 | $0.0014 | $0.0024 | 0.01 |
 | Daily reflection with its correction round | $0.0023 | $0.0028 | $0.0048 | 0.01 |
