@@ -9,8 +9,9 @@ import { View } from 'react-native';
 
 import { AppText, Button, Card, Chip, IconButton, Screen, SectionHeader, space, useFeedback } from '@/design';
 import { useT } from '@/i18n';
-import { PRESETS } from '@/lib/audio/presets';
 import { startSound, useSoundSession } from '@/lib/audio/session';
+import { loadSound } from '@/lib/audio/soundStore';
+import { suggestTrack, trackLayers } from '@/lib/audio/tracks';
 import { subscribe } from '@/lib/storage/json';
 import { addDays, dayKey } from '@/lib/wellbeing/dates';
 import { EVENTS_TOPIC, loadEvents, recordEvent, removeEvents } from '@/lib/wellbeing/eventStore';
@@ -39,9 +40,11 @@ export default function SleepScreen() {
   const labels = tl('wb.sleep.quality');
 
   const windDown = async () => {
-    const preset = PRESETS.sleep;
+    // The person's own latest sleep track, else rain and soft piano (a finished, level-matched track).
+    const history = await loadSound().then((s) => s.history.map((h) => h.trackId)).catch(() => []);
+    const track = suggestTrack('sleep', history);
     await recordEvent('sleep.bedtime', `routine:${today}`, { minutes: 0 });
-    await startSound({ mode: 'sleep', title: t('wb.sound.modes.sleep'), layers: preset.layers, minutes: preset.minutes });
+    await startSound({ mode: 'sleep', title: t(`wb.sound.tracks.${track.id}.title`), layers: trackLayers(track), minutes: track.minutes, trackId: track.id });
     router.push('/sound?mode=sleep' as any);
   };
 

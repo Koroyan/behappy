@@ -42,6 +42,8 @@ const USER_ROUTES = [
   '/grounding', '/assessments', '/assessments/phq9', '/insights', '/goals', '/safety', '/safety-plan', '/about', '/pricing', '/purchases',
   '/notifications', '/settings/notifications', '/appointments', '/messages', '/support', '/pro', '/pro/apply', '/pro/membership', '/account', '/account/create', '/account/sign-in',
   '/quiz', '/onboarding', '/explore', '/moderation',
+  // Well-being ecosystem
+  '/steps', '/badges', '/calm', '/sleep', '/sleep?morning=1', '/reflection', '/anulia/memory', '/sound', '/sound?category=frequencies', '/sound/mixer', '/sound/mixer?mode=headache',
 ];
 const ADMIN_ROUTES = [
   '/admin', '/admin/analytics', '/admin/users', '/admin/support', '/admin/applications', '/admin/professionals', '/admin/policies', '/admin/appointments',

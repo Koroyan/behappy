@@ -114,4 +114,14 @@ export const LEVEL: Record<string, number> = {"sleepDelta":1.02,"sleepRainPiano"
 export const trackLayers = (t: Track): MixLayer[] => t.layers().map((l) => ({ ...l, volume: Math.min(1, Math.round(l.volume * (LEVEL[t.id] ?? 1) * 1000) / 1000) }));
 
 export const trackById = (id: string | undefined | null) => TRACKS.find((t) => t.id === id) ?? null;
+
+/** What fits the hour: sleep at night, focus in working hours, relax around them. */
+export const categoryForHour = (hour: number): TrackCategory => (hour >= 21 || hour < 5 ? 'sleep' : hour >= 9 && hour < 17 ? 'focus' : 'relax');
+const DEFAULT_FOR: Partial<Record<TrackCategory, string>> = { sleep: 'sleepRainPiano', focus: 'focusRain', relax: 'relaxPiano' };
+
+/** One track to offer with one tap: the person's latest in that category, else a gentle default. */
+export function suggestTrack(category: TrackCategory, recentIds: (string | undefined)[]): Track {
+  const own = recentIds.map((id) => trackById(id)).find((t) => t && t.categories.includes(category));
+  return own ?? trackById(DEFAULT_FOR[category] ?? 'relaxPiano')!;
+}
 export const tracksIn = (c: TrackCategory) => TRACKS.filter((t) => t.categories.includes(c));

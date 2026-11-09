@@ -72,7 +72,11 @@ now-playing card has pause/stop, quick timers (15–90 min or none, changeable
 while playing), volume, and the honest note that applies (headphones for
 binaural, the frequency note, the sleep fade). "Make your own mix"
 (`/sound/mixer`, the former Sound Lab) and Headache comfort stay one tap away.
-Old links (`/sound?mode=sleep|focus|relax`) open the matching shelf.
+Old links (`/sound?mode=sleep|focus|relax`) open the matching shelf. Today
+offers one track for the hour with one tap (sleep from 21:00, focus 9–17, relax
+around them; the person's own latest choice in that shelf first) and names the
+track while it plays; the Sleep companion's "wind down" starts the person's
+latest sleep track (else Rain and soft piano).
 
 | Shelf | Tracks |
 |---|---|
@@ -233,7 +237,7 @@ removes it, the sound files and the in-memory event cache.
 |---|---|
 | `npm test` | 193/193 (incl. reflection 7, AI cost/budget, streamed tokens, synth, Sound catalog) |
 | `npm run test:unit` | 67/67 (events, Steps across DST, badges, challenges, memory, recap, synth 14, Sound catalog 5: every track valid and named in en/ka, frequency tones exact with nothing beating near them, binaural pairs exact with their band clear, seamless loops for every sound, loudness within 2 dB; planner incl. Step/reflection/sleep reminders) |
-| `npm run qa:wellbeing` (Chrome) | 15/15: Today, Tools, Steps auto-completion, undo/skip, badges, Calm now, mixer measured 200/210 Hz, 528 + 174 Hz measured in both ears, all 30 catalog tracks played with one tap and measured (binaural pairs, nine frequency tones), Sleep, reflection (live AI, checked), memory preview/switches, Insights, Arabic dark RTL, no page errors |
+| `npm run qa:wellbeing` (Chrome) | 15/15: Today (one-tap suggestion plays), Tools, Steps auto-completion, undo/skip, badges, Calm now, mixer measured 200/210 Hz, 528 + 174 Hz measured in both ears, all 30 catalog tracks played with one tap and measured (binaural pairs, nine frequency tones), Sleep (morning report; wind down plays a sleep track), reflection (live AI, checked), memory preview/switches, Insights, Arabic dark RTL, no page errors |
 | Android (Expo Go 58, emulator) | Steps (journal after save, breathing after finishing), reminders scheduled at the right local times, badges, reflection in Georgian (live), memory with Anulia (live), revocation |
 
 Not tested: iOS (no Mac here), native store builds, audio interruptions by a

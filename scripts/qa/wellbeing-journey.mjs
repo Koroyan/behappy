@@ -98,6 +98,13 @@ await step('Today: steps, sound and recap cards; five tabs', async () => {
   for (const tab of ['tab-today', 'tab-tools', 'tab-anulia', 'tab-community', 'tab-specialists']) await P.wait(tab);
   if (await P.count('tab-steps')) throw new Error('a sixth tab appeared');
   await P.shot('1-today');
+  // A track for this hour plays with one tap; the card then names the track.
+  // The button's text starts with the icon font's glyph (private use area): keep the words.
+  const label = (await P.page.locator('[data-testid="today-sound-suggested"]').first().innerText()).replace(/[\uE000-\uF8FF]/g, '').trim();
+  await P.click('today-sound-suggested');
+  await P.page.waitForFunction((l) => (document.querySelector('[data-testid="today-sound"]')?.textContent || '').includes(l.trim()) && !document.querySelector('[data-testid="today-sound-suggested"]'), label, { timeout: 45000 });
+  await P.page.getByRole('button', { name: /stop/i }).first().click();
+  return `suggested and played: ${label.trim()}`;
 });
 
 await step('Tools: grouped hub finds the new tools', async () => {
@@ -335,6 +342,13 @@ await step('Sleep companion: morning self-report saved', async () => {
   await P.click('sleep-quality-4');
   await P.click('sleep-save');
   await P.text('4/5');
+  // Wind down starts a finished sleep track (the latest one played, else rain and soft piano).
+  await P.click('sleep-start');
+  await P.page.waitForURL(/\/sound/, { timeout: 30000 });
+  await P.page.locator('[data-testid^="sound-now-state-sleep"], [data-testid^="sound-now-state-nature"], [data-testid^="sound-now-state-noise"]').first().waitFor({ timeout: 45000 });
+  const id = await P.page.evaluate(() => document.querySelector('[data-testid^="sound-now-state-"]')?.getAttribute('data-testid'));
+  await P.click('sound-stop');
+  return `wind down played ${id.replace('sound-now-state-', '')}`;
 });
 
 await step('Daily reflection: facts first; categories respected; checked AI text or an honest reason', async () => {

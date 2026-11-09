@@ -8,7 +8,9 @@ import { View } from 'react-native';
 
 import { AppText, Button, Card, Icon, IconButton, IconName, SectionHeader, space, useTheme } from '@/design';
 import { useT } from '@/i18n';
-import { pauseSound, resumeSound, stopSound, useSoundSession } from '@/lib/audio/session';
+import { pauseSound, resumeSound, startSound, stopSound, useSoundSession } from '@/lib/audio/session';
+import { loadSound, SOUND_TOPIC } from '@/lib/audio/soundStore';
+import { categoryForHour, suggestTrack, trackById, trackLayers } from '@/lib/audio/tracks';
 import { subscribe } from '@/lib/storage/json';
 import { dayKey } from '@/lib/wellbeing/dates';
 import { EVENTS_TOPIC } from '@/lib/wellbeing/eventStore';
@@ -90,6 +92,16 @@ export function TodaySound() {
   const router = useRouter();
   const { t } = useT();
   const session = useSoundSession();
+  // A one-tap suggestion for this hour (the person's own latest choice comes first).
+  const [recent, setRecent] = useState<(string | undefined)[]>([]);
+  useEffect(() => {
+    const load = () => loadSound().then((s) => setRecent(s.history.map((h) => h.trackId))).catch(() => {});
+    load();
+    return subscribe(SOUND_TOPIC, load);
+  }, []);
+  const suggested = suggestTrack(categoryForHour(new Date().getHours()), recent);
+  const playing = trackById(session?.trackId);
+  const playSuggested = () => startSound({ mode: suggested.mode, title: t(`wb.sound.tracks.${suggested.id}.title`), layers: trackLayers(suggested), minutes: suggested.minutes, trackId: suggested.id }).catch(() => {});
   return (
     <Card tone="lavender" padding={16} testID="today-sound">
       {session ? (
@@ -99,7 +111,9 @@ export function TodaySound() {
             <AppText variant="caption" color="onLavenderSoft">
               {t('wb.sound.nowPlaying')}
             </AppText>
-            <AppText variant="bodyStrong">{t(`wb.sound.modes.${session.mode}`)}</AppText>
+            <AppText variant="bodyStrong" numberOfLines={1}>
+              {playing ? t(`wb.sound.tracks.${playing.id}.title`) : t(`wb.sound.modes.${session.mode}`)}
+            </AppText>
           </View>
           {session.state === 'paused' ? <IconButton icon="play" label={t('wb.sound.resume')} onPress={() => resumeSound()} size={38} variant="soft" /> : <IconButton icon="pause" label={t('wb.sound.pause')} onPress={() => pauseSound()} size={38} variant="soft" />}
           <IconButton icon="stop" label={t('wb.sound.stop')} onPress={() => stopSound({ completed: false })} size={38} variant="soft" />
@@ -107,7 +121,8 @@ export function TodaySound() {
         </View>
       ) : (
         <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-          <Button label={t('wb.today.calm')} icon="water-outline" size="sm" onPress={() => router.push('/calm' as any)} testID="today-calm" />
+          <Button label={t(`wb.sound.tracks.${suggested.id}.title`)} icon="play" size="sm" onPress={playSuggested} testID="today-sound-suggested" />
+          <Button label={t('wb.today.calm')} icon="water-outline" size="sm" variant="quiet" onPress={() => router.push('/calm' as any)} testID="today-calm" />
           <Button label={t('wb.sound.title')} icon="musical-notes-outline" size="sm" variant="quiet" onPress={() => router.push('/sound' as any)} testID="today-sound-open" />
         </View>
       )}
