@@ -326,7 +326,8 @@ await step('delete everything', async () => {
   }));
   if (token && token === oldToken) throw new Error('the old account token is still stored');
   // On start-up the app creates a fresh, empty anonymous account and its caches; nothing personal may survive.
-  const startup = ['@behappy_language', '@behappy_account_v1', '@behappy_me_cache_v1', '@behappy_mood_checkins_migrated'];
+  // Written again on every start; none holds personal data (@behappy_visits_v1: how many times the web app was opened, for the install card).
+  const startup = ['@behappy_language', '@behappy_account_v1', '@behappy_me_cache_v1', '@behappy_mood_checkins_migrated', '@behappy_visits_v1'];
   // Usage statistics restart for the new anonymous account; only events from before the deletion would be a leak.
   const queue = await page.evaluate(() => JSON.parse(localStorage.getItem('@behappy_analytics_queue_v1') || '[]'));
   const oldEvents = queue.filter((e) => e.at < deletedAt);

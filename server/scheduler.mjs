@@ -14,6 +14,7 @@
 import { safetyFor } from './admin/safety.mjs';
 import { analyticsFor } from './analytics/index.mjs';
 import { ms, ts } from './db/index.mjs';
+import { entitlementsForAccount } from './entitlements.mjs';
 import { notify } from './notify/notifications.mjs';
 import { professionalsFor } from './professional/index.mjs';
 
@@ -40,6 +41,25 @@ export async function runAllJobs(deps, now = deps.clock.now()) {
       if (await notify(db, row.account_id, 'membership_reminder', { endsAt: end, daysLeft: bucket }, `${end}:${bucket}`)) out.reminders += 1;
     } else if (await notify(db, row.account_id, 'membership_expired', { endedAt: end }, `${end}:expired`)) {
       out.expiredNotices += 1;
+    }
+  }
+
+  // BeHappy Plus never renews by itself: a reminder 3 days and 1 day before it
+  // ends, and a note once it has ended (purchases and complimentary days alike).
+  out.plusReminders = 0;
+  const holders = await db.query(
+    `select account_id from orders where product_kind = 'plus' and status = 'approved' and approved_at > $1
+     union select account_id from entitlement_grants where revoked_at is null and starts_at > $1`,
+    [ts(now - 400 * DAY)]
+  );
+  for (const { account_id: accountId } of holders.rows) {
+    const end = (await entitlementsForAccount(db, accountId, now)).plus.expiresAt;
+    if (!end) continue;
+    if (end > now && end - now <= 3 * DAY) {
+      const bucket = end - now <= DAY ? 1 : 3;
+      if (await notify(db, accountId, 'plus_ending', { endsAt: end, daysLeft: bucket }, `plus:${end}:${bucket}`)) out.plusReminders += 1;
+    } else if (end <= now && now - end < 2 * DAY) {
+      if (await notify(db, accountId, 'plus_ended', { endedAt: end }, `plus:${end}:ended`)) out.plusReminders += 1;
     }
   }
 

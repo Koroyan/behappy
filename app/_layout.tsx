@@ -9,6 +9,7 @@ import { FeedbackProvider, ThemeProvider, useTheme } from '@/design';
 import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
 import { ConsentProvider } from '@/features/common/Consent';
 import { PwaBridge } from '@/features/pwa/PwaBridge';
+import { PendingPaymentWatcher } from '@/features/payments/PendingPaymentWatcher';
 import { AppShell, FontGate } from '@/features/shell/AppShell';
 import { AccountProvider } from '@/lib/api/account';
 import { WellbeingBridge } from '@/features/wellbeing/WellbeingBridge';
@@ -30,6 +31,8 @@ function Navigator() {
         <AnalyticsTracker />
         <NotificationsBridge />
         <WellbeingBridge />
+        {/* A payment finished elsewhere (iPhone: Flitt's browser sheet over the installed app) is noticed here. */}
+        <PendingPaymentWatcher />
         <Stack
           screenOptions={{
             headerShown: false,

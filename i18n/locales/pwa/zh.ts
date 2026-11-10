@@ -29,4 +29,21 @@ export const pwaZh: typeof import('./en').pwaEn = {
     unsupported: '此浏览器无法接收网站通知。所有内容仍会显示在 BeHappy 中。',
     webDevice: '此设备上的通知',
   },
+  payment: {
+    returnHint: '如果此页面是在单独的窗口中打开的，请关闭它（“完成”）返回 BeHappy。应用会自动确认付款。',
+  },
+  notify: {
+    title: '有人给你留言时及时知道',
+    body: '开启回复、消息和预约的通知。通知类型和免打扰时段可在设置中更改。',
+    enable: '开启',
+    later: '暂不',
+  },
+  plan: {
+    current: '你的方案',
+    daysLeft: '剩余天数：{n}',
+    extendNotice: '你的 Plus 已有效至 {date}。再次付款会增加 {days} 天，Plus 将持续到 {newDate}。',
+    extend: '延长 {days} 天',
+    alreadyOwned: '艺术治疗课程已经属于你，无需付款。',
+    paidJustNow: '你之前的付款已成功：Plus 有效至 {date}。',
+  },
 };

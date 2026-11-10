@@ -29,4 +29,21 @@ export const pwaIt: typeof import('./en').pwaEn = {
     unsupported: 'Questo browser non può ricevere notifiche dai siti web. Tutto appare comunque in BeHappy.',
     webDevice: 'Notifiche su questo dispositivo',
   },
+  payment: {
+    returnHint: 'Se questa pagina si è aperta in una finestra a parte, chiudila («Fine») per tornare a BeHappy. L’app rileva il pagamento da sola.',
+  },
+  notify: {
+    title: 'Sappi quando qualcuno ti scrive',
+    body: 'Attiva le notifiche per risposte, messaggi e appuntamenti. Tipi e ore di silenzio si cambiano nelle Impostazioni.',
+    enable: 'Attiva',
+    later: 'Non ora',
+  },
+  plan: {
+    current: 'Il tuo piano',
+    daysLeft: 'Giorni rimasti: {n}',
+    extendNotice: 'Hai già Plus fino al {date}. Un nuovo pagamento aggiunge {days} giorni: Plus durerà fino al {newDate}.',
+    extend: 'Estendi di {days} giorni',
+    alreadyOwned: 'Il programma di arteterapia è già tuo. Non c’è nulla da pagare.',
+    paidJustNow: 'Il tuo pagamento precedente è andato a buon fine: Plus è attivo fino al {date}.',
+  },
 };

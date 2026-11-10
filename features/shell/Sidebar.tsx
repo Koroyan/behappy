@@ -4,9 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Badge, BrandMark, Icon, IconButton, IconName, Press, radius, space, useLayout, useTheme } from '@/design';
+import { AppText, BrandMark, Icon, IconButton, IconName, Press, radius, space, useLayout, useTheme } from '@/design';
 import { useT } from '@/i18n';
 import { hasStaffRole, staffMay, useAccount, useIdentity, useUnread } from '@/lib/api/account';
+
+import { CountBadge } from './CountBadge';
 
 export interface NavItem {
   key: string;
@@ -196,12 +198,12 @@ export function Sidebar() {
       >
         <View>
           <Icon name={active ? item.activeIcon : item.icon} size={22} color={active ? 'onPrimarySoft' : 'textSecondary'} />
-          {item.badge && collapsed ? <View style={{ position: 'absolute', top: -2, end: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: colors.brand }} /> : null}
+          {item.badge && collapsed ? <View style={{ position: 'absolute', top: -2, end: -4, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.danger, borderWidth: 2, borderColor: colors.surface }} /> : null}
         </View>
         <AppText variant={collapsed ? 'caption' : 'callout'} color={active ? 'onPrimarySoft' : 'textSecondary'} numberOfLines={2} align={collapsed ? 'center' : undefined} style={[collapsed ? { fontSize: 11 } : null, !collapsed ? { flex: 1 } : null]}>
           {item.label}
         </AppText>
-        {item.badge && !collapsed ? <Badge label={String(Math.min(item.badge, 99))} tone="primary" /> : null}
+        {item.badge && !collapsed ? <CountBadge count={item.badge} testID={`nav-${item.key}-count`} /> : null}
       </Press>
     );
   };

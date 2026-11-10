@@ -41,7 +41,8 @@
     "qa:wellbeing": "node scripts/qa/wellbeing-journey.mjs",
     "economics:check": "node scripts/unit-economics.mjs --check",
     "pwa:serve": "node scripts/pwa/serve-dist.mjs",
-    "qa:pwa": "node scripts/qa/pwa-check.mjs"
+    "qa:pwa": "node scripts/qa/pwa-check.mjs",
+    "qa:notifications": "node scripts/qa/notifications-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.15",

@@ -29,4 +29,21 @@ export const pwaAz: typeof import('./en').pwaEn = {
     unsupported: 'Bu brauzer saytlardan bildiriş qəbul edə bilmir. Hər şey yenə də BeHappy-də görünür.',
     webDevice: 'Bu cihazda bildirişlər',
   },
+  payment: {
+    returnHint: 'Bu səhifə ayrıca pəncərədə açılıbsa, onu bağlayın (“Done”) və BeHappy-yə qayıdın. Tətbiq ödənişi özü görəcək.',
+  },
+  notify: {
+    title: 'Kimsə yazanda xəbəriniz olsun',
+    body: 'Cavablar, mesajlar və görüşlər üçün bildirişləri yandırın. Növləri və sakit saatları Ayarlarda dəyişmək olar.',
+    enable: 'Yandır',
+    later: 'İndi yox',
+  },
+  plan: {
+    current: 'Planınız',
+    daysLeft: 'Qalan gün: {n}',
+    extendNotice: 'Artıq {date} tarixinədək Plus-ınız var. Yeni ödəniş {days} gün əlavə edir və Plus {newDate} tarixinədək qüvvədə olacaq.',
+    extend: '{days} gün uzat',
+    alreadyOwned: 'Art-terapiya proqramı artıq sizindir. Ödəniləcək heç nə yoxdur.',
+    paidJustNow: 'Əvvəlki ödənişiniz keçdi: Plus {date} tarixinədək aktivdir.',
+  },
 };

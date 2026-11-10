@@ -29,4 +29,21 @@ export const pwaId: typeof import('./en').pwaEn = {
     unsupported: 'Browser ini tidak bisa menerima notifikasi dari situs web. Semuanya tetap tampil di BeHappy.',
     webDevice: 'Notifikasi di perangkat ini',
   },
+  payment: {
+    returnHint: 'Jika halaman ini terbuka di jendela terpisah, tutup jendelanya ("Selesai") untuk kembali ke BeHappy. Aplikasi akan melihat pembayaran dengan sendirinya.',
+  },
+  notify: {
+    title: 'Ketahui saat seseorang menulis untuk Anda',
+    body: 'Aktifkan notifikasi untuk balasan, pesan, dan janji temu. Jenis dan jam tenang bisa diubah di Pengaturan.',
+    enable: 'Aktifkan',
+    later: 'Nanti saja',
+  },
+  plan: {
+    current: 'Paket Anda',
+    daysLeft: 'Sisa hari: {n}',
+    extendNotice: 'Anda sudah punya Plus sampai {date}. Membayar lagi menambah {days} hari, jadi Plus berlaku sampai {newDate}.',
+    extend: 'Perpanjang {days} hari',
+    alreadyOwned: 'Program terapi seni sudah menjadi milik Anda. Tidak ada yang perlu dibayar.',
+    paidJustNow: 'Pembayaran Anda sebelumnya berhasil: Plus aktif sampai {date}.',
+  },
 };

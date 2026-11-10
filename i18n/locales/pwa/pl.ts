@@ -29,4 +29,21 @@ export const pwaPl: typeof import('./en').pwaEn = {
     unsupported: 'Ta przeglądarka nie odbiera powiadomień ze stron. Wszystko nadal widać w BeHappy.',
     webDevice: 'Powiadomienia na tym urządzeniu',
   },
+  payment: {
+    returnHint: 'Jeśli ta strona otworzyła się w osobnym oknie, zamknij je („Gotowe”), aby wrócić do BeHappy. Aplikacja sama zauważy płatność.',
+  },
+  notify: {
+    title: 'Wiedz, kiedy ktoś do ciebie pisze',
+    body: 'Włącz powiadomienia o odpowiedziach, wiadomościach i wizytach. Rodzaje i godziny ciszy zmienisz w Ustawieniach.',
+    enable: 'Włącz',
+    later: 'Nie teraz',
+  },
+  plan: {
+    current: 'Twój plan',
+    daysLeft: 'Pozostało dni: {n}',
+    extendNotice: 'Masz już Plus do {date}. Kolejna płatność doda {days} dni: Plus będzie działać do {newDate}.',
+    extend: 'Przedłuż o {days} dni',
+    alreadyOwned: 'Program arteterapii jest już twój. Nie ma nic do zapłaty.',
+    paidJustNow: 'Twoja wcześniejsza płatność przeszła: Plus jest aktywny do {date}.',
+  },
 };

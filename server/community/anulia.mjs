@@ -8,6 +8,7 @@
 
 import { createAiControls, recordAiUsage } from '../ai.mjs';
 import { ts } from '../db/index.mjs';
+import { notify } from '../notify/notifications.mjs';
 import { entitlementsForAccount } from '../entitlements.mjs';
 import { SERVER_PROMPTS } from '../prompts/index.mjs';
 import { checkAndRecord } from '../quota.mjs';
@@ -108,6 +109,7 @@ export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch
     if (!reply) return unavailable(account.id, roomId, 'error');
     const risk = String(parsed.risk_level || 'none');
 
+    let told = false;
     const id = await db.tx(async (t) => {
       const ins = await t.query("insert into community_messages (room_id, author_account_id, author_kind, author_pseudonym, body, reply_to_id, status, created_at, flags) values ($1, null, 'anulia', 'Bea', $2, $3, 'visible', $4, $5::jsonb) returning id", [
         roomId,
@@ -128,9 +130,12 @@ export function createCommunityAnulia({ db, config, fetchImpl = globalThis.fetch
           ]);
         }
       }
+      // The person who asked Bea is waiting for her answer: told like any reply.
+      told = Boolean(await notify(t, account.id, 'community_reply', { roomId, messageId: ins.rows[0].id, pseudonym: 'Bea' }, `community_reply:${ins.rows[0].id}`));
       return ins.rows[0].id;
     });
     bus.emit('message:new', { roomId, messageId: id });
+    if (told) bus.emit('notification', { accountId: account.id });
     return id;
   };
 }

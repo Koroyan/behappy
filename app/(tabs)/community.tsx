@@ -6,7 +6,8 @@ import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@
 import { AppText, Banner, Button, Card, Icon, Press, Screen, SectionHeader, Sheet, Skeleton, space, TextField, useFeedback, useLayout } from '@/design';
 import { AccountGate } from '@/features/account/AccountParts';
 import { RoomCard } from '@/features/community/RoomCard';
-import { ProfileButton } from '@/features/shell/ProfileButton';
+import { NotifyPrompt } from '@/features/notifications/NotifyPrompt';
+import { HeaderActions } from '@/features/shell/ProfileButton';
 import { GuidelinesList, MemberAvatar } from '@/features/community/RoomParts';
 import { useT } from '@/i18n';
 import { useAccount, useIdentity } from '@/lib/api/account';
@@ -144,9 +145,11 @@ export default function CommunityHome() {
   ) : null;
 
   return (
-    <Screen tab brand title={t('community.title')} subtitle={t('community.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} aside={aside} asideOnNarrow="below" testID="screen-community">
+    <Screen tab brand title={t('community.title')} subtitle={t('community.subtitle')} headerRight={isCompact ? <HeaderActions /> : undefined} aside={aside} asideOnNarrow="below" testID="screen-community">
       <View style={{ gap: space[5] }}>
         {peer}
+        {/* People who joined rooms hear about new messages, once they allow notifications. */}
+        {identity.registered ? <NotifyPrompt testID="community-notify-prompt" /> : null}
         {!identity.registered ? (
           <AccountGate returnTo="/community" />
         ) : !profile ? (

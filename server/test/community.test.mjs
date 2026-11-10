@@ -261,6 +261,21 @@ describe('Community', () => {
     await t.api(`/api/moderation/suspensions/${ban.json.suspensionId}/lift`, { token: mod.token, method: 'POST', body: { note: 'test cleanup' } });
   });
 
+  test('a joined room tells its members about new messages by default (one per unread burst)', async () => {
+    const reader = await member('Tako');
+    await joinRoom(reader, 'loneliness:en');
+    const settings = await t.db.query("select notify from room_memberships where room_id = 'loneliness:en' and account_id = $1", [reader.accountId]);
+    assert.equal(settings.rows[0].notify, 'all', 'new default: every message');
+    const activity = async () => (await t.db.query("select count(*)::int as n from notifications where account_id = $1 and kind = 'community_activity'", [reader.accountId])).rows[0].n;
+    t.clock.advance(31 * SECOND);
+    await joinRoom(luka, 'loneliness:en');
+    await say(luka, 'loneliness:en', 'Evenings are the hardest for me.');
+    assert.equal(await activity(), 1);
+    t.clock.advance(31 * SECOND);
+    await say(luka, 'loneliness:en', 'Anyone else?');
+    assert.equal(await activity(), 1, 'a burst is one notification until the room is read');
+  });
+
   test('search finds visible messages in the room', async () => {
     t.clock.advance(31 * SECOND);
     await say(mari, 'burnout:en', 'Taking a short walk after lunch helps my burnout.');
@@ -278,6 +293,9 @@ describe('Community', () => {
     const reply = await waitFor(async () => (await read(mari, 'panic:en')).json.messages.find((m) => m.author.kind === 'anulia' && m.replyTo?.id === ask.json.message.id));
     assert.equal(reply.author.pseudonym, 'Bea');
     assert.equal(reply.author.ref, null);
+    const told = await t.db.query("select data from notifications where account_id = $1 and kind = 'community_reply' and (data->>'messageId')::bigint = $2", [nino.accountId, reply.id]);
+    assert.equal(told.rowCount, 1, 'the person who asked Bea is told when she answers');
+    assert.equal(told.rows[0].data.pseudonym, 'Bea');
     assert.doesNotMatch(reply.body, /https?:\/\//, 'no links from the AI in public rooms');
     assert.equal(anuliaCalls, before + 1);
     const call = openai.calls.filter((c) => String(c.body).includes('peer-support room')).at(-1);

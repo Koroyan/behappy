@@ -428,6 +428,29 @@ describe('Professionals', () => {
     t.clock.setOffset(0);
   });
 
+  test('BeHappy Plus does not renew by itself: reminders 3 days and 1 day before, then a note that it ended (each once)', async () => {
+    const acct = await t.newAccount();
+    const now = t.clock.now();
+    // 10 complimentary days that started 8 days ago: 2 days left.
+    await t.db.query("insert into entitlement_grants (account_id, kind, days, starts_at, reason, granted_by) values ($1, 'plus', 10, $2, 'test', 'test')", [acct.accountId, new Date(now - 8 * DAY)]);
+    const kinds = async () => (await t.db.query('select kind, data from notifications where account_id = $1 order by id', [acct.accountId])).rows;
+    await runAllJobs(t.app.locals.deps);
+    await runAllJobs(t.app.locals.deps);
+    let rows = await kinds();
+    assert.deepEqual(rows.map((r) => r.kind), ['plus_ending'], 'once, not every run');
+    assert.equal(rows[0].data.daysLeft, 3);
+    t.clock.setOffset(DAY + HOUR); // under a day left
+    await runAllJobs(t.app.locals.deps);
+    rows = await kinds();
+    assert.deepEqual(rows.map((r) => r.kind), ['plus_ending', 'plus_ending']);
+    assert.equal(rows[1].data.daysLeft, 1);
+    t.clock.setOffset(2 * DAY + HOUR); // ended an hour ago
+    await runAllJobs(t.app.locals.deps);
+    await runAllJobs(t.app.locals.deps);
+    assert.deepEqual((await kinds()).map((r) => r.kind), ['plus_ending', 'plus_ending', 'plus_ended']);
+    t.clock.setOffset(0);
+  });
+
   test('renewal reminders at 7, 3 and 1 days respect the preference; the expiry notice always comes', async () => {
     const pro = await applicant('Nia');
     await call(pro, '/api/pro/submit', 'POST', {});

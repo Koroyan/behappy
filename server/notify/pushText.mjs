@@ -266,5 +266,7 @@ export function pushUrl(items) {
   if (n.kind.startsWith('booking_') && d.bookingId && !['booking_requested', 'booking_confirmed_auto'].includes(n.kind)) return `/appointments/${d.bookingId}`;
   if (n.kind === 'booking_requested' || n.kind === 'booking_confirmed_auto') return '/pro/bookings';
   if (n.kind === 'support_reply' && d.ticketId) return `/support/${d.ticketId}`;
+  if (n.kind === 'payment_approved' || n.kind === 'payment_refunded') return '/purchases';
+  if (n.kind === 'plus_ending' || n.kind === 'plus_ended') return '/pricing';
   return '/notifications';
 }

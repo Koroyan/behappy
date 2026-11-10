@@ -17,6 +17,7 @@ import crypto from 'node:crypto';
 import { durationMs, findProduct, orderDescription } from './catalog.mjs';
 import { ts } from './db/index.mjs';
 import { FINAL_STATUSES, KNOWN_STATUSES, verifySignature } from './flitt.mjs';
+import { notify } from './notify/notifications.mjs';
 import { getOrder } from './orders.mjs';
 
 const ALLOWED_TRANSITIONS = {
@@ -239,6 +240,12 @@ export async function applyFlittUpdate({ db, config, payload, via, trustedChanne
     if (handlers) {
       if (nextStatus === 'approved' && handlers.approve) await handlers.approve(t, updated, now);
       if (reversed && handlers.reverse) await handlers.reverse(t, updated, now);
+    }
+    // The person hears about it even without the return page (a closed browser
+    // sheet, another device): an in-app notification, and a push if they allow it.
+    if (updated.productKind === 'plus' || updated.productKind === 'art') {
+      if (nextStatus === 'approved') await notify(t, updated.accountId, 'payment_approved', { orderId, productKind: updated.productKind, days: updated.durationDays || null }, `paid:${orderId}`);
+      if (reversed) await notify(t, updated.accountId, 'payment_refunded', { orderId, productKind: updated.productKind }, `refunded:${orderId}:${nextStatus}`);
     }
     return { ok: true, order: updated, changed: true };
   });

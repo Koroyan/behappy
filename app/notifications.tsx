@@ -4,12 +4,15 @@ import { View } from 'react-native';
 
 import { AppText, Button, Card, EmptyState, Icon, IconButton, IconName, Screen, Skeleton, space, useTheme } from '@/design';
 import { AccountGate } from '@/features/account/AccountParts';
+import { NotifyPrompt } from '@/features/notifications/NotifyPrompt';
 import { useT } from '@/i18n';
 import { useAccount, useIdentity } from '@/lib/api/account';
 import { AppNotification, listNotifications, markNotificationsRead } from '@/lib/api/notifications';
 import { onEvent } from '@/lib/realtime/socket';
 
 const ICONS: Record<string, IconName> = {
+  payment: 'card-outline',
+  plus: 'sparkles-outline',
   community: 'chatbubbles-outline',
   moderation: 'shield-outline',
   booking: 'calendar-outline',
@@ -56,6 +59,12 @@ function hrefFor(n: AppNotification, isPro: boolean): string | null {
     case 'membership_expired':
     case 'membership_refunded':
       return '/pro/membership';
+    case 'payment_approved':
+    case 'payment_refunded':
+      return '/purchases';
+    case 'plus_ending':
+    case 'plus_ended':
+      return '/pricing';
     default:
       return null;
   }
@@ -94,7 +103,8 @@ export default function Notifications() {
       pseudonym: d.pseudonym || '',
       clientName: d.clientName || t('messages.formerClient'),
       from: d.from || '',
-      date: n.kind.startsWith('membership') ? (d.endsAt ? formatDate(d.endsAt, { day: 'numeric', month: 'long', year: 'numeric' }) : '') : when(d.startsAt),
+      date: n.kind.startsWith('membership') || n.kind.startsWith('plus_') ? (d.endsAt || d.endedAt ? formatDate(d.endsAt || d.endedAt, { day: 'numeric', month: 'long', year: 'numeric' }) : '') : when(d.startsAt),
+      product: d.productKind === 'art' ? t('pricing.artTitle') : t('pricing.plusTitle'),
       days: d.daysLeft ?? d.days ?? '',
     });
     return text === key ? t('notifications.kinds.generic') : text;
@@ -138,6 +148,7 @@ export default function Notifications() {
         </View>
       }
     >
+      {identity.registered ? <NotifyPrompt style={{ marginBottom: space[4] }} /> : null}
       {!identity.registered ? (
         <AccountGate returnTo="/notifications" />
       ) : items === null ? (

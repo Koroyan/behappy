@@ -99,7 +99,9 @@ grant(analyst.email, 'analyst');
 await j('/api/community/profile', { method: 'PUT', token: member.token, body: JSON.stringify({ pseudonym: `Quiet ${Date.now().toString(36).slice(-4)}`, acceptGuidelines: true }) });
 await j('/api/community/rooms/anxiety:en/join', { method: 'POST', token: member.token, body: '{}' });
 await j('/api/community/rooms/anxiety:en/messages', { method: 'POST', token: member.token, body: JSON.stringify({ body: 'Some nights I feel like I want to end my life.' }) });
-const ticket = await j('/api/support/tickets', { method: 'POST', token: member.token, body: JSON.stringify({ category: 'payment', subject: 'QA: charged twice?', body: 'I think I was charged twice for Plus yesterday.' }) });
+// A subject of its own per run: older runs leave tickets with the same words in the queue.
+const SUBJECT = `QA: charged twice? ${Date.now().toString(36)}`;
+const ticket = await j('/api/support/tickets', { method: 'POST', token: member.token, body: JSON.stringify({ category: 'payment', subject: SUBJECT, body: 'I think I was charged twice for Plus yesterday.' }) });
 
 const O = await client(owner, { width: 1440, height: 900 }, 'desktop-owner');
 try {
@@ -141,7 +143,7 @@ try {
   await step('support: the request is readable and the reply reaches the person', async () => {
     await O.click('admin-nav-support');
     await O.wait('screen-admin-support');
-    await O.page.locator('[data-testid="admin-ticket-row"]').filter({ hasText: 'QA: charged twice?' }).first().click();
+    await O.page.locator('[data-testid="admin-ticket-row"]').filter({ hasText: SUBJECT }).first().click();
     await O.wait('screen-admin-ticket');
     await O.fill('admin-ticket-reply', 'We checked: it was a TEST payment, nothing was charged.');
     await O.click('admin-ticket-send');

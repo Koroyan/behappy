@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
 
 import { trackAction } from '@/lib/analytics';
 
-import { apiJson } from './client';
+import { API_BASE_URL, apiJson } from './client';
 
 export type ProductKind = 'plus' | 'art' | 'professional';
 
@@ -98,18 +98,34 @@ export function getQuote(productId: string, promoCode?: string): Promise<Quote> 
   return apiJson<Quote>('/api/payments/quote', { method: 'POST', body: { productId, ...(promoCode ? { promoCode } : {}) } });
 }
 
-export async function startCheckout(productId: string, lang: string, promoCode?: string): Promise<{ order: Order; checkoutUrl: string; product: Product }> {
+/**
+ * `extend`: the person saw that they already have Plus and chose to add days
+ * after its current end (the server refuses Plus during Plus otherwise: 409 plus_active).
+ */
+export async function startCheckout(productId: string, lang: string, promoCode?: string, { extend = false }: { extend?: boolean } = {}): Promise<{ order: Order; checkoutUrl: string; product: Product }> {
   const returnTo =
     Platform.OS === 'web' && typeof window !== 'undefined'
       ? { platform: 'web', origin: window.location.origin, path: '/checkout/result' }
       : { platform: 'native' };
-  const out = await apiJson<{ order: Order; checkoutUrl: string; product: Product }>('/api/payments/checkout', { method: 'POST', body: { productId, lang, returnTo, ...(promoCode ? { promoCode } : {}) } });
+  const out = await apiJson<{ order: Order; checkoutUrl: string; product: Product }>('/api/payments/checkout', { method: 'POST', body: { productId, lang, returnTo, ...(promoCode ? { promoCode } : {}), ...(extend ? { extend: true } : {}) } });
   trackAction('membership', 'checkout_started');
   return out;
 }
 
 export function getOrder(orderId: string): Promise<{ order: Order; entitlements: any }> {
   return apiJson(`/api/payments/orders/${encodeURIComponent(orderId)}`);
+}
+
+/**
+ * The status of one order from the receipt in Flitt's return link, without the
+ * account (the return can open in a browser window where the app isn't signed
+ * in: on iPhone, the sheet over an installed web app). Plain fetch on purpose:
+ * this must never create an account in that window.
+ */
+export async function getOrderReceipt(orderId: string, receipt: string): Promise<{ status: OrderStatus; productKind: string; attemptDeclined: boolean }> {
+  const res = await fetch(`${API_BASE_URL}/api/payments/orders/${encodeURIComponent(orderId)}/receipt?r=${encodeURIComponent(receipt)}`);
+  if (!res.ok) throw new Error(`receipt ${res.status}`);
+  return res.json();
 }
 
 export function listOrders(): Promise<{ orders: Order[] }> {

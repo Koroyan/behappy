@@ -5,7 +5,7 @@ import { ScrollView, View } from 'react-native';
 import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@/contexts/LanguageContext';
 import { AppText, Banner, Button, Chip, EmptyState, Icon, Press, Screen, Segmented, Sheet, Skeleton, space, TextField, useLayout, useTheme } from '@/design';
 import { ProCard } from '@/features/pro/ProParts';
-import { ProfileButton } from '@/features/shell/ProfileButton';
+import { HeaderActions } from '@/features/shell/ProfileButton';
 import { useT } from '@/i18n';
 import { PublicPro, searchPros } from '@/lib/api/pros';
 
@@ -59,7 +59,7 @@ export default function Specialists() {
   );
 
   return (
-    <Screen tab brand title={t('specialists.title')} subtitle={t('specialists.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} testID="screen-specialists">
+    <Screen tab brand title={t('specialists.title')} subtitle={t('specialists.subtitle')} headerRight={isCompact ? <HeaderActions /> : undefined} testID="screen-specialists">
       <View style={{ gap: space[4] }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
           {filterChip(lang ? LANGUAGE_NAMES[lang] : t('specialists.anyLanguage'), Boolean(lang), () => setSheet('language'), 'filter-language')}

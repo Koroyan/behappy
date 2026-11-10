@@ -29,4 +29,21 @@ export const pwaFr: typeof import('./en').pwaEn = {
     unsupported: 'Ce navigateur ne peut pas recevoir de notifications des sites web. Tout apparaît toujours dans BeHappy.',
     webDevice: 'Notifications sur cet appareil',
   },
+  payment: {
+    returnHint: 'Si cette page s’est ouverte dans une fenêtre à part, fermez-la (« OK ») pour revenir à BeHappy. L’app voit le paiement d’elle-même.',
+  },
+  notify: {
+    title: 'Sachez quand quelqu’un vous écrit',
+    body: 'Activez les notifications pour les réponses, les messages et les rendez-vous. Les types et les heures calmes se règlent dans les Réglages.',
+    enable: 'Activer',
+    later: 'Pas maintenant',
+  },
+  plan: {
+    current: 'Votre formule',
+    daysLeft: 'Jours restants : {n}',
+    extendNotice: 'Vous avez déjà Plus jusqu’au {date}. Payer à nouveau ajoute {days} jours : Plus durera jusqu’au {newDate}.',
+    extend: 'Prolonger de {days} jours',
+    alreadyOwned: 'Le programme d’art-thérapie est déjà à vous. Il n’y a rien à payer.',
+    paidJustNow: 'Votre paiement précédent est passé : Plus est actif jusqu’au {date}.',
+  },
 };

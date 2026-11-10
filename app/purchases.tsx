@@ -1,11 +1,11 @@
 import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Platform, Share, View } from 'react-native';
 
 import { AppText, Badge, Banner, Button, Card, Divider, EmptyState, Screen, SectionHeader, space, TextField, useFeedback } from '@/design';
 import { useT } from '@/i18n';
 import { restoreWithCode, useAccount } from '@/lib/api/account';
-import { listOrders, Order } from '@/lib/api/payments';
+import { FINAL_ORDER_STATUSES, listOrders, Order } from '@/lib/api/payments';
 
 export default function PurchasesScreen() {
   const { t, formatDate, formatPrice } = useT();
@@ -23,6 +23,20 @@ export default function PurchasesScreen() {
       .catch(() => setOrders([]));
   }, []);
   useFocusEffect(load);
+
+  // A payment still in progress (just paid, or just declined at Flitt): look again for a
+  // minute, so the list catches up with Flitt by itself instead of showing "Started".
+  const inProgress = Boolean(orders?.some((o) => !FINAL_ORDER_STATUSES.includes(o.status) && !o.attemptDeclined));
+  useEffect(() => {
+    if (!inProgress) return;
+    let n = 0;
+    const timer = setInterval(() => {
+      n += 1;
+      if (n > 15) clearInterval(timer);
+      else load();
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [inProgress, load]);
 
   const copy = async () => {
     const value = account?.recoveryCode;

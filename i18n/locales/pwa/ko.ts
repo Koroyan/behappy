@@ -29,4 +29,21 @@ export const pwaKo: typeof import('./en').pwaEn = {
     unsupported: '이 브라우저는 웹사이트 알림을 받을 수 없어요. 모든 내용은 BeHappy 안에서 볼 수 있어요.',
     webDevice: '이 기기의 알림',
   },
+  payment: {
+    returnHint: '이 페이지가 별도 창에서 열렸다면 창을 닫고(“완료”) BeHappy로 돌아가세요. 앱이 결제를 알아서 확인해요.',
+  },
+  notify: {
+    title: '누군가 글을 쓰면 알려 드려요',
+    body: '답글, 메시지, 예약 알림을 켜세요. 종류와 방해 금지 시간은 설정에서 바꿀 수 있어요.',
+    enable: '켜기',
+    later: '나중에',
+  },
+  plan: {
+    current: '내 요금제',
+    daysLeft: '남은 기간: {n}일',
+    extendNotice: '이미 {date}까지 Plus가 있어요. 다시 결제하면 {days}일이 더해져 Plus가 {newDate}까지 이어져요.',
+    extend: '{days}일 연장하기',
+    alreadyOwned: '미술 치료 프로그램은 이미 갖고 계세요. 결제할 것이 없어요.',
+    paidJustNow: '이전 결제가 완료됐어요: Plus는 {date}까지 이용할 수 있어요.',
+  },
 };

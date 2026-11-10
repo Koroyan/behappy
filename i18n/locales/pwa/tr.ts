@@ -29,4 +29,21 @@ export const pwaTr: typeof import('./en').pwaEn = {
     unsupported: 'Bu tarayıcı sitelerden bildirim alamıyor. Her şey yine BeHappy’de görünür.',
     webDevice: 'Bu cihazda bildirimler',
   },
+  payment: {
+    returnHint: 'Bu sayfa ayrı bir pencerede açıldıysa, BeHappy’ye dönmek için kapatın (“Bitti”). Uygulama ödemeyi kendisi görür.',
+  },
+  notify: {
+    title: 'Biri size yazdığında haberiniz olsun',
+    body: 'Yanıtlar, mesajlar ve randevular için bildirimleri açın. Türler ve sessiz saatler Ayarlar’dan değiştirilir.',
+    enable: 'Aç',
+    later: 'Şimdi değil',
+  },
+  plan: {
+    current: 'Planınız',
+    daysLeft: 'Kalan gün: {n}',
+    extendNotice: '{date} tarihine kadar Plus’ınız zaten var. Yeniden ödemek {days} gün ekler; Plus {newDate} tarihine kadar sürer.',
+    extend: '{days} gün uzat',
+    alreadyOwned: 'Sanat terapisi programı zaten sizin. Ödenecek bir şey yok.',
+    paidJustNow: 'Önceki ödemeniz gerçekleşti: Plus {date} tarihine kadar etkin.',
+  },
 };

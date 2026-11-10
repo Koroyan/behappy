@@ -6,12 +6,19 @@ import { Platform, View } from 'react-native';
 
 import { AppText, Banner, Button, Card, Divider, Icon, Screen, Skeleton, space, TextField } from '@/design';
 import { useT } from '@/i18n';
+import { useAccount } from '@/lib/api/account';
+import { ApiError } from '@/lib/api/client';
 import { getCatalog, getQuote, PENDING_ORDER_KEY, Product, Quote, startCheckout } from '@/lib/api/payments';
+
+const DAY = 24 * 60 * 60 * 1000;
 
 export default function CheckoutScreen() {
   const { product: productId } = useLocalSearchParams<{ product?: string }>();
   const router = useRouter();
-  const { t, formatPrice, language } = useT();
+  const { t, formatPrice, formatDate, language } = useT();
+  // What the person already has: Plus extends after its current end, the Art program is bought once.
+  const { entitlements, refresh } = useAccount();
+  const [justPaid, setJustPaid] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -50,12 +57,16 @@ export default function CheckoutScreen() {
   const name = product?.kind === 'art' ? t('pricing.artTitle') : t('pricing.plusTitle');
   const access = product?.durationDays ? t('pricing.passDays', { days: product.durationDays }) : t('pricing.lifetime');
 
+  const owned = product?.kind === 'art' && entitlements.artProgram.owned;
+  const plusUntil = product?.kind === 'plus' && entitlements.plus.active && entitlements.plus.expiresAt ? entitlements.plus.expiresAt : null;
+  const longDate = (ms: number) => formatDate(ms, { day: 'numeric', month: 'long', year: 'numeric' });
+
   const pay = async () => {
-    if (!product) return;
+    if (!product || owned) return;
     setBusy(true);
     setError(null);
     try {
-      const { order, checkoutUrl } = await startCheckout(product.id, language, applied);
+      const { order, checkoutUrl } = await startCheckout(product.id, language, applied, { extend: Boolean(plusUntil) });
       await AsyncStorage.setItem(PENDING_ORDER_KEY, order.id);
       if (Platform.OS === 'web') {
         // Full-page redirect to Flitt's hosted checkout; Flitt returns via our
@@ -65,7 +76,13 @@ export default function CheckoutScreen() {
       }
       await WebBrowser.openAuthSessionAsync(checkoutUrl, 'behappy://checkout/result');
       router.replace(`/checkout/result?orderId=${encodeURIComponent(order.id)}`);
-    } catch {
+    } catch (e) {
+      // The server knew better (a payment made a moment ago elsewhere): show it, ask again.
+      if (e instanceof ApiError && (e.code === 'plus_active' || e.code === 'already_owned')) {
+        setJustPaid(e.code === 'plus_active');
+        await refresh();
+        return;
+      }
       setError(t('checkout.errorCreate'));
     } finally {
       setBusy(false);
@@ -143,8 +160,24 @@ export default function CheckoutScreen() {
         </Card>
 
         {error && product ? <Banner tone="warning" body={error} /> : null}
+        {justPaid && plusUntil ? <Banner tone="success" body={t('pwa.plan.paidJustNow', { date: longDate(plusUntil) })} /> : null}
+        {owned ? <Banner tone="success" body={t('pwa.plan.alreadyOwned')} /> : null}
+        {plusUntil && product?.durationDays ? (
+          <Banner tone="info" body={t('pwa.plan.extendNotice', { date: longDate(plusUntil), days: product.durationDays, newDate: longDate(plusUntil + product.durationDays * DAY) })} />
+        ) : null}
 
-        <Button label={busy ? t('checkout.redirecting') : t('checkout.pay')} icon="lock-closed-outline" onPress={pay} loading={busy} disabled={!product} fullWidth size="lg" testID="checkout-pay" />
+        {owned ? null : (
+          <Button
+            label={busy ? t('checkout.redirecting') : plusUntil && product?.durationDays ? t('pwa.plan.extend', { days: product.durationDays }) : t('checkout.pay')}
+            icon="lock-closed-outline"
+            onPress={pay}
+            loading={busy}
+            disabled={!product}
+            fullWidth
+            size="lg"
+            testID="checkout-pay"
+          />
+        )}
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="shield-checkmark-outline" size={16} color="textTertiary" />
           <AppText variant="caption" color="textTertiary" align="center">

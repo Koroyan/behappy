@@ -308,6 +308,81 @@ await step('iPhone in Safari: reminders explain "add to Home Screen first" inste
 });
 await ios.close();
 
+// ---------- Paying in Flitt's sheet (iPhone, installed app) ----------
+// iOS shows Flitt (another site) in a browser sheet over the installed app: the
+// payment and the return happen there, in storage that isn't the app's, and the
+// app stays on its checkout screen underneath. Simulated with two contexts.
+if (!args.includes('--skip-pay')) {
+  const app = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await app.addInitScript(seed);
+  const sheet = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await sheet.addInitScript(seed);
+  const ap = await app.newPage();
+  const sp = await sheet.newPage();
+  watch(ap, 'app');
+  watch(sp, 'sheet');
+
+  await step('iPhone sheet: paid in Flitt’s window, the app notices by itself and shows Plus', async () => {
+    let flittUrl = null;
+    await app.route(/pay\.flitt\.com/, (route) => {
+      flittUrl = route.request().url();
+      return route.fulfill({ status: 200, contentType: 'text/html', body: '<p>(the sheet is open over the app)</p>' });
+    });
+    await ap.goto(`${APP}/pricing`, { waitUntil: 'load' });
+    await ap.click('[data-testid="buy-plus_30"]');
+    await ap.click('[data-testid="checkout-pay"]');
+    for (let i = 0; i < 60 && !flittUrl; i += 1) await ap.waitForTimeout(500);
+    check(flittUrl, 'checkout did not open Flitt');
+    await ap.goBack({ waitUntil: 'load' }); // the app as it was under the sheet
+    await ap.waitForSelector('[data-testid="screen-checkout"]', { timeout: 60000 });
+
+    await sp.goto(flittUrl, { waitUntil: 'load' });
+    const card = sp.locator('input[name="f-card_number"]');
+    if (!(await card.isVisible({ timeout: 8000 }).catch(() => false))) await sp.getByText(/^(ბარათი|Card|Карта)$/).first().click();
+    await card.waitFor({ timeout: 60000 });
+    await sp.fill('input[name="f-card_number"]', '4444555511116666');
+    await sp.fill('input[name="f-expiry_date"]', '1230');
+    await sp.fill('input[name="f-cvv2"]', '123');
+    await sp.locator('button', { hasText: /[\d.,]+\s*GEL/i }).first().click();
+    const deadline = Date.now() + 150000;
+    while (!/\/checkout\/result/.test(sp.url())) {
+      check(Date.now() < deadline, `sheet still on ${new URL(sp.url()).host}`);
+      for (const frame of sp.frames()) {
+        const b = frame.getByRole('button', { name: /^Continue$/ });
+        if (await b.isVisible().catch(() => false)) await b.click().catch(() => {});
+      }
+      await sp.waitForTimeout(1000);
+    }
+    // The sheet: verified status by the receipt, and "close this window".
+    await sp.waitForSelector('[data-testid="checkout-result-elsewhere"]', { timeout: 60000 });
+    await sp.waitForFunction(() => /Payment confirmed/.test(document.querySelector('[data-testid="checkout-result-title"]')?.textContent || ''), null, { timeout: 90000 });
+    const sheetTitle = await sp.innerText('[data-testid="checkout-result-title"]');
+    await sp.screenshot({ path: path.join(OUT, 'sheet-result.png') });
+
+    // The app, never told: it notices the payment and shows the result.
+    await ap.waitForSelector('[data-testid="screen-checkout-result"]', { timeout: 60000 });
+    await ap.waitForFunction(() => /Payment confirmed/.test(document.querySelector('[data-testid="checkout-result-title"]')?.textContent || ''), null, { timeout: 90000 });
+    const appTitle = await ap.innerText('[data-testid="checkout-result-title"]');
+    await ap.screenshot({ path: path.join(OUT, 'app-noticed-payment.png') });
+    const token = await ap.evaluate(() => JSON.parse(localStorage.getItem('@behappy_account_v1') || '{}').token);
+    const me = await (await fetch(`${APP}/api/account/me`, { headers: { Authorization: `Bearer ${token}` } })).json();
+    check(me.entitlements?.plus?.active, 'server: Plus not active');
+
+    // Back on Pricing: the current plan is shown; paying again is an explicit extension.
+    await ap.goto(`${APP}/pricing`, { waitUntil: 'load' });
+    await ap.waitForSelector('[data-testid="current-plan"]', { timeout: 60000 });
+    await ap.click('[data-testid="buy-plus_30"]');
+    // The label follows the account (Plus active) once it has loaded.
+    await ap.waitForFunction(() => /Extend by/.test(document.querySelector('[data-testid="checkout-pay"]')?.textContent || ''), null, { timeout: 30000 }).catch(() => {});
+    const label = (await ap.innerText('[data-testid="checkout-pay"]')).trim();
+    check(/Extend by 30 days/.test(label), `pay button: ${label}`);
+    await ap.screenshot({ path: path.join(OUT, 'extend-notice.png') });
+    return `sheet: "${sheetTitle}" + close hint (status from the receipt); app: "${appTitle}", Plus active; then "${label}"`;
+  });
+  await app.close();
+  await sheet.close();
+}
+
 // ---------- Desktop: unchanged layout, no install card ----------
 const desk = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 await desk.addInitScript(seed);

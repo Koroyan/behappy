@@ -15,7 +15,7 @@ import { staffFor, staffRouter } from './admin/staff.mjs';
 import { createAiRouter } from './ai.mjs';
 import { audit } from './audit.mjs';
 import { bearerToken, createAccount, requireAccount, restoreAccount, rotateRecoveryCode } from './auth.mjs';
-import { getCatalog } from './catalog.mjs';
+import { findProduct, getCatalog } from './catalog.mjs';
 import { createClock } from './clock.mjs';
 import { createCrypto } from './crypto.mjs';
 import { schemaVersion } from './db/migrate.mjs';
@@ -258,8 +258,30 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
     }
   });
 
+  /**
+   * No paying twice by mistake. The account's recent open orders are brought up
+   * to date with Flitt first, so a payment made a moment ago (perhaps in a
+   * browser window the app didn't see) already counts. Then:
+   *  - the Art program is bought once: owned → 409 already_owned;
+   *  - Plus while Plus is active → 409 plus_active, unless the app sends
+   *    extend: true after showing that the new days come after the current end.
+   */
+  async function purchaseGuard(account, productId, extend) {
+    const product = findProduct(config.catalog, productId, { professional: config.professional });
+    if (!product || (product.kind !== 'art' && product.kind !== 'plus')) return null;
+    const now = clock.now();
+    const open = (await ordersForAccount(db, account.id)).filter((o) => !isFinal(o.status) && now - o.createdAt < 2 * 60 * 60 * 1000);
+    await Promise.all(open.map((o) => refreshOrderFromFlitt({ db, config, flitt, orderId: o.id, minIntervalMs: 0, now }).catch(() => null)));
+    const ent = await entitlementsForAccount(db, account.id, now);
+    if (product.kind === 'art' && ent.artProgram.owned) return { error: 'already_owned', productKind: 'art' };
+    if (product.kind === 'plus' && ent.plus.active && !extend) return { error: 'plus_active', expiresAt: ent.plus.expiresAt };
+    return null;
+  }
+
   app.post('/api/payments/checkout', json, auth, async (req, res) => {
     try {
+      const blocked = await purchaseGuard(req.account, String(req.body?.productId || ''), req.body?.extend === true);
+      if (blocked) return res.status(409).json(blocked);
       const returnUrl = buildReturnUrl(config, req.body?.returnTo);
       // The price is decided here (promotions held to the safe floor), never by the client.
       const q = await promotions.quote({ accountId: req.account.id, productId: String(req.body?.productId || ''), code: req.body?.promoCode ? String(req.body.promoCode).slice(0, 32) : null, now: clock.now() }).catch((e) => {
@@ -287,13 +309,14 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
   app.get('/api/payments/orders', auth, async (req, res) => {
     const now = clock.now();
     // Bring the newest open orders up to date with Flitt first (a declined attempt,
-    // an expiry), so the list never shows a stale "started". Each check is throttled
-    // inside refreshOrderFromFlitt and never throws.
+    // an expiry), so the list never shows a stale "started". At most three, always
+    // asked afresh: a check a moment earlier (the app watching its order) may have
+    // come before Flitt had the result. refreshOrderFromFlitt never throws.
     const open = (await ordersForAccount(db, req.account.id))
       .filter((o) => !isFinal(o.status))
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 3);
-    await Promise.all(open.map((o) => refreshOrderFromFlitt({ db, config, flitt, orderId: o.id, now }).catch(() => null)));
+    await Promise.all(open.map((o) => refreshOrderFromFlitt({ db, config, flitt, orderId: o.id, minIntervalMs: 0, now }).catch(() => null)));
     const orders = (await ordersForAccount(db, req.account.id)).sort((a, b) => b.createdAt - a.createdAt).map(publicOrder);
     res.json({ orders });
   });
@@ -319,6 +342,26 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
     res.status(200).json({ ok: true, duplicate: Boolean(result.duplicate) });
   });
 
+  // The page Flitt sends the payer back to may open where the app's sign-in is
+  // not: on iPhone, an installed web app shows Flitt (another site) in a browser
+  // sheet, and the return lands in that sheet. The return link carries a receipt
+  // (an HMAC of the order id) that lets that page show the verified status of
+  // that one order: nothing about the account, no way to look up other orders.
+  const receiptFor = (orderId) => deps.crypto.hmac(`order-receipt:${orderId}`).slice(0, 32);
+
+  app.get('/api/payments/orders/:orderId/receipt', async (req, res) => {
+    const orderId = String(req.params.orderId || '');
+    const given = Buffer.from(String(req.query.r || ''));
+    const expected = Buffer.from(receiptFor(orderId));
+    if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return res.status(404).json({ error: 'not_found' });
+    const order = await getOrder(db, orderId);
+    if (!order) return res.status(404).json({ error: 'not_found' });
+    const now = clock.now();
+    const refreshed = isFinal(order.status) ? order : await refreshOrderFromFlitt({ db, config, flitt, orderId, now }).catch(() => order);
+    const p = publicOrder(refreshed);
+    res.set('Cache-Control', 'no-store').json({ status: p.status, productKind: p.productKind, attemptDeclined: p.attemptDeclined });
+  });
+
   // Browser redirect after checkout (Flitt may POST form fields or GET).
   app.all('/api/payments/flitt/return', express.urlencoded({ extended: false, limit: '100kb' }), express.json({ limit: '100kb' }), async (req, res) => {
     const orderId = String(req.query.orderId || req.body?.order_id || '');
@@ -333,7 +376,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
     } catch {
       // status will be retried by the result screen's polling
     }
-    res.redirect(303, withQuery(order.returnUrl || `${config.appPublicUrls[0]}/checkout/result`, { orderId }));
+    res.redirect(303, withQuery(order.returnUrl || `${config.appPublicUrls[0]}/checkout/result`, { orderId, r: receiptFor(orderId) }));
   });
 
   // ---------- Owner tools: the server-side ADMIN_TOKEN (scripts), or a staff session with the permission ----------

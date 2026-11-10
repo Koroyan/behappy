@@ -35,4 +35,21 @@ export const pwaEn = {
     unsupported: 'This browser can’t receive notifications from websites. Everything still appears in BeHappy.',
     webDevice: 'Notifications on this device',
   },
+  payment: {
+    returnHint: 'If this page opened in a separate window, close it (Done) to go back to BeHappy. The app picks up the payment by itself.',
+  },
+  notify: {
+    title: 'Know when someone writes to you',
+    body: 'Turn on notifications for replies, messages and appointments. Every type and quiet hours can be changed in Settings.',
+    enable: 'Turn on',
+    later: 'Not now',
+  },
+  plan: {
+    current: 'Your plan',
+    daysLeft: 'Days left: {n}',
+    extendNotice: 'You already have Plus until {date}. Paying again adds {days} days, so Plus lasts until {newDate}.',
+    extend: 'Extend by {days} days',
+    alreadyOwned: 'The art therapy program is already yours. There is nothing to pay.',
+    paidJustNow: 'Your earlier payment went through: Plus is active until {date}.',
+  },
 };

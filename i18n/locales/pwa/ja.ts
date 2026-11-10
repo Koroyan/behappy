@@ -29,4 +29,21 @@ export const pwaJa: typeof import('./en').pwaEn = {
     unsupported: 'このブラウザはサイトからの通知を受け取れません。内容はすべて BeHappy の中で見られます。',
     webDevice: 'このデバイスへの通知',
   },
+  payment: {
+    returnHint: 'このページが別のウィンドウで開いた場合は、閉じて（「完了」）BeHappy に戻ってください。アプリが支払いを自動で確認します。',
+  },
+  notify: {
+    title: '誰かから連絡があったら分かるように',
+    body: '返信・メッセージ・予約の通知をオンにしましょう。種類やおやすみ時間は設定で変えられます。',
+    enable: 'オンにする',
+    later: '今はしない',
+  },
+  plan: {
+    current: '現在のプラン',
+    daysLeft: '残り日数：{n}',
+    extendNotice: 'すでに {date} まで Plus があります。もう一度支払うと {days} 日追加され、Plus は {newDate} まで続きます。',
+    extend: '{days} 日延長する',
+    alreadyOwned: 'アートセラピープログラムはすでにお持ちです。お支払いは不要です。',
+    paidJustNow: '前回のお支払いは完了しています：Plus は {date} まで有効です。',
+  },
 };

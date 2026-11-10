@@ -30,9 +30,13 @@ export async function loadGoals(): Promise<Goal[]> {
         status: g.status === 'completed' ? 'completed' : 'active',
         completedAt: g.status === 'completed' ? Date.now() : undefined,
       }));
-    list = [...list, ...imported];
-    await writeJson(KEY, list);
-    await writeJson(MIGRATED, true);
+    // Written only when there was something to import: an empty device stays empty
+    // (after "delete everything", nothing comes back by just opening the app).
+    if (imported.length) {
+      list = [...list, ...imported];
+      await writeJson(KEY, list);
+      await writeJson(MIGRATED, true);
+    }
   }
   return list.sort((a, b) => (a.status === b.status ? b.createdAt - a.createdAt : a.status === 'active' ? -1 : 1));
 }

@@ -6,14 +6,21 @@ import { ActivityIndicator, View } from 'react-native';
 import { AppText, Badge, Button, Card, Icon, IconName, Screen, space, useTheme } from '@/design';
 import { useT } from '@/i18n';
 import { useAccount } from '@/lib/api/account';
-import { FINAL_ORDER_STATUSES, getOrder, Order, PENDING_ORDER_KEY } from '@/lib/api/payments';
+import { FINAL_ORDER_STATUSES, getOrder, getOrderReceipt, Order, PENDING_ORDER_KEY } from '@/lib/api/payments';
 
 const POLL_MS = 2500;
 const MAX_WAIT_MS = 3 * 60 * 1000;
 
-/** Shows only what the server verified with Flitt. URL flags are ignored. */
+/**
+ * Shows only what the server verified with Flitt. URL flags are ignored.
+ *
+ * Opened somewhere the app isn't signed in (on iPhone, the browser sheet an
+ * installed web app shows Flitt in: no pending order in this window's storage),
+ * it reads the order's status with the receipt from the return link and says
+ * to close the window: the app itself notices the payment (PendingPaymentWatcher).
+ */
 export default function CheckoutResult() {
-  const params = useLocalSearchParams<{ orderId?: string }>();
+  const params = useLocalSearchParams<{ orderId?: string; r?: string }>();
   const router = useRouter();
   const { t, formatDate, formatPrice } = useT();
   const { colors } = useTheme();
@@ -21,26 +28,38 @@ export default function CheckoutResult() {
   const [order, setOrder] = useState<Order | null>(null);
   const [timedOut, setTimedOut] = useState(false);
   const [missing, setMissing] = useState(false);
+  const [elsewhere, setElsewhere] = useState(false);
   const started = useRef(Date.now());
 
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
     (async () => {
-      const orderId = params.orderId || (await AsyncStorage.getItem(PENDING_ORDER_KEY));
+      const pending = await AsyncStorage.getItem(PENDING_ORDER_KEY);
+      const orderId = params.orderId || pending;
       if (!orderId) {
         setMissing(true);
         return;
       }
+      // Not this window's order, but a signed return link: status only, no account.
+      const viaReceipt = Boolean(params.r) && pending !== orderId;
+      if (viaReceipt) setElsewhere(true);
       const poll = async () => {
         try {
-          const res = await getOrder(orderId);
-          if (!alive) return;
-          setOrder(res.order);
-          if (FINAL_ORDER_STATUSES.includes(res.order.status)) {
-            await AsyncStorage.removeItem(PENDING_ORDER_KEY);
-            refresh();
-            return;
+          if (viaReceipt) {
+            const r = await getOrderReceipt(orderId, String(params.r));
+            if (!alive) return;
+            setOrder({ id: orderId, status: r.status, productKind: r.productKind, attemptDeclined: r.attemptDeclined } as Order);
+            if (FINAL_ORDER_STATUSES.includes(r.status)) return;
+          } else {
+            const res = await getOrder(orderId);
+            if (!alive) return;
+            setOrder(res.order);
+            if (FINAL_ORDER_STATUSES.includes(res.order.status)) {
+              await AsyncStorage.removeItem(PENDING_ORDER_KEY);
+              refresh();
+              return;
+            }
           }
         } catch {
           // keep polling: the server may be momentarily unreachable
@@ -57,7 +76,7 @@ export default function CheckoutResult() {
       alive = false;
       clearTimeout(timer);
     };
-  }, [params.orderId, refresh]);
+  }, [params.orderId, params.r, refresh]);
 
   const status = order?.status;
   const view: { icon: IconName; tone: string; title: string; body: string } =
@@ -95,10 +114,18 @@ export default function CheckoutResult() {
         <AppText variant="title1" align="center" testID="checkout-result-title">
           {view.title}
         </AppText>
-        <AppText variant="body" color="textSecondary" align="center">
-          {view.body}
-        </AppText>
-        {order ? (
+        {/* In Flitt's window (no account here) the end date isn't known: the hint below says what to do. */}
+        {elsewhere && status === 'approved' ? null : (
+          <AppText variant="body" color="textSecondary" align="center">
+            {view.body}
+          </AppText>
+        )}
+        {elsewhere ? (
+          <AppText variant="small" color="textSecondary" align="center" testID="checkout-result-elsewhere">
+            {t('pwa.payment.returnHint')}
+          </AppText>
+        ) : null}
+        {order && !elsewhere ? (
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             <Badge label={t('purchases.testLabel')} tone="gold" icon="flask-outline" />
             <AppText variant="caption" color="textTertiary">
@@ -106,7 +133,7 @@ export default function CheckoutResult() {
             </AppText>
           </View>
         ) : null}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginTop: space[2] }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginTop: space[2], display: elsewhere ? 'none' : 'flex' }}>
           {status === 'approved' ? (
             <Button label={t('checkout.result.continue')} onPress={() => router.replace(pro ? ('/pro/membership' as any) : order?.productKind === 'art' ? '/art' : '/')} testID="checkout-continue" />
           ) : status === 'declined' || status === 'expired' || order?.attemptDeclined ? (

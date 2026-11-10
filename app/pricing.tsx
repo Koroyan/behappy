@@ -15,10 +15,13 @@ export default function PricingScreen() {
   const { entitlements, refresh } = useAccount();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState(false);
+  // "Days left" counts from when the screen was opened.
+  const [openedAt, setOpenedAt] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       setError(false);
+      setOpenedAt(Date.now());
       getCatalog()
         .then(setCatalog)
         .catch(() => setError(true));
@@ -98,8 +101,31 @@ export default function PricingScreen() {
       <View style={{ gap: space[6] }}>
         <Banner tone="test" title={t('common.test')} body={t('pricing.testBanner')} />
 
-        {entitlements.plus.active && entitlements.plus.expiresAt ? (
-          <Banner tone="success" body={t('pricing.youHavePlus', { date: formatDate(entitlements.plus.expiresAt, { day: 'numeric', month: 'long', year: 'numeric' }) })} />
+        {/* The current plan first, so nobody pays twice without meaning to. */}
+        {(entitlements.plus.active && entitlements.plus.expiresAt) || entitlements.artProgram.owned ? (
+          <Card tone="sage" padding={18} testID="current-plan">
+            <View style={{ gap: 6 }}>
+              <AppText variant="label" color="primary">
+                {t('pwa.plan.current')}
+              </AppText>
+              {entitlements.plus.active && entitlements.plus.expiresAt ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Icon name="checkmark-circle" size={20} color="success" />
+                  <AppText variant="bodyStrong" style={{ flexShrink: 1 }}>
+                    {t('pricing.youHavePlus', { date: formatDate(entitlements.plus.expiresAt, { day: 'numeric', month: 'long', year: 'numeric' }) })}
+                  </AppText>
+                  {openedAt ? <Badge label={t('pwa.plan.daysLeft', { n: Math.max(1, Math.ceil((entitlements.plus.expiresAt - openedAt) / 86400000)) })} tone="success" /> : null}
+                </View>
+              ) : null}
+              {entitlements.artProgram.owned ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Icon name="checkmark-circle" size={20} color="success" />
+                  <AppText variant="bodyStrong">{t('pricing.youOwnArt')}</AppText>
+                </View>
+              ) : null}
+              <Button label={t('profile.purchases')} size="sm" variant="quiet" onPress={() => router.push('/purchases')} style={{ alignSelf: 'flex-start' }} />
+            </View>
+          </Card>
         ) : null}
 
         <View style={{ flexDirection: isCompact ? 'column' : 'row', gap: space[5], alignItems: 'stretch' }}>

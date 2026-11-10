@@ -300,7 +300,10 @@ describe('API', () => {
       body: `order_id=${order.id}&order_status=approved&amount=${order.amountMinor}&currency=GEL&merchant_id=1549901`,
     });
     assert.equal(ret.status, 303);
-    assert.equal(ret.headers.get('location'), `http://app.test/checkout/result?orderId=${order.id}`);
+    const back = new URL(ret.headers.get('location'));
+    assert.equal(`${back.origin}${back.pathname}`, 'http://app.test/checkout/result');
+    assert.equal(back.searchParams.get('orderId'), order.id);
+    assert.match(back.searchParams.get('r') || '', /^[0-9a-f]{32}$/, 'a receipt for the return page');
     assert.equal((await getOrder(db, order.id)).status, 'processing');
     assert.equal((await api('/api/account/me', { token: acct.token })).json.entitlements.artProgram.owned, false);
 
@@ -312,6 +315,57 @@ describe('API', () => {
 
     const other = await newAccount();
     assert.equal((await api(`/api/payments/orders/${order.id}`, { token: other.token })).status, 404, 'orders are private to their account');
+  });
+
+  test('the return receipt shows one order’s verified status without the account, nothing more', async () => {
+    const acct = await newAccount();
+    const { json } = await api('/api/payments/checkout', { token: acct.token, method: 'POST', body: { productId: 'plus_30', returnTo: { platform: 'web', origin: 'http://app.test', path: '/checkout/result' } } });
+    const order = await getOrder(db, json.order.id);
+    flitt.statusById.set(order.id, { order_id: order.id, merchant_id: 1549901, amount: order.amountMinor, currency: 'GEL', order_status: 'processing' });
+    const ret = await fetch(`${base}/api/payments/flitt/return?orderId=${order.id}`, { redirect: 'manual' });
+    const r = new URL(ret.headers.get('location')).searchParams.get('r');
+    const pending = await api(`/api/payments/orders/${order.id}/receipt?r=${r}`);
+    assert.equal(pending.status, 200);
+    assert.deepEqual(Object.keys(pending.json).sort(), ['attemptDeclined', 'productKind', 'status'], 'status only: no account, amount or ids');
+    assert.equal(pending.json.status, 'processing');
+    // Flitt approves; the receipt (no sign-in) sees it, and Plus is granted by the server's own check.
+    flitt.statusById.set(order.id, { order_id: order.id, merchant_id: 1549901, amount: order.amountMinor, currency: 'GEL', order_status: 'approved', payment_id: 91 });
+    await db.query('update orders set last_status_check_at = null where id = $1', [order.id]);
+    assert.equal((await api(`/api/payments/orders/${order.id}/receipt?r=${r}`)).json.status, 'approved');
+    assert.equal((await api('/api/account/me', { token: acct.token })).json.entitlements.plus.active, true);
+    // A wrong or borrowed receipt opens nothing.
+    assert.equal((await api(`/api/payments/orders/${order.id}/receipt?r=${'0'.repeat(32)}`)).status, 404);
+    assert.equal((await api(`/api/payments/orders/${order.id}/receipt`)).status, 404);
+    const other = await api('/api/payments/checkout', { token: (await newAccount()).token, method: 'POST', body: { productId: 'plus_30' } });
+    assert.equal((await api(`/api/payments/orders/${other.json.order.id}/receipt?r=${r}`)).status, 404, 'a receipt is for its own order only');
+  });
+
+  test('no paying twice by mistake: Art once; Plus during Plus only as a deliberate extension', async () => {
+    const acct = await newAccount();
+    const buy = (productId, extra = {}) => api('/api/payments/checkout', { token: acct.token, method: 'POST', body: { productId, ...extra } });
+    // Art program, bought and approved: a second purchase is refused.
+    const art = await getOrder(db, (await buy('art_program')).json.order.id);
+    await api('/api/payments/flitt/callback', { method: 'POST', body: signedCallback(art) });
+    const again = await buy('art_program');
+    assert.equal(again.status, 409);
+    assert.equal(again.json.error, 'already_owned');
+
+    // Plus paid at Flitt a moment ago, but the callback hasn't arrived: the server asks Flitt first.
+    const first = await getOrder(db, (await buy('plus_30')).json.order.id);
+    flitt.statusById.set(first.id, { order_id: first.id, merchant_id: 1549901, amount: first.amountMinor, currency: 'GEL', order_status: 'approved', payment_id: 92 });
+    const second = await buy('plus_30');
+    assert.equal(second.status, 409, JSON.stringify(second.json));
+    assert.equal(second.json.error, 'plus_active');
+    assert.ok(second.json.expiresAt > Date.now());
+    // Seen and chosen: extending is allowed, and the days come after the current end.
+    const extend = await buy('plus_30', { extend: true });
+    assert.equal(extend.status, 201);
+    await api('/api/payments/flitt/callback', { method: 'POST', body: signedCallback(await getOrder(db, extend.json.order.id)) });
+    const ent = (await api('/api/account/me', { token: acct.token })).json.entitlements;
+    assert.ok(ent.plus.expiresAt - second.json.expiresAt > 29 * 24 * 60 * 60 * 1000, 'extended after the current end');
+    // Each confirmed payment is also a notification (so the person learns it even without the return page).
+    const notes = (await db.query("select kind, data from notifications where account_id = $1 and kind = 'payment_approved' order by id", [acct.accountId])).rows;
+    assert.deepEqual(notes.map((n) => n.data.productKind), ['art', 'plus', 'plus']);
   });
 
   test('the purchases list shows a declined attempt and grants nothing', async () => {

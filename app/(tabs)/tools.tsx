@@ -9,7 +9,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { AppText, Badge, Card, Chip, Icon, Press, Screen, SectionHeader, space, TextField, useLayout, useTheme } from '@/design';
-import { ProfileButton } from '@/features/shell/ProfileButton';
+import { HeaderActions } from '@/features/shell/ProfileButton';
 import { QUICK, TONE_BG, TONE_FG, Tool, ToolSection, TOOLS } from '@/features/tools/catalog';
 import { useToolFlags } from '@/features/tools/useToolFlags';
 import { useT } from '@/i18n';
@@ -109,7 +109,7 @@ export default function ToolsScreen() {
   );
 
   return (
-    <Screen tab brand title={t('tools.title')} subtitle={t('tools.subtitle')} headerRight={isCompact ? <ProfileButton /> : undefined} testID="screen-tools">
+    <Screen tab brand title={t('tools.title')} subtitle={t('tools.subtitle')} headerRight={isCompact ? <HeaderActions /> : undefined} testID="screen-tools">
       <View style={{ gap: space[6] }}>
         <TextField value={q} onChangeText={setQ} placeholder={t('tools.search')} accessibilityLabel={t('tools.search')} returnKeyType="search" testID="tools-search" />
         {results ? (

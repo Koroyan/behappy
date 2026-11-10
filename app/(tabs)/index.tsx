@@ -9,7 +9,7 @@ import { conversationTitle, listConversations, type Conversation } from '@/featu
 import { loadProgram, type ProgramState } from '@/features/art/program';
 import { MoodPicker } from '@/features/mood/MoodPicker';
 import { InstallCard } from '@/features/pwa/InstallCard';
-import { ProfileButton } from '@/features/shell/ProfileButton';
+import { HeaderActions } from '@/features/shell/ProfileButton';
 import { TODAY_TOOLS, TONE_BG, TONE_FG, TOOLS } from '@/features/tools/catalog';
 import { markToolUsed } from '@/lib/storage/recentTools';
 import { TodayRecap, TodaySound, TodaySteps } from '@/features/wellbeing/TodayCards';
@@ -458,7 +458,7 @@ export default function TodayScreen() {
       eyebrow={formatDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long' })}
       title={title}
       subtitle={t('today.intro')}
-      headerRight={isCompact ? <ProfileButton /> : <Avatar name={name} size={40} />}
+      headerRight={isCompact ? <HeaderActions /> : <Avatar name={name} size={40} />}
       aside={aside}
       testID="screen-today"
     >

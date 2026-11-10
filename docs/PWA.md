@@ -74,9 +74,50 @@ it returns to the screen, at most every 30 minutes.
   which sends the person back to `/checkout/result`.
 - Plus is granted only after the server verifies the payment (signed
   callback, or a status check with Flitt), never from the redirect itself.
-- In an installed app the Flitt page opens inside the app window, with the
-  system's small browser bar on iOS/Android, and the return lands back in
-  the app.
+- On Android the Flitt page opens inside the installed app's window and the
+  return lands back in the app. On iPhone the installed app shows Flitt
+  (another site) in a browser sheet: the return then loads in the sheet,
+  whose storage isn't the app's, and closing the sheet shows the app where it
+  was. Three things cover that:
+  - The return link carries a receipt (an HMAC of the order id). With it,
+    `/api/payments/orders/:id/receipt` gives that one order's verified
+    status, and nothing about the account. The sheet shows "Payment
+    confirmed" and says to close the window.
+  - `features/payments/PendingPaymentWatcher.tsx`: while an order started
+    in the app is open, the app asks the server about it whenever it comes
+    back to the screen. During the first 20 minutes it also asks every 5
+    seconds while on screen. Once Flitt has confirmed the payment, the
+    result screen opens. Declines move nobody: Flitt keeps the order open
+    for another card, and the watch goes on.
+  - The server tells the person anyway: a "Payment confirmed" notification
+    (a push too, if allowed).
+- No paying twice by mistake. Before a checkout, the server checks the
+  account's recent open orders with Flitt (so a payment made a moment ago
+  counts). It then refuses a second Art program (`409 already_owned`), and
+  refuses Plus while Plus is active (`409 plus_active`) unless the app sends
+  `extend: true`. The app sends it only after showing "You already have Plus
+  until …; this adds 30 days, until …". Pricing shows the current plan
+  first.
+
+**What people are told (all platforms).**
+- Every room a person joins tells them about new messages: one notification
+  per unread burst per room, never from someone they blocked or muted. Before
+  launch the default was "mentions only" (migration 016). "Mentions only"
+  and "Nothing" stay one tap away in the room.
+- Replies, @mentions and Bea's answer to a question all notify the person.
+  So do private messages, appointments, support replies and moderation
+  decisions.
+- Payments: payment confirmed or refunded. Plus, which never renews by
+  itself, sends a reminder 3 days and 1 day before it ends, and a note once
+  it has ended.
+- Counts:
+  - a red bell at the top of each main phone screen, with the unread count;
+  - red counts on the tab bar and the sidebar;
+  - the same number on the app icon (phones; the installed web app through
+    the Badging API).
+- A "Know when someone writes to you · Turn on" card on Community and
+  Notifications, while the device has no notifications on. Permission is
+  asked only after the tap, and "Not now" hides the card for 14 days.
 
 **Sessions.** The sign-in token lives in the app's local storage, so it
 survives closing and reopening the installed app. On iPhone the Home Screen
@@ -111,7 +152,9 @@ Production then has web push off and logs a warning at start.
    include the web origin in `APP_PUBLIC_URLS`.
 
 Test locally: `npm run build:web`, `npm run server:local`, `npm run pwa:serve`
-(http://localhost:8090), then `npm run qa:pwa`.
+(http://localhost:8090), then `npm run qa:pwa` and `npm run qa:notifications`
+(add `http://localhost:8090` to `APP_PUBLIC_URLS` in `server/.env`, or the
+return from Flitt goes to the other app address).
 
 ## Installing (for users)
 
