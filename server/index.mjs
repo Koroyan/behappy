@@ -9,6 +9,7 @@ import http from 'node:http';
 
 import { createApp } from './app.mjs';
 import { createClock } from './clock.mjs';
+import { warnIfClockIsWrong } from './clockCheck.mjs';
 import { assertTestModeOnly, config, describeConfig, LEAKED_ROOT_KEY_PRESENT, productionProblems } from './config.mjs';
 import { createDatabase } from './db/index.mjs';
 import { importJsonStore } from './db/import-json.mjs';
@@ -48,6 +49,8 @@ server.listen(config.port, () => {
   if (!config.openai.apiKey) console.warn('[ai] OPENAI_API_KEY is missing: AI features will answer 503.');
   if (config.devTools) console.warn('[dev] Development tools are ON (dev outbox, movable clock). Never use --dev-tools in production.');
   console.log('[payments] Flitt TEST mode only. Test card: 4444 5555 1111 6666 (approved, no 3-D Secure).');
+  // A wrong clock silently breaks Web Push to iPhones, reminders and expiry times.
+  warnIfClockIsWrong(config.flitt.apiBase).catch(() => {});
 });
 
 const shutdown = async () => {

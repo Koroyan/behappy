@@ -11,7 +11,8 @@ import { after, before, describe, test } from 'node:test';
 import { mountCommunity, startCommunityRealtime } from '../community/index.mjs';
 import { cleanReminders, createPush } from '../notify/push.mjs';
 import { mountPush } from '../notify/routes.mjs';
-import { validWebEndpoint, validWebKeys } from '../notify/webpush.mjs';
+import { validWebEndpoint, validWebKeys, vapidSubject } from '../notify/webpush.mjs';
+import { describeSkew, measureClockSkew } from '../clockCheck.mjs';
 import { startTestServer } from './helpers.mjs';
 
 const require = createRequire(import.meta.url);
@@ -100,6 +101,24 @@ describe('Web Push rules (pure)', () => {
     assert.equal(validWebKeys({ ...b.keys, auth: crypto.randomBytes(8).toString('base64url') }), false);
     assert.equal(validWebKeys({ ...b.keys, p256dh: 'not base64!' }), false);
     assert.equal(validWebKeys(null), false);
+  });
+
+  test('the VAPID contact is never a made-up address (Apple refuses those: 403 BadJwtToken)', () => {
+    assert.equal(vapidSubject({ push: { web: { subject: 'mailto:team@behappy.ge' } } }), 'mailto:team@behappy.ge');
+    assert.equal(vapidSubject({ supportEmail: 'help@behappy.ge' }), 'mailto:help@behappy.ge');
+    assert.equal(vapidSubject({ appPublicUrls: ['http://localhost:8081', 'https://abc.ngrok-free.app'] }), 'https://abc.ngrok-free.app');
+    assert.equal(vapidSubject({ appPublicUrls: ['http://localhost:8081'], publicApiUrl: 'http://localhost:8787' }), 'https://behappy.app');
+    assert.ok(!/invalid|localhost/.test(vapidSubject({})));
+  });
+
+  test('a wrong computer clock is measured from a Date header (it breaks Apple Web Push)', async () => {
+    const realNow = Date.now() + 13.5 * 3600 * 1000;
+    const fakeFetch = async () => ({ headers: new Map([['date', new Date(realNow).toUTCString()]]) });
+    const skew = await measureClockSkew('https://pay.flitt.test', fakeFetch);
+    assert.ok(Math.abs(skew - 13.5 * 3600) < 5, String(skew));
+    assert.equal(describeSkew(-skew), '13 h 30 min behind');
+    assert.equal(await measureClockSkew('https://x.test', async () => ({ headers: new Map() })), null);
+    assert.equal(await measureClockSkew('https://x.test', async () => Promise.reject(new Error('offline'))), null);
   });
 
   test('a reminder plan accepts only app paths, known kinds and near times', () => {

@@ -57,12 +57,26 @@ export function validWebKeys(keys) {
   return typeof p === 'string' && typeof a === 'string' && B64URL.test(p) && B64URL.test(a) && b64urlBytes(p) === 65 && b64urlBytes(a) === 16;
 }
 
+/**
+ * The contact in every VAPID signature ("sub"). Apple's push service refuses
+ * made-up ones (403 BadJwtToken: localhost, .invalid and the like), so: the
+ * configured WEB_PUSH_SUBJECT, else SUPPORT_EMAIL, else the app's own public
+ * https address (development: the tunnel in APP_PUBLIC_URLS).
+ */
+export function vapidSubject(config = {}) {
+  const c = config.push?.web || {};
+  if (/^(mailto:[^@\s]+@[^@\s]+\.[a-z]{2,}|https:\/\/)/i.test(c.subject || '')) return c.subject;
+  if (config.supportEmail) return `mailto:${config.supportEmail}`;
+  const publicUrl = [...(config.appPublicUrls || []), config.publicApiUrl].find((u) => /^https:\/\//.test(u || '') && !/\/\/(localhost|127\.|\[::1\])/.test(u));
+  return publicUrl || 'https://behappy.app';
+}
+
 /** The VAPID key pair: configured, or (development) made once and kept. Null = web push off. */
 export async function vapidKeys(deps) {
   if (deps.vapid) return deps.vapid;
   deps.vapid = (async () => {
     const c = deps.config?.push?.web || {};
-    const subject = /^(mailto:|https:\/\/)/.test(c.subject || '') ? c.subject : deps.config?.supportEmail ? `mailto:${deps.config.supportEmail}` : 'mailto:notifications@behappy.invalid';
+    const subject = vapidSubject(deps.config);
     if (c.publicKey && c.privateKey) return { publicKey: c.publicKey, privateKey: c.privateKey, subject };
     if (deps.config?.isProduction) return null;
     const row = (await deps.db.query("select value from server_keys where name = 'vapid'")).rows[0];
@@ -104,14 +118,20 @@ export async function sendWebPush(deps, device, message, { ttlSeconds = 4 * 60 *
     if (code >= 200 && code < 300) return { status: 'ok', id: null };
     return mapStatus(code);
   } catch (e) {
-    if (e?.statusCode) return mapStatus(Number(e.statusCode));
+    if (e?.statusCode) return mapStatus(Number(e.statusCode), e.body);
     return { status: 'error', error: e?.code === 'ETIMEDOUT' || /timeout/i.test(String(e?.message)) ? 'timeout' : 'network' };
   }
 }
 
-function mapStatus(code) {
+function mapStatus(code, body) {
   if (code === 404 || code === 410) return { status: 'error', error: 'DeviceNotRegistered' };
   if (code === 429) return { status: 'error', error: 'http_429' };
   if (TEMPORARY_STATUS(code)) return { status: 'error', error: 'http_5xx' };
-  return { status: 'error', error: `http_${code}`, final: true };
+  let reason = '';
+  try {
+    reason = String(JSON.parse(String(body || '{}')).reason || '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 40);
+  } catch {
+    reason = '';
+  }
+  return { status: 'error', error: reason ? `http_${code}_${reason}` : `http_${code}`, final: true };
 }
