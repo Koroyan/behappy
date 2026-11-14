@@ -2,9 +2,13 @@
 //
 // A push is shown by the phone's operating system, so the server writes it.
 // It never contains what anyone wrote: private messages are encrypted at rest
-// and community posts can be personal. With "show who wrote" off (the
-// default) a push only says that something new arrived; with it on, it names
-// the person (their community pseudonym or professional name) and nothing more.
+// and community posts can be personal. With "show who wrote and where" on
+// (the default) it says who and in which room: the room's name as the title
+// ("Panic attacks"), the person's community pseudonym or professional name in
+// the text ("New message from Nino"). Turned off, a push only says "BeHappy:
+// You have a new message" (lock screens are visible to others).
+
+import { TOPIC_NAMES } from './topicNames.mjs';
 
 const TEXT = {
   en: {
@@ -234,25 +238,41 @@ export function categoryOf(kind) {
 const nameOf = (n) => {
   const d = n.data || {};
   if (n.kind === 'pro_message') return d.from || '';
-  if (n.kind === 'community_reply' || n.kind === 'community_mention') return d.pseudonym || '';
+  if (n.kind.startsWith('community_')) return d.pseudonym || '';
   return '';
 };
 
+const languageOf = (language) => (TEXT[language] ? language : TEXT[String(language || '').split('-')[0]] ? String(language).split('-')[0] : 'en');
+
+/** A community room's name in the phone's language ("panic:en" → "Panic attacks"), or ''. */
+export function roomName(language, roomId) {
+  const topic = String(roomId || '').split(':')[0];
+  return TOPIC_NAMES[languageOf(language)]?.[topic] || TOPIC_NAMES.en?.[topic] || '';
+}
+
+/** The room all these notifications are about, if they are about one room. */
+export function roomOf(items) {
+  const id = items[0]?.data?.roomId;
+  return id && items.every((n) => n.kind.startsWith('community_') && n.data?.roomId === id) ? String(id) : '';
+}
+
 /**
  * Title and body for one push. `items` are the notifications it covers (one,
- * or several merged into a summary).
+ * or several merged into a summary). `previews`: say who wrote and where.
  */
-export function pushText(language, items, { previews = false } = {}) {
-  const tx = TEXT[language] || TEXT[String(language || '').split('-')[0]] || TEXT.en;
+export function pushText(language, items, { previews = true } = {}) {
+  const tx = TEXT[languageOf(language)];
   const title = 'BeHappy';
-  if (items.length > 1) return { title, body: fill(tx.summary, { n: items.length }) };
+  const room = previews ? roomName(language, roomOf(items)) : '';
+  if (items.length > 1) return { title: room || title, body: fill(tx.summary, { n: items.length }) };
   const n = items[0];
   const chat = ['community', 'messages'].includes(categoryOf(n.kind));
   if (!previews) return { title, body: chat ? tx.message : tx.notification };
   const name = nameOf(n);
-  if (n.kind === 'community_activity') return { title, body: tx.community_activity };
-  if (name && tx[n.kind]) return { title, body: fill(tx[n.kind], { name }) };
-  if (chat) return { title, body: tx.message };
+  if (n.kind === 'community_activity') return { title: room || title, body: name ? fill(tx.pro_message, { name }) : tx.community_activity };
+  if (n.kind === 'pro_message') return name ? { title: name, body: tx.message } : { title, body: tx.message };
+  if (name && tx[n.kind]) return { title: room || title, body: fill(tx[n.kind], { name }) };
+  if (chat) return { title: room || title, body: tx.message };
   return { title, body: categoryOf(n.kind) === 'appointments' ? tx.appointment : tx.account };
 }
 

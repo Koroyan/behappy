@@ -33,7 +33,7 @@ export const alertsId = {
     messages: 'Pesan pribadi',
     appointments: 'Janji temu',
     account: 'Akun, keanggotaan, dan bantuan',
-    previews: 'Tampilkan siapa yang menulis',
+    previews: 'Tampilkan siapa yang menulis dan di mana',
     previewsHint: 'Jika mati, notifikasi hanya bertuliskan «Pesan baru». Isi tulisan orang tidak pernah ditampilkan.',
     web: 'Notifikasi browser saat BeHappy terbuka di tab',
     webDenied: 'Browsermu memblokir notifikasi dari situs ini.',

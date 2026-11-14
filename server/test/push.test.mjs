@@ -6,7 +6,8 @@ import { after, before, describe, test } from 'node:test';
 
 import { mountCommunity, startCommunityRealtime } from '../community/index.mjs';
 import { backoffMs, cleanPrefs, createPush, inQuietHours, localMinutes, quietEndsAt } from '../notify/push.mjs';
-import { pushText } from '../notify/pushText.mjs';
+import { PUSH_LANGUAGES, pushText, roomName } from '../notify/pushText.mjs';
+import { TOPIC_NAMES } from '../notify/topicNames.mjs';
 import { mountPush } from '../notify/routes.mjs';
 import { mountProfessionals } from '../professional/index.mjs';
 import { startTestServer } from './helpers.mjs';
@@ -33,19 +34,35 @@ describe('Push rules (pure)', () => {
   test('preferences keep only known keys with valid values', () => {
     const p = cleanPrefs({ community: false, previews: 'yes', quietFrom: 9999, evil: true });
     assert.equal(p.community, false);
-    assert.equal(p.previews, false);
+    assert.equal(p.previews, true, 'not a boolean: the default (who and where) stays');
+    assert.equal(cleanPrefs({ previews: false }).previews, false);
     assert.equal(p.quietFrom, 22 * 60);
     assert.equal('evil' in p, false);
   });
 
-  test('push text never contains message content and names people only with previews on', () => {
-    const n = { kind: 'community_reply', data: { pseudonym: 'Nino', body: 'secret words' } };
-    assert.deepEqual(pushText('en', [n]), { title: 'BeHappy', body: 'You have a new message' });
-    assert.equal(pushText('en', [n], { previews: true }).body, 'Nino replied to you');
-    assert.equal(pushText('ka', [n], { previews: true }).body, 'Nino-მა გიპასუხა');
-    assert.equal(pushText('en', [n, n, n]).body, 'New notifications: 3');
-    assert.equal(pushText('xx', [n]).body, 'You have a new message', 'unknown languages use English');
-    for (const lang of ['en', 'ka', 'ru', 'ar', 'ja']) assert.ok(!JSON.stringify(pushText(lang, [n], { previews: true })).includes('secret'));
+  test('push text says who wrote and in which room, never what they wrote', () => {
+    const n = { kind: 'community_reply', data: { pseudonym: 'Nino', roomId: 'panic:en', body: 'secret words' } };
+    assert.deepEqual(pushText('en', [n]), { title: 'Panic attacks', body: 'Nino replied to you' });
+    assert.deepEqual(pushText('ka', [n]), { title: 'პანიკური შეტევები', body: 'Nino-მა გიპასუხა' }, 'the room in the phone’s language');
+    assert.deepEqual(pushText('ru-RU', [n]), { title: 'Панические атаки', body: 'Nino ответил(а) вам' });
+    const activity = { kind: 'community_activity', data: { pseudonym: 'Grigory', roomId: 'self_esteem:ka', messageId: 9 } };
+    assert.deepEqual(pushText('en', [activity]), { title: 'Self-esteem', body: 'New message from Grigory' });
+    assert.deepEqual(pushText('ka', [activity]), { title: 'თვითშეფასება', body: 'ახალი შეტყობინება — Grigory' });
+    assert.deepEqual(pushText('en', [{ kind: 'community_mention', data: { pseudonym: 'Bea', roomId: 'sleep:en' } }]), { title: 'Sleep', body: 'Bea mentioned you' });
+    assert.deepEqual(pushText('en', [{ kind: 'pro_message', data: { from: 'Dr. Ana', threadId: 't1' } }]), { title: 'Dr. Ana', body: 'You have a new message' });
+    assert.deepEqual(pushText('en', [n, activity]), { title: 'BeHappy', body: 'New notifications: 2' }, 'two rooms: no room name');
+    assert.deepEqual(pushText('en', [n, n, n]), { title: 'Panic attacks', body: 'New notifications: 3' });
+    assert.deepEqual(pushText('en', [{ kind: 'community_reply', data: { pseudonym: 'Nino', roomId: 'unknown:en' } }]), { title: 'BeHappy', body: 'Nino replied to you' });
+    assert.equal(pushText('xx', [n]).body, 'Nino replied to you', 'unknown languages use English');
+    // Turned off: nothing about who or where (lock screens are visible to others).
+    assert.deepEqual(pushText('en', [n], { previews: false }), { title: 'BeHappy', body: 'You have a new message' });
+    assert.deepEqual(pushText('en', [n, n], { previews: false }), { title: 'BeHappy', body: 'New notifications: 2' });
+    assert.deepEqual(pushText('ka', [activity], { previews: false }), { title: 'BeHappy', body: 'ახალი შეტყობინება გაქვს' });
+    for (const lang of ['en', 'ka', 'ru', 'ar', 'ja']) assert.ok(!JSON.stringify(pushText(lang, [n])).includes('secret'));
+  });
+
+  test('every room has a name in every push language', () => {
+    for (const lang of PUSH_LANGUAGES) for (const topic of Object.keys(TOPIC_NAMES.en)) assert.ok(roomName(lang, `${topic}:en`), `${lang} ${topic}`);
   });
 });
 
@@ -79,7 +96,7 @@ describe('Push notifications', () => {
   });
   after(() => t.stop());
 
-  test('devices: valid Expo tokens only; preferences default to discreet', async () => {
+  test('devices: valid Expo tokens only; preferences default to who-and-where and quiet nights', async () => {
     const u = await member('Dato');
     const bad = await t.api('/api/push/devices', { token: u.token, method: 'POST', body: { token: 'not-a-token', platform: 'ios' } });
     assert.equal(bad.status, 400);
@@ -87,12 +104,12 @@ describe('Push notifications', () => {
     assert.equal(badPlatform.status, 400);
     await phone(u);
     const p = await t.api('/api/push/prefs', { token: u.token });
-    assert.equal(p.json.prefs.previews, false);
+    assert.equal(p.json.prefs.previews, true);
     assert.equal(p.json.prefs.quiet, true);
     assert.equal((await t.api('/api/push/prefs')).status, 401);
   });
 
-  test('a reply is pushed once, discreetly, with the badge and where to open it', async () => {
+  test('a reply is pushed once, with who and where (not what), the badge and where to open it', async () => {
     const nino = await member('Nino');
     const luka = await member('Luka');
     const tok = await phone(luka);
@@ -103,7 +120,8 @@ describe('Push notifications', () => {
     await flush();
     const msgs = sentTo(tok);
     assert.equal(msgs.length, 1);
-    assert.equal(msgs[0].body, 'You have a new message');
+    assert.equal(msgs[0].title, 'Sleep');
+    assert.equal(msgs[0].body, 'Nino replied to you');
     assert.equal(msgs[0].data.url, `/community/${ROOM}`);
     assert.ok(msgs[0].badge >= 1);
     assert.ok(!JSON.stringify(msgs[0]).includes('Every night'), 'message text never leaves in a push');
@@ -111,15 +129,16 @@ describe('Push notifications', () => {
     assert.equal(sentTo(tok).length, 1, 'never pushed twice');
   });
 
-  test('with "show who wrote" on, the push names the person', async () => {
+  test('with "show who wrote and where" off, the push says only that something arrived', async () => {
     const nino = await member('Nina');
     const mari = await member('Mari');
     const tok = await phone(mari);
-    await prefs(mari, { ...awake, previews: true });
+    await prefs(mari, { ...awake, previews: false });
     const first = await say(mari, 'Hello room');
     await say(nino, 'Hi Mari', { replyToId: first.json.message.id });
     await flush();
-    assert.equal(sentTo(tok)[0]?.body, 'Nina replied to you');
+    assert.equal(sentTo(tok)[0]?.title, 'BeHappy');
+    assert.equal(sentTo(tok)[0]?.body, 'You have a new message');
   });
 
   test('already read in the room, or reading it right now: no push', async () => {

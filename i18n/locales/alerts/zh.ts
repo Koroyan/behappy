@@ -33,7 +33,7 @@ export const alertsZh = {
     messages: '私信',
     appointments: '预约',
     account: '账户、会员和支持',
-    previews: '显示是谁写的',
+    previews: '显示是谁在哪里写的',
     previewsHint: '关闭时，通知只会显示“新消息”。别人写的内容永远不会显示。',
     web: 'BeHappy 在浏览器标签页中打开时的浏览器通知',
     webDenied: '你的浏览器屏蔽了此网站的通知。',

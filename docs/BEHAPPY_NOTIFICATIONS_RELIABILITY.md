@@ -49,9 +49,17 @@ pending → expired (older than 14 hours)
 
 ## What a push says (privacy)
 
-- Default: "BeHappy — You have a new message" / "You have a new notification" /
-  "New notifications: 3". With "Show who wrote" on: the pseudonym or
-  professional name ("Nino replied to you"). **Message text is never pushed.**
+- Default ("Show who wrote and where" on): the room's name in the phone's
+  language as the title and who wrote as the text ("Panic attacks — New
+  message from Nino", "Sleep — Bea mentioned you"); a professional's name for
+  a private message. Turned off: "BeHappy — You have a new message" / "New
+  notifications: 3". **Message text is never pushed.** Room names come from
+  the app's translations (`node scripts/i18n/push-topic-names.mjs` →
+  `server/notify/topicNames.mjs`).
+- Web: one notification per room on the screen (tag `behappy-room-<room>`); a
+  newer one replaces that room's last. Apple refuses a Web Push `Topic` whose
+  length is 4n+1 (400 BadWebPushTopic), so `webTopic()` turns such names into
+  a fixed 32-character digest.
 - Nothing about moods, journals, assessments or art appears on a lock screen;
   reminders use neutral wording (`i18n/locales/alerts`).
 - Phones are tied to the session that registered them: signing out, a revoked
@@ -76,7 +84,7 @@ refreshed on live events, socket reconnect, return to the app and every 90 s.
 
 ## Tests (17 push + 9 planner)
 
-Discreet text and no message content · names only with previews · read in the
+Who and where, never message content · plain text with it off · read in the
 room or reading it now → no push · "Every message" bursts · quiet hours summary
 · categories off · signing out · live badges · DeviceNotRegistered ·
 **temporary failure retried with backoff, never lost in the app** · **5 attempts

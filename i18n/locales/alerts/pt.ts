@@ -33,7 +33,7 @@ export const alertsPt = {
     messages: 'Mensagens privadas',
     appointments: 'Consultas',
     account: 'Conta, assinatura e apoio',
-    previews: 'Mostrar quem escreveu',
+    previews: 'Mostrar quem escreveu e onde',
     previewsHint: 'Desligado: a notificação diz apenas «Nova mensagem». O que as pessoas escrevem nunca é mostrado.',
     web: 'Notificações do navegador enquanto o BeHappy está aberto num separador',
     webDenied: 'O seu navegador bloqueia as notificações deste site.',

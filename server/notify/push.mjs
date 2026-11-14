@@ -37,7 +37,7 @@
 // worker sends each reminder once at its time (sendReminders).
 
 import { ms, ts } from '../db/index.mjs';
-import { categoryOf, pushText, pushUrl } from './pushText.mjs';
+import { categoryOf, pushText, pushUrl, roomOf } from './pushText.mjs';
 import { sendWebPush, validWebEndpoint, validWebKeys } from './webpush.mjs';
 
 const MINUTE = 60 * 1000;
@@ -67,7 +67,8 @@ export const DEFAULT_PREFS = Object.freeze({
   messages: true,
   appointments: true,
   account: true,
-  previews: false,
+  // Who wrote and in which room (never what they wrote): pushText.mjs.
+  previews: true,
   quiet: true,
   quietFrom: 22 * 60,
   quietTo: 8 * 60,
@@ -377,7 +378,8 @@ export function createPush(deps) {
           continue;
         }
         const { web, to, urgency, ...payload } = m;
-        tickets[i] = await deliverWeb({ token: to, web_p256dh: web.p256dh, web_auth: web.auth }, payload, { ttlSeconds: 4 * 60 * 60, urgency, topic: payload.tag === 'behappy-chats' ? 'chats' : 'updates' });
+        // Topic = the tag: a newer push for the same room replaces one still waiting at the push service.
+        tickets[i] = await deliverWeb({ token: to, web_p256dh: web.p256dh, web_auth: web.auth }, payload, { ttlSeconds: 4 * 60 * 60, urgency, topic: payload.tag });
       }
       const phoneTickets = await deliver(phones.map((i) => messages[i]));
       phones.forEach((i, j) => {
@@ -545,6 +547,9 @@ export function createPush(deps) {
       const text = pushText(device.language, items, { previews: prefs.previews });
       if (device.platform === 'web') {
         const chat = ['community', 'messages'].includes(categoryOf(items[0].kind));
+        // One notification per room on the screen: a new one replaces that room's
+        // last, and different rooms don't replace each other.
+        const room = roomOf(items).toLowerCase().replace(/[^a-z0-9]+/g, '-');
         messages.push({
           to: token,
           web: { p256dh: device.web_p256dh, auth: device.web_auth },
@@ -553,7 +558,7 @@ export function createPush(deps) {
           url: pushUrl(items),
           badge: badgeCache.get(device.account_id),
           kind: items.length === 1 ? items[0].kind : 'summary',
-          tag: chat ? 'behappy-chats' : 'behappy-updates',
+          tag: room ? `behappy-room-${room}`.slice(0, 60) : chat ? 'behappy-chats' : 'behappy-updates',
           urgency: chat ? 'high' : 'normal',
         });
         plan.push({ token, ids: keep.map((k) => k.d.id), attempts: Math.max(...keep.map((k) => k.d.attempts)) });

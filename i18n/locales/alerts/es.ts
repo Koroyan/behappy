@@ -33,7 +33,7 @@ export const alertsEs = {
     messages: 'Mensajes privados',
     appointments: 'Citas',
     account: 'Cuenta, membresía y ayuda',
-    previews: 'Mostrar quién escribió',
+    previews: 'Mostrar quién escribió y dónde',
     previewsHint: 'Desactivado: la notificación solo dice «Mensaje nuevo». Lo que escriben nunca se muestra.',
     web: 'Notificaciones del navegador mientras BeHappy está abierto en una pestaña',
     webDenied: 'Tu navegador bloquea las notificaciones de este sitio.',

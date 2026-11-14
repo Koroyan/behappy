@@ -33,7 +33,7 @@ export const alertsKo = {
     messages: '개인 메시지',
     appointments: '예약',
     account: '계정, 멤버십, 지원',
-    previews: '보낸 사람 표시',
+    previews: '누가 어디에 썼는지 표시',
     previewsHint: '끄면 알림에 «새 메시지»라고만 표시돼요. 사람들이 쓴 내용은 절대 표시되지 않아요.',
     web: 'BeHappy가 탭에 열려 있을 때 브라우저 알림',
     webDenied: '브라우저가 이 사이트의 알림을 차단하고 있어요.',

@@ -33,7 +33,7 @@ export const alertsJa = {
     messages: '個別メッセージ',
     appointments: '予約',
     account: 'アカウント、メンバーシップ、サポート',
-    previews: '送信者を表示する',
+    previews: '誰がどこで書いたかを表示する',
     previewsHint: 'オフの場合、通知には「新しいメッセージ」とだけ表示されます。書かれた内容は表示されません。',
     web: 'BeHappy をタブで開いているときのブラウザ通知',
     webDenied: 'お使いのブラウザがこのサイトの通知をブロックしています。',

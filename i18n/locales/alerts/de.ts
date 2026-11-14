@@ -33,7 +33,7 @@ export const alertsDe = {
     messages: 'Private Nachrichten',
     appointments: 'Termine',
     account: 'Konto, Mitgliedschaft und Support',
-    previews: 'Zeigen, wer geschrieben hat',
+    previews: 'Zeigen, wer wo geschrieben hat',
     previewsHint: 'Aus: Eine Mitteilung sagt nur „Neue Nachricht“. Was andere schreiben, wird nie angezeigt.',
     web: 'Browser-Mitteilungen, während BeHappy in einem Tab offen ist',
     webDenied: 'Dein Browser blockiert Mitteilungen dieser Website.',

@@ -40,7 +40,7 @@ export const alertsEn = {
     messages: 'Private messages',
     appointments: 'Appointments',
     account: 'Account, membership and support',
-    previews: 'Show who wrote',
+    previews: 'Show who wrote and where',
     previewsHint: 'Off: a notification only says “New message”. What people write is never shown.',
     web: 'Browser notifications while BeHappy is open in a tab',
     webDenied: 'Your browser blocks notifications for this site.',

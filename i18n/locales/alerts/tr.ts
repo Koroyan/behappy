@@ -33,7 +33,7 @@ export const alertsTr = {
     messages: 'Özel mesajlar',
     appointments: 'Randevular',
     account: 'Hesap, üyelik ve destek',
-    previews: 'Kimin yazdığını göster',
+    previews: 'Kimin nerede yazdığını göster',
     previewsHint: 'Kapalıyken bildirimde yalnızca «Yeni mesaj» yazar. Yazılanlar asla gösterilmez.',
     web: 'BeHappy bir sekmede açıkken tarayıcı bildirimleri',
     webDenied: 'Tarayıcın bu sitenin bildirimlerini engelliyor.',

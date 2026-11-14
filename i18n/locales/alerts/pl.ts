@@ -33,7 +33,7 @@ export const alertsPl = {
     messages: 'Prywatne wiadomości',
     appointments: 'Spotkania',
     account: 'Konto, członkostwo i pomoc',
-    previews: 'Pokazuj, kto napisał',
+    previews: 'Pokazuj, kto i gdzie napisał',
     previewsHint: 'Wyłączone: powiadomienie mówi tylko „Nowa wiadomość”. Treść wiadomości nigdy nie jest pokazywana.',
     web: 'Powiadomienia przeglądarki, gdy BeHappy jest otwarte w karcie',
     webDenied: 'Twoja przeglądarka blokuje powiadomienia z tej strony.',

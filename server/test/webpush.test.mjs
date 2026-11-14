@@ -230,8 +230,9 @@ describe('Web Push', () => {
     const got = to(tab);
     assert.equal(got.length, 1, JSON.stringify(service.received.map((r) => r.message)));
     const { message, headers } = got[0];
-    assert.equal(message.title, 'BeHappy');
-    assert.equal(message.tag, 'behappy-chats');
+    assert.equal(message.title, 'Sleep', 'the room, in the browser’s language');
+    assert.equal(message.body, 'Giorgi replied to you');
+    assert.equal(message.tag, 'behappy-room-sleep-en', 'one notification per room on the screen');
     assert.match(message.url, /^\/community\//);
     assert.ok(!JSON.stringify(message).includes('private words'), 'no message text in a push');
     assert.equal(headers['Content-Encoding'], 'aes128gcm');

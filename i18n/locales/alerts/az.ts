@@ -33,7 +33,7 @@ export const alertsAz = {
     messages: 'Şəxsi mesajlar',
     appointments: 'Görüşlər',
     account: 'Hesab, üzvlük və dəstək',
-    previews: 'Kimin yazdığını göstər',
+    previews: 'Kimin harada yazdığını göstər',
     previewsHint: 'Söndürülüb: bildirişdə yalnız «Yeni mesaj» yazılır. Yazılanlar heç vaxt göstərilmir.',
     web: 'BeHappy tabda açıq olanda brauzer bildirişləri',
     webDenied: 'Brauzeriniz bu saytın bildirişlərini bloklayır.',
