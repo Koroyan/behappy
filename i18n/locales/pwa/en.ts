@@ -53,7 +53,7 @@ export const pwaEn = {
     paidJustNow: 'Your earlier payment went through: Plus is active until {date}.',
     beaFreeTitle: 'Free version',
     beaFree: 'Bea answers simply here, a few messages a day. Plus gives you Bea’s full, professional mode in every message.',
-    beaFullOnce: 'That was Bea’s full mode, free once. From now on she answers simply; Plus brings the full mode to every message.',
+    beaFullOnce: 'That was Bea’s full mode, free once. From now on, Bea answers simply; Plus brings the full mode to every message.',
     beaFreeCta: 'Get Plus',
   },
 };

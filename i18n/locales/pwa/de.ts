@@ -47,7 +47,7 @@ export const pwaDe: typeof import('./en').pwaEn = {
     paidJustNow: 'Deine vorherige Zahlung ist durchgegangen: Plus ist aktiv bis {date}.',
     beaFreeTitle: 'Kostenlose Version',
     beaFree: 'Hier antwortet Bea einfach, auf ein paar Nachrichten am Tag. Mit Plus antwortet Bea auf jede Nachricht im vollen, professionellen Modus.',
-    beaFullOnce: 'Das war Beas voller Modus, einmal kostenlos. Ab jetzt antwortet sie einfach; mit Plus gibt es den vollen Modus bei jeder Nachricht.',
+    beaFullOnce: 'Das war Beas voller Modus, einmal kostenlos. Ab jetzt antwortet Bea einfach; mit Plus gibt es den vollen Modus bei jeder Nachricht.',
     beaFreeCta: 'Plus holen',
   },
 };
