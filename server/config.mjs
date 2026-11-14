@@ -147,7 +147,9 @@ export const config = {
   // The instructions themselves are server-owned (server/prompts/).
   ai: {
     models: {
-      anulia: env.AI_MODEL_ANULIA || 'gpt-5.4-mini',
+      // Bea for Plus (and each free account's first reply): the strong model.
+      // Free accounts then get the light model (config.ai.anulia.freeModel).
+      anulia: modelId(env.AI_MODEL_ANULIA, 'gpt-6.1-sol'),
       // Art reflection reads two photos, follows a three-phase method and keeps
       // the person's words straight; it uses a stronger model than the others
       // (docs/BEHAPPY_AI_MODEL_EVALUATION.md). Other features stay independent.
@@ -159,11 +161,18 @@ export const config = {
       // Daily reflection: short, checked text from facts (server/reflection).
       reflection: modelId(env.AI_MODEL_REFLECTION, 'gpt-5.4-mini'),
     },
+    anulia: {
+      reasoning: oneOf(env.AI_REASONING_ANULIA, ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'], 'low', 'AI_REASONING_ANULIA'),
+      // Free accounts after their first reply: simple answers, a few a day (server/quota.mjs).
+      freeModel: modelId(env.AI_MODEL_ANULIA_FREE, 'gpt-5.4-mini'),
+      freeReasoning: oneOf(env.AI_REASONING_ANULIA_FREE, ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'], 'low', 'AI_REASONING_ANULIA_FREE'),
+      // Used once if the strong model is unavailable for this OpenAI project.
+      fallbackModel: modelId(env.AI_MODEL_ANULIA_FALLBACK, 'gpt-5.4-mini'),
+    },
     cards: {
-      // The free card reflection (one conversation, inside the free AI allowance
-      // of $0.10 per 30 days): the same instructions on the smaller model.
-      freeModel: modelId(env.AI_MODEL_CARDS_FREE, 'gpt-5.4-mini'),
-      freeReasoning: oneOf(env.AI_REASONING_CARDS_FREE, ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'], 'medium', 'AI_REASONING_CARDS_FREE'),
+      // The free card reflection runs on the same strong model, with a smaller
+      // output budget (its own lifetime allowance: server/quota.mjs freeCards).
+      freeMaxOutputTokens: Math.min(6000, Math.max(800, int(env.AI_CARDS_FREE_MAX_OUTPUT_TOKENS, 1500))),
       // Used once if the cards model is unavailable for this OpenAI project.
       fallbackModel: modelId(env.AI_MODEL_CARDS_FALLBACK, 'gpt-5.4-mini'),
       // low: the same replies as medium in the live check, at about half the wait (2.8 s vs 5–10 s).

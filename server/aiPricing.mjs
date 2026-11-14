@@ -81,16 +81,18 @@ export function callCostUsd({ model, input = 0, output = 0, cached = 0 }, overri
  * from the server's own caps (output tokens, retries, history) with 0% cache.
  */
 export const RESERVE_USD = {
-  // gpt-5.4-mini: up to ~24k input (instructions, memory, 60 turns) and 2,048 output.
-  anulia: 0.03,
+  // Plus Bea, gpt-6.1-sol: up to ~24k input (instructions, memory, 60 turns) and 2,048 output.
+  anulia: 0.07,
+  // Free Bea: gpt-5.4-mini (≤ $0.03), or the first reply on gpt-6.1-sol (a new conversation: ≤ ~8k input).
+  anuliaFree: 0.04,
   summary: 0.02,
   motivation: 0.01,
   journal: 0.01,
   // Plus: gpt-6.1-sol, low reasoning: up to ~24k input (instructions, card
   // images, 60 turns) and 6,000 output incl. reasoning.
   cards: 0.12,
-  // Free card reflection: gpt-5.4-mini, medium reasoning, same caps.
-  cardsFree: 0.05,
+  // Free card reflection: gpt-6.1-sol, 40 messages at most (~12k input) and 1,500 output.
+  cardsFree: 0.04,
   community: 0.01,
   reflection: 0.02, // one draft and one correction
   // gpt-6.1-sol, 24 messages per session at most: up to 3 calls, each ~19k input

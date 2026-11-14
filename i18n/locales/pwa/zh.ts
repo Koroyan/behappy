@@ -45,5 +45,9 @@ export const pwaZh: typeof import('./en').pwaEn = {
     extend: '延长 {days} 天',
     alreadyOwned: '艺术治疗课程已经属于你，无需付款。',
     paidJustNow: '你之前的付款已成功：Plus 有效至 {date}。',
+    beaFreeTitle: '免费版',
+    beaFree: '在这里，Bea 每天简单回复几条消息。开通 Plus 后，Bea 会以完整的专业模式回复每一条消息。',
+    beaFullOnce: '刚才是 Bea 的完整模式，可免费使用一次。之后她会简单回复；开通 Plus，每条消息都是完整模式。',
+    beaFreeCta: '开通 Plus',
   },
 };

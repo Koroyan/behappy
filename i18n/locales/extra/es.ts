@@ -545,14 +545,14 @@ export const es: PartialMessages = {
     freeItems: [
       'Diario, registros de ánimo y tendencias',
       'Respiración, meditación y cuestionarios de autoevaluación',
-      '{anulia} mensajes con Bea al mes',
+      'Bea: la primera respuesta en modo completo, luego {anulia} respuestas sencillas al día',
       'La primera sesión de arteterapia y una reflexión con cartas',
       'Recursos de seguridad, siempre',
     ],
     plusTitle: 'BeHappy Plus',
     plusTagline: 'Más tiempo con Bea y todos los programas creativos.',
     plusItems: [
-      'Hasta {anulia} mensajes al día con Bea',
+      'Bea en modo completo y profesional: hasta {anulia} mensajes al día',
       'El programa completo de arteterapia de 43 sesiones',
       'Cartas de reflexión: hasta {cards} reflexiones nuevas al día',
       'Hasta {journal} reflexiones del diario al día',

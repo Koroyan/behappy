@@ -1,6 +1,6 @@
 // Live check of the card-reflection instructions (server/prompts/cards.md) on
-// the models the server uses: Plus (AI_MODEL_CARDS, AI_REASONING_CARDS) and the
-// free reflection (AI_MODEL_CARDS_FREE, AI_REASONING_CARDS_FREE). Scripted,
+// the model the server uses (AI_MODEL_CARDS, AI_REASONING_CARDS), with the Plus
+// output budget and the free reflection's (AI_CARDS_FREE_MAX_OUTPUT_TOKENS). Scripted,
 // synthetic person turns with the real deck images; no real person's data.
 // Costs real OpenAI tokens (a few cents).
 //
@@ -21,8 +21,8 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const arg = (n, d) => (process.argv.includes(`--${n}`) ? process.argv[process.argv.indexOf(`--${n}`) + 1] : d);
 const OUT = arg('out', '');
 const SETUPS = {
-  plus: { model: config.ai.models.cards, reasoning: config.ai.cards.reasoning },
-  free: { model: config.ai.cards.freeModel, reasoning: config.ai.cards.freeReasoning },
+  plus: { model: config.ai.models.cards, reasoning: config.ai.cards.reasoning, maxOutputTokens: config.ai.cards.maxOutputTokens },
+  free: { model: config.ai.models.cards, reasoning: config.ai.cards.reasoning, maxOutputTokens: config.ai.cards.freeMaxOutputTokens },
 };
 const which = arg('setups', 'plus,free').split(',');
 const SUMMARY_REQUEST = "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.";
@@ -57,7 +57,7 @@ async function call(setup, input) {
   const res = await fetch(`${config.openai.baseUrl}/responses`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${config.openai.apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: setup.model, instructions: SERVER_PROMPTS.cards.instructions, reasoning: { effort: setup.reasoning }, max_output_tokens: config.ai.cards.maxOutputTokens, store: false, input }),
+    body: JSON.stringify({ model: setup.model, instructions: SERVER_PROMPTS.cards.instructions, reasoning: { effort: setup.reasoning }, max_output_tokens: setup.maxOutputTokens, store: false, input }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`${res.status} ${JSON.stringify(data.error || data).slice(0, 200)}`);

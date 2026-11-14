@@ -545,14 +545,14 @@ export const id: PartialMessages = {
     freeItems: [
       'Jurnal, catatan suasana hati, dan perkembangan',
       'Pernapasan, meditasi, dan kuesioner cek diri',
-      '{anulia} pesan Bea per bulan',
+      'Bea: jawaban pertama dalam mode lengkap, lalu {anulia} jawaban sederhana per hari',
       'Sesi terapi seni pertama dan satu refleksi kartu',
       'Sumber keselamatan — selalu',
     ],
     plusTitle: 'BeHappy Plus',
     plusTagline: 'Lebih banyak waktu dengan Bea dan semua program kreatif.',
     plusItems: [
-      'Hingga {anulia} pesan Bea per hari',
+      'Bea dalam mode lengkap dan profesional: hingga {anulia} pesan per hari',
       'Program terapi seni lengkap 43 sesi',
       'Kartu refleksi: hingga {cards} refleksi baru per hari',
       'Hingga {journal} refleksi jurnal per hari',

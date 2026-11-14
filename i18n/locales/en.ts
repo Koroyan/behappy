@@ -602,14 +602,14 @@ export const en = {
     freeItems: [
       'Journal, mood check-ins and insights',
       'Breathing, meditation and self-check questionnaires',
-      '{anulia} messages with Bea each month',
+      'Bea: your first answer in full mode, then {anulia} simple answers a day',
       'Art therapy session 1 and one card reflection',
       'Safety resources, always',
     ],
     plusTitle: 'BeHappy Plus',
     plusTagline: 'More time with Bea, and every creative program.',
     plusItems: [
-      'Up to {anulia} messages with Bea a day',
+      'Bea in full, professional mode: up to {anulia} messages a day',
       'The full 43-session Art therapy program',
       'Reflection cards: up to {cards} new reflections a day',
       'Up to {journal} journal reflections a day',

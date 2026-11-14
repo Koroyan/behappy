@@ -45,5 +45,9 @@ export const pwaAz: typeof import('./en').pwaEn = {
     extend: '{days} gün uzat',
     alreadyOwned: 'Art-terapiya proqramı artıq sizindir. Ödəniləcək heç nə yoxdur.',
     paidJustNow: 'Əvvəlki ödənişiniz keçdi: Plus {date} tarixinədək aktivdir.',
+    beaFreeTitle: 'Pulsuz versiya',
+    beaFree: 'Burada Bea sadə cavab verir, gündə bir neçə mesaja. Plus ilə Bea hər mesaja tam, peşəkar rejimdə cavab verir.',
+    beaFullOnce: 'Bu, Bea-nın tam rejimi idi, bir dəfə pulsuz. Bundan sonra o sadə cavab verir; Plus ilə tam rejim hər mesajda olacaq.',
+    beaFreeCta: 'Plus al',
   },
 };

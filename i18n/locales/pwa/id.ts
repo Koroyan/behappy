@@ -45,5 +45,9 @@ export const pwaId: typeof import('./en').pwaEn = {
     extend: 'Perpanjang {days} hari',
     alreadyOwned: 'Program terapi seni sudah menjadi milik Anda. Tidak ada yang perlu dibayar.',
     paidJustNow: 'Pembayaran Anda sebelumnya berhasil: Plus aktif sampai {date}.',
+    beaFreeTitle: 'Versi gratis',
+    beaFree: 'Di sini Bea menjawab dengan sederhana, untuk beberapa pesan sehari. Dengan Plus, Bea menjawab setiap pesan dalam mode lengkap dan profesional.',
+    beaFullOnce: 'Itu tadi mode lengkap Bea, gratis sekali. Mulai sekarang Bea menjawab dengan sederhana; dengan Plus, mode lengkap ada di setiap pesan.',
+    beaFreeCta: 'Dapatkan Plus',
   },
 };

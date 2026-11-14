@@ -45,5 +45,9 @@ export const pwaJa: typeof import('./en').pwaEn = {
     extend: '{days} 日延長する',
     alreadyOwned: 'アートセラピープログラムはすでにお持ちです。お支払いは不要です。',
     paidJustNow: '前回のお支払いは完了しています：Plus は {date} まで有効です。',
+    beaFreeTitle: '無料版',
+    beaFree: 'ここでは Bea は 1日数件のメッセージにシンプルに答えます。Plus なら、すべてのメッセージに Bea のフル（プロフェッショナル）モードで答えます。',
+    beaFullOnce: '今のは Bea のフルモードで、1回だけ無料です。これからはシンプルに答えます。Plus ならすべてのメッセージがフルモードになります。',
+    beaFreeCta: 'Plus にする',
   },
 };

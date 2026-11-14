@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-14T13:12:27.131Z",
+  "date": "2026-11-14T13:43:04.309Z",
   "summary": {
     "plus": {
       "model": "gpt-6.1-sol",
@@ -8,16 +8,16 @@
       "moreThanOneQuestion": 0,
       "noQuestion": 1,
       "suspect": 0,
-      "medianMs": 2737
+      "medianMs": 2257
     },
     "free": {
-      "model": "gpt-5.4-mini",
-      "reasoning": "medium",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
       "replies": 16,
       "moreThanOneQuestion": 0,
-      "noQuestion": 0,
+      "noQuestion": 1,
       "suspect": 0,
-      "medianMs": 1809
+      "medianMs": 2348
     }
   },
   "results": [
@@ -32,7 +32,7 @@
           "bea": "Welcome, I’m Bea. What drew you to this card?",
           "questions": 1,
           "suspect": null,
-          "ms": 2494,
+          "ms": 2277,
           "inputTokens": 4001,
           "outputTokens": 17
         },
@@ -41,63 +41,63 @@
           "bea": "You noticed loneliness in the person. What about them gives you that sense?",
           "questions": 1,
           "suspect": null,
-          "ms": 2938,
+          "ms": 2064,
           "inputTokens": 4032,
           "outputTokens": 19
         },
         {
           "person": "I don't know",
-          "bea": "That’s okay—you don’t have to know. What’s one detail your eye goes to when you look at the card?",
+          "bea": "That’s okay; you don’t have to know. What’s one detail your eye goes to when you look at the person?",
           "questions": 1,
           "suspect": null,
-          "ms": 2541,
+          "ms": 2124,
           "inputTokens": 4060,
-          "outputTokens": 29
+          "outputTokens": 30
         },
         {
           "person": "What does this card mean?",
-          "bea": "There isn’t one fixed meaning—the meaning you find in it is what counts. What do you feel as you look at it now?",
+          "bea": "There isn’t a fixed meaning to this card—what it means to you is what counts. What do you feel as you look at it now?",
           "questions": 1,
           "suspect": null,
-          "ms": 2809,
-          "inputTokens": 4101,
-          "outputTokens": 31
+          "ms": 2039,
+          "inputTokens": 4102,
+          "outputTokens": 34
         },
         {
           "person": "It reminds me of my school years, I was alone a lot",
-          "bea": "You spent a lot of time alone during your school years. What is it like for you to remember that now?",
+          "bea": "You remember being alone a lot during your school years. What is it like for you to remember that now?",
           "questions": 1,
           "suspect": null,
-          "ms": 2762,
-          "inputTokens": 4151,
-          "outputTokens": 27
+          "ms": 2345,
+          "inputTokens": 4155,
+          "outputTokens": 26
         },
         {
           "person": "Can you give me some advice?",
           "bea": "Thank you for sharing that with me. What has helped you before when these memories come up?",
           "questions": 1,
           "suspect": null,
-          "ms": 2268,
-          "inputTokens": 4191,
+          "ms": 2338,
+          "inputTokens": 4194,
           "outputTokens": 23
         },
         {
           "person": "I would like to stop now.",
-          "bea": "We can stop here. Thank you for sharing what this card brought up for you; there’s no need to explore any further.",
+          "bea": "We can stop here. Thank you for sharing what you did; you don’t need to explore it any further.",
           "questions": 0,
           "suspect": null,
-          "ms": 2737,
-          "inputTokens": 4227,
-          "outputTokens": 30
+          "ms": 1863,
+          "inputTokens": 4230,
+          "outputTokens": 27
         },
         {
           "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
-          "bea": "🎴 “My school years”\n\nWhat came up for you: The person on the card looked lonely to you. It reminded you of your school years: “I was alone a lot.”\n\nWhat supports you: You haven’t named a source of support in this reflection. That can stay open for another time.\n\nYour next small step: You chose to stop for now. No further step needs to be decided here.\n\nThis was a reflection with an AI companion, not therapy.",
+          "bea": "🎴 “I was alone a lot”\n\nWhat came up for you: The person on the card looked lonely to you, and it reminded you of your school years: “I was alone a lot.”\n\nWhat supports you: You haven’t named a source of support in this reflection. That can stay open for another time.\n\nYour next small step: You chose to stop here. You haven’t named a further step, and there’s no need to decide one now.\n\nThis was a reflection with an AI companion, not therapy.",
           "questions": 0,
           "suspect": null,
-          "ms": 3341,
+          "ms": 2752,
           "inputTokens": 4287,
-          "outputTokens": 99
+          "outputTokens": 110
         }
       ]
     },
@@ -112,45 +112,45 @@
           "bea": "გამარჯობა, მიხარია, რომ აქ ხარ. რამ მიგიზიდა ამ ბარათში?",
           "questions": 1,
           "suspect": null,
-          "ms": 3051,
+          "ms": 2477,
           "inputTokens": 4001,
           "outputTokens": 26
         },
         {
           "person": "ეს ბარათი იმიტომ ავირჩიე, რომ ძალიან მომეწონა",
-          "bea": "რა მოგეწონა ამ ბარათში ყველაზე მეტად?",
+          "bea": "რა მოგეწონა ყველაზე მეტად ამ ბარათში?",
           "questions": 1,
           "suspect": null,
-          "ms": 1895,
+          "ms": 1756,
           "inputTokens": 4049,
           "outputTokens": 16
         },
         {
           "person": "სიმშვიდეს ვგრძნობ",
-          "bea": "ამ ბარათის ყურებისას სიმშვიდეს გრძნობ. სხეულში სად ამჩნევ ამ სიმშვიდეს?",
+          "bea": "სიმშვიდეს გრძნობ. სხეულში სად ამჩნევ ამ სიმშვიდეს?",
           "questions": 1,
           "suspect": null,
-          "ms": 2376,
+          "ms": 1929,
           "inputTokens": 4078,
-          "outputTokens": 34
+          "outputTokens": 25
         },
         {
           "person": "შენ რას ფიქრობ, რას ნიშნავს?",
-          "bea": "ბარათს წინასწარ განსაზღვრული მნიშვნელობა არ აქვს — მთავარია, შენთვის რას ნიშნავს. შენ სიმშვიდე ახსენე; ბარათში რას უკავშირდება შენთვის ეს სიმშვიდე?",
+          "bea": "ამ ბარათის მნიშვნელობა შენია — მთავარია, შენ რას ხედავ და გრძნობ მასთან, და შენ სიმშვიდე ახსენე. როგორია შენთვის ეს სიმშვიდე?",
           "questions": 1,
           "suspect": null,
-          "ms": 3194,
-          "inputTokens": 4127,
-          "outputTokens": 53
+          "ms": 3051,
+          "inputTokens": 4118,
+          "outputTokens": 47
         },
         {
           "person": "ბავშვობაში სოფელში ბებიასთან ვიყავი ასე",
-          "bea": "ამ სიმშვიდემ სოფელში, ბებიასთან ყოფნა გაგახსენა. რა გახსენდება ყველაზე მკაფიოდ იმ დროიდან?",
+          "bea": "ამ სიმშვიდემ სოფელში, ბებიასთან გატარებული ბავშვობა გაგახსენა. რა გახსენდება იქ ყოფნიდან ყველაზე მკაფიოდ?",
           "questions": 1,
           "suspect": null,
-          "ms": 3743,
-          "inputTokens": 4197,
-          "outputTokens": 35
+          "ms": 2786,
+          "inputTokens": 4182,
+          "outputTokens": 39
         }
       ]
     },
@@ -162,216 +162,216 @@
       "turns": [
         {
           "person": null,
-          "bea": "Здравствуйте, я Беа, ваш ИИ-компаньон. С какой карты вам хотелось бы начать?",
+          "bea": "Здравствуйте, я Беа. С какой из двух карт вам хотелось бы начать?",
           "questions": 1,
           "suspect": null,
-          "ms": 3241,
+          "ms": 2637,
           "inputTokens": 5245,
-          "outputTokens": 27
+          "outputTokens": 21
         },
         {
           "person": "Начну с тяжёлой",
           "bea": "Начнём с тяжёлой. Что первым привлекает ваше внимание на этой карте?",
           "questions": 1,
           "suspect": null,
-          "ms": 2207,
-          "inputTokens": 5284,
+          "ms": 1921,
+          "inputTokens": 5278,
           "outputTokens": 23
         },
         {
           "person": "Мне тяжело на неё смотреть",
-          "bea": "Вам тяжело на неё смотреть — можно не спешить. Что сейчас помогло бы вам продолжить в своём темпе?",
+          "bea": "Не будем спешить. Что на этой карте особенно тяжело для вас видеть?",
           "questions": 1,
           "suspect": null,
-          "ms": 2605,
-          "inputTokens": 5319,
-          "outputTokens": 32
+          "ms": 2180,
+          "inputTokens": 5313,
+          "outputTokens": 21
         },
         {
           "person": "не знаю",
-          "bea": "Не знать — тоже нормально, и продолжать через силу не нужно. Как вы себя чувствуете сейчас?",
+          "bea": "Не знать — тоже нормально, и смотреть на карту сейчас не обязательно. Как вы чувствуете себя прямо сейчас?",
           "questions": 1,
           "suspect": null,
-          "ms": 2658,
-          "inputTokens": 5359,
-          "outputTokens": 40
+          "ms": 2257,
+          "inputTokens": 5342,
+          "outputTokens": 27
         }
       ]
     },
     {
       "setup": "free",
-      "model": "gpt-5.4-mini",
-      "reasoning": "medium",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
       "scenario": "en-emotion",
       "turns": [
         {
           "person": null,
-          "bea": "Welcome. What do you notice first when you look at this card?",
+          "bea": "Welcome, I’m Bea. What drew you to this card?",
           "questions": 1,
           "suspect": null,
-          "ms": 1764,
+          "ms": 1998,
           "inputTokens": 4001,
-          "outputTokens": 108
+          "outputTokens": 17
         },
         {
           "person": "I chose it because the person looks lonely",
-          "bea": "“Lonely” feels like the word that fits here. What about the person makes it feel lonely to you?",
+          "bea": "The person looks lonely to you. What about them gives you that sense?",
           "questions": 1,
           "suspect": null,
-          "ms": 1618,
-          "inputTokens": 4033,
-          "outputTokens": 83
+          "ms": 1983,
+          "inputTokens": 4032,
+          "outputTokens": 19
         },
         {
           "person": "I don't know",
-          "bea": "That’s okay. What is the first detail that catches your eye on the card?",
+          "bea": "That’s okay; you don’t have to know. What’s one detail your eyes settle on?",
           "questions": 1,
           "suspect": null,
-          "ms": 1674,
-          "inputTokens": 4069,
-          "outputTokens": 152
+          "ms": 2149,
+          "inputTokens": 4060,
+          "outputTokens": 24
         },
         {
           "person": "What does this card mean?",
-          "bea": "It means whatever it means to you, and your sense of it is what counts. What do you see or feel when you look at it?",
+          "bea": "The card means whatever it means to you—your sense of it is what counts. What do you feel as you look at it?",
           "questions": 1,
           "suspect": null,
-          "ms": 1791,
-          "inputTokens": 4102,
-          "outputTokens": 134
+          "ms": 1988,
+          "inputTokens": 4096,
+          "outputTokens": 31
         },
         {
           "person": "It reminds me of my school years, I was alone a lot",
-          "bea": "School years, alone a lot. What feels most similar between this card and that time?",
+          "bea": "Being alone a lot during your school years is what comes to mind. What is it like for you to remember that now?",
           "questions": 1,
           "suspect": null,
-          "ms": 1908,
-          "inputTokens": 4154,
-          "outputTokens": 119
+          "ms": 2123,
+          "inputTokens": 4146,
+          "outputTokens": 29
         },
         {
           "person": "Can you give me some advice?",
-          "bea": "That sounds like a hard time. What helped you then, even a little?",
+          "bea": "Thank you for sharing that with me. What has helped you before when these memories come up?",
           "questions": 1,
           "suspect": null,
-          "ms": 1897,
-          "inputTokens": 4189,
-          "outputTokens": 148
+          "ms": 2423,
+          "inputTokens": 4188,
+          "outputTokens": 23
         },
         {
           "person": "I would like to stop now.",
-          "bea": "Of course. You chose “school years, alone a lot,” and “what helped you then, even a little?” was the last place we were looking.",
-          "questions": 1,
+          "bea": "We can stop here. Thank you for sharing what this card brought up for you; there’s no need to explore it further.",
+          "questions": 0,
           "suspect": null,
-          "ms": 1292,
-          "inputTokens": 4222,
-          "outputTokens": 36
+          "ms": 2025,
+          "inputTokens": 4224,
+          "outputTokens": 30
         },
         {
           "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
-          "bea": "🎴 School years, alone a lot\n\nWhat came up for you: “lonely,” and it reminded you of your “school years,” when you were “alone a lot.”\n\nWhat supports you: You didn’t name anything here.\n\nYour next small step: You chose to stop now.\n\nThis was a reflection with an AI companion, not therapy.",
+          "bea": "🎴 “I was alone a lot”\n\nWhat came up for you:\nThe person on the card looked lonely to you. It reminded you of your school years, when you “were alone a lot.”\n\nWhat supports you:\nYou didn’t name a source of support during this reflection. That can stay open for another time.\n\nYour next small step:\nYou chose to stop here. No further step was named, and nothing more needs to be decided now.\n\nThis was a reflection with an AI companion, not therapy.",
           "questions": 0,
           "suspect": null,
-          "ms": 3516,
-          "inputTokens": 4288,
-          "outputTokens": 460
+          "ms": 2765,
+          "inputTokens": 4284,
+          "outputTokens": 107
         }
       ]
     },
     {
       "setup": "free",
-      "model": "gpt-5.4-mini",
-      "reasoning": "medium",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
       "scenario": "ka-resource",
       "turns": [
         {
           "person": null,
-          "bea": "მოგესალმები. რა ძალას ან მხარდაჭერას ხედავ ამ ბარათში შენთვის?",
+          "bea": "გამარჯობა, მიხარია, რომ აქ ხარ. რამ მიგიზიდა ამ ბარათში?",
           "questions": 1,
           "suspect": null,
-          "ms": 2249,
+          "ms": 2909,
           "inputTokens": 4001,
-          "outputTokens": 154
+          "outputTokens": 26
         },
         {
           "person": "ეს ბარათი იმიტომ ავირჩიე, რომ ძალიან მომეწონა",
-          "bea": "მიხარია, რომ ძალიან მოგეწონა. რა არის ამ ბარათში ის ნაწილი, რომელიც ყველაზე მეტად მოგწონს?",
+          "bea": "რა მოგეწონა ამ ბარათში ყველაზე მეტად?",
           "questions": 1,
           "suspect": null,
-          "ms": 1475,
-          "inputTokens": 4051,
-          "outputTokens": 67
+          "ms": 2317,
+          "inputTokens": 4049,
+          "outputTokens": 16
         },
         {
           "person": "სიმშვიდეს ვგრძნობ",
-          "bea": "სიმშვიდე. სად გრძნობ ამას სხეულში?",
+          "bea": "სიმშვიდეს გრძნობ. სად გრძნობ ამ სიმშვიდეს სხეულში?",
           "questions": 1,
           "suspect": null,
-          "ms": 1678,
-          "inputTokens": 4095,
-          "outputTokens": 72
+          "ms": 2348,
+          "inputTokens": 4078,
+          "outputTokens": 23
         },
         {
           "person": "შენ რას ფიქრობ, რას ნიშნავს?",
-          "bea": "ეს იმას ნიშნავს, რასაც შენთვის ნიშნავს — შენი განცდა აქ მთავარია. რა გიჩნდება, როცა ამ სიმშვიდეს უყურებ?",
+          "bea": "ამ ბარათის მნიშვნელობა შენთვის იმაშია, რასაც თავად ხედავ და გრძნობ — შენი განცდაა მთავარი. რა არის ამ ბარათში შენთვის სიმშვიდის მომტანი?",
           "questions": 1,
           "suspect": null,
-          "ms": 1680,
-          "inputTokens": 4127,
-          "outputTokens": 74
+          "ms": 2814,
+          "inputTokens": 4116,
+          "outputTokens": 48
         },
         {
           "person": "ბავშვობაში სოფელში ბებიასთან ვიყავი ასე",
-          "bea": "„ბავშვობაში სოფელში ბებიასთან“ — ეს მოგონება მოვიდა. რა არის ამ სურათში ისეთი, რაც იმ დროს გახსენებს?",
+          "bea": "ბარათმა სოფელში, ბებიასთან გატარებული ბავშვობა გაგახსენა. რა გახსენდება ყველაზე მკაფიოდ იმ დროიდან?",
           "questions": 1,
           "suspect": null,
-          "ms": 1838,
-          "inputTokens": 4180,
-          "outputTokens": 84
+          "ms": 3063,
+          "inputTokens": 4181,
+          "outputTokens": 37
         }
       ]
     },
     {
       "setup": "free",
-      "model": "gpt-5.4-mini",
-      "reasoning": "medium",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
       "scenario": "ru-pair",
       "turns": [
         {
           "person": null,
-          "bea": "Здравствуйте. С какой карты вам хочется начать?",
+          "bea": "Здравствуйте, я Беа. С какой из этих двух карт вам хотелось бы начать?",
           "questions": 1,
           "suspect": null,
-          "ms": 2037,
+          "ms": 2935,
           "inputTokens": 5245,
-          "outputTokens": 171
+          "outputTokens": 22
         },
         {
           "person": "Начну с тяжёлой",
-          "bea": "Понимаю, начнём с тяжёлой. Что в этой карте для вас сейчас самое заметное?",
+          "bea": "Начнём с тяжёлой. Что первым привлекает ваше внимание на этой карте?",
           "questions": 1,
           "suspect": null,
-          "ms": 2524,
-          "inputTokens": 5270,
-          "outputTokens": 133
+          "ms": 1871,
+          "inputTokens": 5279,
+          "outputTokens": 23
         },
         {
           "person": "Мне тяжело на неё смотреть",
-          "bea": "Спасибо, что сказали. Что именно в ней делает смотреть тяжело?",
+          "bea": "Не будем торопиться. Что делает эту карту тяжёлой для вас?",
           "questions": 1,
           "suspect": null,
-          "ms": 1809,
-          "inputTokens": 5310,
-          "outputTokens": 87
+          "ms": 2673,
+          "inputTokens": 5314,
+          "outputTokens": 20
         },
         {
           "person": "не знаю",
-          "bea": "Это нормально. Что на этой карте чуть легче всего смотреть?",
+          "bea": "Не обязательно сейчас знать. Какую часть этой карты вам легче рассматривать?",
           "questions": 1,
           "suspect": null,
-          "ms": 2095,
-          "inputTokens": 5337,
-          "outputTokens": 90
+          "ms": 2960,
+          "inputTokens": 5342,
+          "outputTokens": 19
         }
       ]
     }

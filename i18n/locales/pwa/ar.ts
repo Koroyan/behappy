@@ -45,5 +45,9 @@ export const pwaAr: typeof import('./en').pwaEn = {
     extend: 'تمديد {days} يومًا',
     alreadyOwned: 'برنامج العلاج بالفن لك بالفعل. لا يوجد ما تدفعه.',
     paidJustNow: 'تمت دفعتك السابقة: Plus نشط حتى {date}.',
+    beaFreeTitle: 'النسخة المجانية',
+    beaFree: 'تجيب Bea هنا بشكل بسيط، على بضع رسائل يوميًا. مع Plus تجيب Bea عن كل رسالة بالوضع الكامل والمهني.',
+    beaFullOnce: 'كان ذلك الوضع الكامل لـ Bea، مجانًا لمرة واحدة. من الآن تجيب بشكل بسيط؛ ومع Plus يكون الوضع الكامل في كل رسالة.',
+    beaFreeCta: 'احصل على Plus',
   },
 };

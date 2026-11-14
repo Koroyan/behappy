@@ -545,14 +545,14 @@ export const az: PartialMessages = {
     freeItems: [
       'Gündəlik, əhval qeydləri və dinamika',
       'Nəfəs, meditasiya və özünüyoxlama sorğuları',
-      'Ayda {anulia} Bea mesajı',
+      'Bea: ilk cavab tam rejimdə, sonra gündə {anulia} sadə cavab',
       'İlk art-terapiya seansı və bir kartla düşüncə',
       'Təhlükəsizlik resursları — həmişə',
     ],
     plusTitle: 'BeHappy Plus',
     plusTagline: 'Bea ilə daha çox vaxt və bütün yaradıcı proqramlar.',
     plusItems: [
-      'Gündə {anulia} ədədə qədər Bea mesajı',
+      'Bea tam, peşəkar rejimdə: gündə {anulia} mesaja qədər',
       'Tam, 43 seanslıq art-terapiya proqramı',
       'Düşüncə kartları: gündə {cards} ədədə qədər yeni düşüncə',
       'Gündə {journal} ədədə qədər gündəlik düşüncəsi',

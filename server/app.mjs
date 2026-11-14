@@ -107,7 +107,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
         if (!origin || allowedOrigins.has(origin.replace(/\/$/, ''))) return cb(null, true);
         return cb(null, false);
       },
-      exposedHeaders: ['X-BeHappy-Tier', 'X-BeHappy-Remaining', 'X-BeHappy-Grace'],
+      exposedHeaders: ['X-BeHappy-Tier', 'X-BeHappy-Remaining', 'X-BeHappy-Grace', 'X-BeHappy-Bea'],
     })
   );
   app.use((_req, res, next) => {

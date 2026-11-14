@@ -545,14 +545,14 @@ export const zh: PartialMessages = {
     freeItems: [
       '日记、情绪记录和变化趋势',
       '呼吸、冥想和自我评估问卷',
-      '每月 {anulia} 条 Bea 消息',
+      'Bea：首次回复为完整模式，之后每天 {anulia} 条简单回复',
       '艺术疗愈第 1 节和一次卡片反思',
       '安全资源——始终免费',
     ],
     plusTitle: 'BeHappy Plus',
     plusTagline: '与 Bea 有更多时间，并解锁所有创作课程。',
     plusItems: [
-      '每天最多 {anulia} 条 Bea 消息',
+      '完整专业模式的 Bea：每天最多 {anulia} 条消息',
       '完整的 43 节艺术疗愈课程',
       '反思卡片：每天最多 {cards} 次新的反思',
       '每天最多 {journal} 次日记回应',

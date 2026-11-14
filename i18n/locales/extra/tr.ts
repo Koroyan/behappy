@@ -545,14 +545,14 @@ export const tr: PartialMessages = {
     freeItems: [
       'Günlük, duygu kayıtları ve gidişat',
       'Nefes, meditasyon ve kendini değerlendirme anketleri',
-      'Ayda {anulia} Bea mesajı',
+      'Bea: ilk yanıt tam modda, sonra günde {anulia} basit yanıt',
       'İlk sanat terapisi seansı ve bir kartla düşünme',
       'Güvenlik kaynakları — her zaman',
     ],
     plusTitle: 'BeHappy Plus',
     plusTagline: 'Bea ile daha fazla zaman ve tüm yaratıcı programlar.',
     plusItems: [
-      'Günde {anulia} adede kadar Bea mesajı',
+      'Tam, profesyonel modda Bea: günde {anulia} mesaja kadar',
       '43 seanslık sanat terapisi programının tamamı',
       'Düşünme kartları: günde {cards} adede kadar yeni düşünme',
       'Günde {journal} adede kadar günlük düşüncesi',

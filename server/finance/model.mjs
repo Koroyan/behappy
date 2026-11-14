@@ -53,9 +53,9 @@ export function infraMonthlyUsd(A, activeUsers, option = A.infra.chosen) {
   return { hosting, fixed, total: hosting + fixed, tier: tier.activeUsers, option };
 }
 
-/** Free users' monthly cost (USD) per free account: their AI allowance, their first Art session (amortised), infrastructure. */
+/** Free users' monthly cost (USD) per free account: their AI allowance, their first Art session and card reflection (amortised), infrastructure. */
 export function freeUserMonthlyUsd(A) {
-  return AI_ALLOWANCES.free.usd + AI_ALLOWANCES.freeArt.usd / A.free.artSessionAmortiseMonths + A.infra.perActiveUserUsd;
+  return AI_ALLOWANCES.free.usd + (AI_ALLOWANCES.freeArt.usd + AI_ALLOWANCES.freeCards.usd) / A.free.artSessionAmortiseMonths + A.infra.perActiveUserUsd;
 }
 
 // ---------- Unit costs (what features cost per use) ----------

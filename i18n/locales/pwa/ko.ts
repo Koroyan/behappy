@@ -45,5 +45,9 @@ export const pwaKo: typeof import('./en').pwaEn = {
     extend: '{days}일 연장하기',
     alreadyOwned: '미술 치료 프로그램은 이미 갖고 계세요. 결제할 것이 없어요.',
     paidJustNow: '이전 결제가 완료됐어요: Plus는 {date}까지 이용할 수 있어요.',
+    beaFreeTitle: '무료 버전',
+    beaFree: '여기서 Bea는 하루에 몇 개의 메시지에 간단하게 답해요. Plus에서는 모든 메시지에 Bea의 전체 전문 모드로 답해요.',
+    beaFullOnce: '방금은 Bea의 전체 모드였어요(1회 무료). 이제부터는 간단하게 답해요. Plus에서는 모든 메시지가 전체 모드예요.',
+    beaFreeCta: 'Plus 받기',
   },
 };

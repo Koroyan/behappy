@@ -25,9 +25,13 @@ describe('Economics invariant: at least 15 GEL per 30 days, worst case', () => {
     assert.deepEqual(['plus_30', 'plus_90', 'plus_365', 'art_program', 'professional_30d'].map((id) => requiredGel(byId(id))), [15, 45, 180, 15, 15]);
   });
 
-  test('the cheaper catalog is only safe if the 1% small-business status is confirmed', () => {
+  test('the cheaper catalog is not safe while free accounts get the card reflection on the strong model', () => {
+    // Since 2026-11-14 the free card reflection runs on GPT-6.1 Sol (its own
+    // lifetime allowance, quota.mjs freeCards): about 0.43 GEL per 30 days per
+    // paying customer. The cheaper catalog was safe only with the 1% status;
+    // now it falls short even then (Plus 90, about 0.25 GEL per 30 days).
     const cheap = [...getCatalog('affordable'), ...getProfessionalCatalog()];
-    assert.equal(checkInvariant({ products: cheap, scenario: 'small_business_1' }).ok, true);
+    assert.equal(checkInvariant({ products: cheap, scenario: 'small_business_1' }).ok, false);
     assert.equal(checkInvariant({ products: cheap, scenario: 'worst_case' }).ok, false, 'not before the accountant confirms');
   });
 

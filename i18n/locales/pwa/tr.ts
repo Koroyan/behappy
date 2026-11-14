@@ -45,5 +45,9 @@ export const pwaTr: typeof import('./en').pwaEn = {
     extend: '{days} gün uzat',
     alreadyOwned: 'Sanat terapisi programı zaten sizin. Ödenecek bir şey yok.',
     paidJustNow: 'Önceki ödemeniz gerçekleşti: Plus {date} tarihine kadar etkin.',
+    beaFreeTitle: 'Ücretsiz sürüm',
+    beaFree: 'Burada Bea basitçe yanıt verir, günde birkaç mesaja. Plus ile Bea her mesaja tam, profesyonel modda yanıt verir.',
+    beaFullOnce: 'Bu, Bea’nın tam moduydu, bir kez ücretsiz. Bundan sonra basitçe yanıt verir; Plus ile tam mod her mesajda olur.',
+    beaFreeCta: 'Plus al',
   },
 };

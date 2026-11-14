@@ -22,6 +22,7 @@ import { ChatScroll, Composer, MessageBubble, TypingDots } from '@/features/chat
 import { useEnsureConsent } from '@/features/common/Consent';
 import { LimitNotice } from '@/features/common/LimitNotice';
 import { useT } from '@/i18n';
+import { useAccount } from '@/lib/api/account';
 import { getLastAiMeta } from '@/lib/api/ai';
 import { NetworkError, QuotaError } from '@/lib/api/client';
 import { MicPermissionError, speakText, stopSpeaking, transcribeRecording, useVoiceRecorder, VoiceUnsupportedError } from '@/lib/media/audio';
@@ -51,6 +52,9 @@ export default function AnuliaScreen() {
   const [transcribing, setTranscribing] = useState(false);
   const [limit, setLimit] = useState<QuotaError | null>(null);
   const [graceLeft, setGraceLeft] = useState<number | null>(null);
+  // Free accounts: which Bea answered last ('full' once, then 'lite'), for the note above the composer.
+  const { entitlements } = useAccount();
+  const [beaMode, setBeaMode] = useState<'full' | 'lite' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [summary, setSummary] = useState<ConversationSummary | null>(null);
@@ -138,6 +142,7 @@ export default function AnuliaScreen() {
       await persist(next);
       const meta = getLastAiMeta();
       setGraceLeft(meta.grace !== undefined ? meta.grace : null);
+      if (meta.bea) setBeaMode(meta.bea);
     } catch (e) {
       if (e instanceof QuotaError) {
         setLimit(e);
@@ -315,9 +320,18 @@ export default function AnuliaScreen() {
       <View style={{ paddingTop: space[2], paddingBottom: hasSideNav ? space[4] : space[3], gap: 8 }}>
         {error ? <Banner tone="warning" body={error} /> : null}
         {graceLeft !== null && !limit ? <Banner tone="info" body={t('anulia.graceNote')} /> : null}
+        {!entitlements.plus.active && !limit ? (
+          <Banner
+            tone="test"
+            icon="sparkles-outline"
+            title={t('pwa.plan.beaFreeTitle')}
+            body={beaMode === 'full' ? t('pwa.plan.beaFullOnce') : t('pwa.plan.beaFree')}
+            action={<Button label={t('pwa.plan.beaFreeCta')} size="sm" variant="secondary" icon="arrow-forward" onPress={() => router.push('/pricing')} testID="bea-free-plus" />}
+          />
+        ) : null}
         {limit ? (
           <LimitNotice
-            title={limit.reason === 'daily_limit' ? t('anulia.limitDailyTitle') : limit.reason === 'ai_allowance' ? t('wb.money.allowanceTitle') : t('anulia.limitTitle')}
+            title={limit.reason === 'daily_limit' || limit.reason === 'free_limit' ? t('anulia.limitDailyTitle') : limit.reason === 'ai_allowance' ? t('wb.money.allowanceTitle') : t('anulia.limitTitle')}
             body={
               limit.reason === 'daily_limit'
                 ? t('anulia.limitDailyBody')

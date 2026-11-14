@@ -81,7 +81,10 @@ export const ASSUMPTIONS = {
   // p50/p95 input and output tokens per request (Art: one turn incl. all calls).
   measured: {
     art: { model: 'gpt-6.1-sol', p50: { input: 7774, output: 274 }, p95: { input: 18571, output: 427 }, samples: 54 },
-    anulia: { model: 'gpt-5.4-mini', p50: { input: 2009, output: 132 }, p95: { input: 2362, output: 245 }, samples: 11 },
+    // ESTIMATE since 2026-11-14 (Plus Bea moved to gpt-6.1-sol, low reasoning; free
+    // accounts get gpt-5.4-mini after the first reply): the measured mini input
+    // (2009 / 2362) with room for the longer instructions. Replace with measured values.
+    anulia: { model: 'gpt-6.1-sol', p50: { input: 2900, output: 160 }, p95: { input: 3500, output: 300 }, samples: 0 },
     // ESTIMATE since 2026-11-14 (Plus cards moved to gpt-6.1-sol, low reasoning): the
     // measured mini input (2384 / 3671) plus room for longer instructions, and
     // Art's measured Sol output incl. reasoning. Replace with measured values.
@@ -148,8 +151,8 @@ export const ASSUMPTIONS = {
     // ASSUMPTION: free accounts per paying customer (stress: 20).
     perPaid: 10,
     // Free users' AI is capped per account (server/quota.mjs); their worst-case
-    // cost is that cap. Their first Art session is a separate lifetime cap,
-    // amortised over 12 months.
+    // cost is that cap. Their first Art session and their card reflection are
+    // separate lifetime caps, amortised over 12 months.
     artSessionAmortiseMonths: 12,
   },
   // Customer acquisition cost per new paying customer (GEL). null = UNKNOWN:

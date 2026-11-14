@@ -446,7 +446,7 @@ describe('API', () => {
     assert.equal(badPrompt.status, 400);
     const forced = await anulia(acct.token, 'c1', { model: 'gpt-4-32k' });
     assert.equal(forced.status, 200);
-    assert.equal(JSON.parse(openai.calls.at(-1).body).model, 'gpt-5.4-mini', 'the server, not the client, chooses the model');
+    assert.equal(JSON.parse(openai.calls.at(-1).body).model, 'gpt-6.1-sol', 'the server, not the client, chooses the model (a free account’s first Bea reply is the full one)');
     assert.equal((await anulia(acct.token, 'c1', { tools: [] })).status, 400);
     const ok = await anulia(acct.token, 'c1', { max_output_tokens: 99999 });
     assert.equal(ok.status, 200);
@@ -480,10 +480,10 @@ describe('API', () => {
     // Card reflections ask instead of interpreting (prompt set 3.5.0).
     assert.match(sent.instructions, /Never say what a card means/);
     assert.match(sent.instructions, /One question per reply/);
-    // The free reflection: the same instructions on the smaller model (inside the free allowance).
-    assert.equal(sent.model, 'gpt-5.4-mini');
-    assert.deepEqual(sent.reasoning, { effort: 'medium' });
-    assert.equal(sent.max_output_tokens, 6000);
+    // The free reflection: the strong model too, with a smaller output budget (its own lifetime allowance).
+    assert.equal(sent.model, 'gpt-6.1-sol');
+    assert.deepEqual(sent.reasoning, { effort: 'low' });
+    assert.equal(sent.max_output_tokens, 1500);
     // Plus (the same person after buying it; new accounts per IP are rate-limited): the strong model with room to think.
     const plusAcct = acct;
     const { json: checkout } = await api('/api/payments/checkout', { token: plusAcct.token, method: 'POST', body: { productId: 'plus_30' } });
@@ -546,18 +546,29 @@ describe('API', () => {
     assert.equal((await anulia(b.token, 'conv-b', { previous_response_id: respId })).status, 409);
   });
 
-  test('free Anulia allowance ends gently: grace for the open conversation, then a calm 402', async () => {
+  test('free Bea: the first reply is the full one, then simple answers, a few a day, ending gently', async () => {
     const acct = await newAccount();
-    for (let i = 0; i < 20; i += 1) assert.equal((await anulia(acct.token, 'talk')).status, 200, `message ${i + 1}`);
+    const sent = () => JSON.parse(openai.calls.at(-1).body);
+    const first = await anulia(acct.token, 'talk');
+    assert.equal(first.status, 200);
+    assert.equal(first.headers.get('x-behappy-bea'), 'full');
+    assert.equal(sent().model, 'gpt-6.1-sol');
+    assert.deepEqual(sent().reasoning, { effort: 'low' });
+    const second = await anulia(acct.token, 'talk');
+    assert.equal(second.headers.get('x-behappy-bea'), 'lite');
+    assert.equal(sent().model, 'gpt-5.4-mini');
+    assert.deepEqual(sent().reasoning, { effort: 'low' });
+    assert.equal(second.headers.get('x-behappy-remaining'), '3');
+    for (let i = 3; i <= 5; i += 1) assert.equal((await anulia(acct.token, 'talk')).status, 200, `message ${i}`);
+    assert.equal(sent().model, 'gpt-5.4-mini', 'the full reply is once, not once a day');
     const g1 = await anulia(acct.token, 'talk');
     assert.equal(g1.status, 200);
-    assert.equal(g1.headers.get('x-behappy-grace'), '2');
-    await anulia(acct.token, 'talk');
+    assert.equal(g1.headers.get('x-behappy-grace'), '1');
     await anulia(acct.token, 'talk');
     const blocked = await anulia(acct.token, 'talk');
     assert.equal(blocked.status, 402);
     assert.equal(blocked.json.reason, 'free_limit');
-    assert.ok(blocked.json.resetAt > Date.now());
+    assert.ok(blocked.json.resetAt > Date.now() && blocked.json.resetAt <= Date.now() + 24 * 60 * 60 * 1000, 'back tomorrow');
     assert.equal((await anulia(acct.token, 'brand-new')).status, 402, 'no grace for a conversation started after the limit');
   });
 

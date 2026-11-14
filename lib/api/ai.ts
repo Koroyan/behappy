@@ -30,6 +30,8 @@ export interface AiMeta {
   tier?: string;
   remaining?: number;
   grace?: number;
+  /** Bea's reply: 'full' (Plus, or a free account's first reply) or 'lite' (free). */
+  bea?: 'full' | 'lite';
 }
 
 function ctxHeaders(ctx: AiContext): Record<string, string> {
@@ -43,10 +45,12 @@ function ctxHeaders(ctx: AiContext): Record<string, string> {
 function readMeta(headers: Headers | { get(name: string): string | null }): AiMeta {
   const remaining = headers.get('X-BeHappy-Remaining');
   const grace = headers.get('X-BeHappy-Grace');
+  const bea = headers.get('X-BeHappy-Bea');
   return {
     tier: headers.get('X-BeHappy-Tier') ?? undefined,
     remaining: remaining !== null ? Number(remaining) : undefined,
     grace: grace !== null ? Number(grace) : undefined,
+    bea: bea === 'full' || bea === 'lite' ? bea : undefined,
   };
 }
 

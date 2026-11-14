@@ -19,10 +19,12 @@ import { createLimiter } from './rateLimit.mjs';
 
 // The server decides which model each feature uses (config.ai.models overrides);
 // a model a client names is ignored.
-const DEFAULT_MODELS = { anulia: 'gpt-5.4-mini', art: 'gpt-6.1-sol', cards: 'gpt-6.1-sol', journal: 'gpt-4.1-mini', summary: 'gpt-5.4-mini', motivation: 'gpt-4.1-mini' };
-// Card reflections when config.ai.cards doesn't say otherwise (server/config.mjs):
-// Plus on the strong model, the free reflection on the smaller one.
-const CARDS_DEFAULTS = { reasoning: 'low', maxOutputTokens: 6000, freeModel: 'gpt-5.4-mini', freeReasoning: 'medium', fallbackModel: 'gpt-5.4-mini' };
+const DEFAULT_MODELS = { anulia: 'gpt-6.1-sol', art: 'gpt-6.1-sol', cards: 'gpt-6.1-sol', journal: 'gpt-4.1-mini', summary: 'gpt-5.4-mini', motivation: 'gpt-4.1-mini' };
+// When config.ai.cards / config.ai.anulia don't say otherwise (server/config.mjs).
+// Card reflections: the strong model for everyone (free: one conversation, smaller output budget).
+const CARDS_DEFAULTS = { reasoning: 'low', maxOutputTokens: 6000, freeMaxOutputTokens: 1500, fallbackModel: 'gpt-5.4-mini' };
+// Bea: the strong model for Plus and each free account's first reply, then the light one.
+const ANULIA_DEFAULTS = { reasoning: 'low', freeModel: 'gpt-5.4-mini', freeReasoning: 'low', fallbackModel: 'gpt-5.4-mini' };
 // Reasoning models: the server sets their output budget and effort (the client can't).
 const REASONING_CHAT_MODELS = new Set(['gpt-5.4-mini', 'gpt-5.4', 'gpt-6.1-sol', 'gpt-6.1-terra']);
 // `prompt` is still accepted from app builds before 3.0, then replaced (see below).
@@ -300,22 +302,31 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     }
     const serverPrompt = SERVER_PROMPTS[feature];
     const { prompt: _ignoredPrompt, model: _ignoredModel, ...rest } = body;
-    // Card reflections: the server's reasoning effort and output budget (reasoning tokens count against it).
+    // Cards and Bea: the server's reasoning effort and output budget (reasoning tokens count against it).
     const cards = feature === 'cards' ? { ...CARDS_DEFAULTS, ...(config.ai?.cards || {}) } : null;
+    const bea = feature === 'anulia' ? { ...ANULIA_DEFAULTS, ...(config.ai?.anulia || {}) } : null;
+    const tuned = cards || bea;
     const clean = {
       ...rest,
       model: config.ai?.models?.[feature] || DEFAULT_MODELS[feature],
       instructions: serverPrompt.instructions,
-      reasoning: cards?.reasoning ? { effort: cards.reasoning } : serverPrompt.reasoning,
+      reasoning: tuned?.reasoning ? { effort: tuned.reasoning } : serverPrompt.reasoning,
       max_output_tokens: cards?.maxOutputTokens || Math.min(Number(body.max_output_tokens) || MAX_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS),
     };
 
     const decision = await meter(req, res);
     if (!decision) return;
-    // Card reflections: Plus on the strong model; the free one on the smaller model (its allowance).
-    if (cards && decision.tier !== 'plus' && cards.freeModel) {
-      clean.model = cards.freeModel;
-      clean.reasoning = { effort: cards.freeReasoning || 'medium' };
+    // Free accounts: the card reflection stays on the strong model with a smaller
+    // output budget; Bea answers the first message with it (decision.pro), then
+    // simply, with the light model. The app shows which (X-BeHappy-Bea).
+    if (cards && decision.tier !== 'plus') clean.max_output_tokens = cards.freeMaxOutputTokens;
+    if (bea) {
+      const full = decision.tier === 'plus' || decision.pro === true;
+      if (!full) {
+        clean.model = bea.freeModel;
+        clean.reasoning = { effort: bea.freeReasoning };
+      }
+      res.setHeader('X-BeHappy-Bea', full ? 'full' : 'lite');
     }
 
     // Art reflection: every reply is checked before the person sees it
@@ -343,12 +354,12 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     let failedText = null;
     try {
       upstream = await send();
-      // Card reflections: the cards model isn't available to this OpenAI project → the fallback model, once.
-      const fallback = cards?.fallbackModel;
+      // Cards and Bea: the strong model isn't available to this OpenAI project → the fallback model, once.
+      const fallback = tuned?.fallbackModel;
       if (!upstream.ok && fallback && fallback !== clean.model && [400, 403, 404].includes(upstream.status)) {
         failedText = await upstream.text().catch(() => '');
         if (/model/i.test(failedText) && !/previous[_ ]response/i.test(failedText)) {
-          console.warn(`[ai] ${clean.model} is not available for card reflections (HTTP ${upstream.status}); using ${fallback}.`);
+          console.warn(`[ai] ${clean.model} is not available for ${feature} (HTTP ${upstream.status}); using ${fallback}.`);
           clean.model = fallback;
           clean.reasoning = { effort: 'none' };
           failedText = null;
@@ -444,8 +455,9 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     }
     const feature = req.aiContext.feature;
     const language = typeof body.language === 'string' && LANGUAGE.test(body.language) ? body.language : 'English';
-    // The server chooses the model and writes every instruction.
-    const model = config.ai?.models?.[feature] || DEFAULT_MODELS[feature];
+    // The server chooses the model and writes every instruction. Bea's chat path
+    // (older app builds) stays on the light model; the full Bea is /responses.
+    const model = feature === 'anulia' ? config.ai?.anulia?.freeModel || ANULIA_DEFAULTS.freeModel : config.ai?.models?.[feature] || DEFAULT_MODELS[feature];
     const reasoning = REASONING_CHAT_MODELS.has(model);
     const outputCap = Math.min(Number(body.max_tokens) || 800, MAX_CHAT_TOKENS);
     const instructions = `${CHAT_PREAMBLE}\n\n${CHAT_PROMPTS[feature] ? CHAT_PROMPTS[feature](language) : ''}`.trim();

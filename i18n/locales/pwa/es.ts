@@ -45,5 +45,9 @@ export const pwaEs: typeof import('./en').pwaEn = {
     extend: 'Ampliar {days} días',
     alreadyOwned: 'El programa de arteterapia ya es tuyo. No hay nada que pagar.',
     paidJustNow: 'Tu pago anterior se completó: Plus está activo hasta el {date}.',
+    beaFreeTitle: 'Versión gratuita',
+    beaFree: 'Aquí Bea responde de forma sencilla, a unos pocos mensajes al día. Con Plus, Bea responde a cada mensaje en modo completo y profesional.',
+    beaFullOnce: 'Ese fue el modo completo de Bea, gratis una vez. A partir de ahora responde de forma sencilla; con Plus tendrás el modo completo en cada mensaje.',
+    beaFreeCta: 'Obtener Plus',
   },
 };

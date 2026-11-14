@@ -545,14 +545,14 @@ export const de: PartialMessages = {
     freeItems: [
       'Tagebuch, Stimmungs-Check-ins und Verlauf',
       'Atmen, Meditation und Selbsttests',
-      '{anulia} Nachrichten an Bea pro Monat',
+      'Bea: die erste Antwort im vollen Modus, danach {anulia} einfache Antworten pro Tag',
       'Die erste Kunstsitzung und eine Kartenreflexion',
       'Hilfsangebote für Notfälle – immer',
     ],
     plusTitle: 'BeHappy Plus',
     plusTagline: 'Mehr Zeit mit Bea und alle kreativen Programme.',
     plusItems: [
-      'Bis zu {anulia} Nachrichten an Bea pro Tag',
+      'Bea im vollen, professionellen Modus: bis zu {anulia} Nachrichten pro Tag',
       'Das komplette Kunsttherapie-Programm mit 43 Sitzungen',
       'Reflexionskarten: bis zu {cards} neue Reflexionen pro Tag',
       'Bis zu {journal} Tagebuch-Reflexionen pro Tag',

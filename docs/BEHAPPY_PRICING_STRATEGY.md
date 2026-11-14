@@ -19,10 +19,10 @@ Source: `server/quota.mjs` (the pricing page reads the same numbers from `/api/c
 | Journal, mood check-ins, insights, goals | Unlimited, no AI needed | Unlimited |
 | Breathing, meditation, PHQ-9 / GAD-7 / DASS-21 | Unlimited | Unlimited |
 | "Get help now" | Always | Always |
-| Anulia (AI companion) | 20 messages a month, plus 3 to finish a conversation | 40 messages a day |
+| Bea (AI companion) | The first reply in full mode (GPT-6.1 Sol), then 5 simple replies a day (gpt-5.4-mini), plus 2 to finish a conversation | 40 messages a day, full mode (GPT-6.1 Sol) |
 | Anulia reflection on a journal entry | 1 a day | 3 a day |
 | Art therapy (43 sessions, drawn on paper) | Session 1 | Full program, 1 new session a day |
-| Reflection cards | 1 reflection | 2 new reflections a day |
+| Reflection cards | 1 reflection (GPT-6.1 Sol, its own lifetime allowance of $0.18) | 2 new reflections a day (GPT-6.1 Sol) |
 | Voice messages (transcribed) | 5 a day | 30 a day |
 | Read a reply aloud | 3 a day | 10 a day |
 

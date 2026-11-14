@@ -545,14 +545,14 @@ export const ko: PartialMessages = {
     freeItems: [
       '일기, 기분 기록, 흐름',
       '호흡, 명상, 자기 점검 설문',
-      'Bea 메시지: 한 달에 {anulia}개',
+      'Bea: 첫 답은 전체 모드, 이후 하루 {anulia}개의 간단한 답',
       '미술 치료 1회기와 카드 성찰 1회',
       '안전 연락처 — 언제나',
     ],
     plusTitle: 'BeHappy Plus',
     plusTagline: 'Bea와 더 많이 이야기하고, 모든 창작 프로그램을 이용하세요.',
     plusItems: [
-      'Bea 메시지: 하루 최대 {anulia}개',
+      '전체 전문 모드의 Bea: 하루 최대 {anulia}개 메시지',
       '미술 치료 43회기 전체',
       '성찰 카드: 하루 최대 {cards}회 새로운 성찰',
       '일기 한마디: 하루 최대 {journal}회',

@@ -21,8 +21,9 @@ import { callCostUsd, priceFor, RESERVE_USD } from './aiPricing.mjs';
  * (RESERVE_USD), inside the same locked transaction, so parallel requests can't
  * overrun it. People see it as a fair-use allowance (percent used, reset date).
  *  - plus: per rolling 30 days, all features;
- *  - free: per rolling 30 days, every feature except Art;
+ *  - free: per rolling 30 days, every feature except Art and the card reflection;
  *  - freeArt: lifetime, the free first Art session;
+ *  - freeCards: lifetime, the free card reflection (one conversation, strong model);
  *  - artProgram: lifetime, the 43-session program bought on its own.
  */
 export const AI_ALLOWANCES = {
@@ -30,12 +31,18 @@ export const AI_ALLOWANCES = {
   free: { usd: 0.1, windowDays: 30 },
   // Room for a whole first session (~17 turns even with no prompt caching) plus one turn's reservation.
   freeArt: { usd: 0.8, windowDays: null },
+  // The free card reflection on GPT-6.1 Sol: a full conversation (~15–20 turns,
+  // ~1 cent each) plus one reservation. Sized so every plan keeps 15 GEL per 30
+  // days in the worst case (server/finance: amortised like the Art session).
+  freeCards: { usd: 0.18, windowDays: null },
   artProgram: { usd: 12.4, windowDays: null },
 };
 
 export const LIMITS = {
   free: {
-    anulia: { messages: 20, period: 'month', graceMessages: 3, gracePerPeriod: 3 },
+    // A few simple answers a day (light model); the very first reply ever is
+    // Bea's full one (strong model): proReplies, lifetime.
+    anulia: { messages: 5, period: 'day', graceMessages: 2, gracePerPeriod: 2, proReplies: 1 },
     journal: { reflections: 1, period: 'day' },
     cards: { conversations: 1, period: 'lifetime', messagesPerConversation: 40 },
     art: { freeSessionIds: [1], newSessions: 1, period: 'day', messagesPerSession: 24 },
@@ -112,8 +119,9 @@ export async function checkAndRecord({ db, accountId, entitlements, ctx, now = D
   return db.tx(async (t) => {
     await t.query('select id from accounts where id = $1 for update', [accountId]);
     const allowance = await allowanceFor(t, { accountId, entitlements, feature: ctx.feature, now });
-    // The free card reflection runs on the smaller model (server/ai.mjs), so it reserves less.
-    const reserve = ctx.feature === 'cards' && !entitlements.plus.active ? RESERVE_USD.cardsFree : RESERVE_USD[ctx.feature] ?? 0.05;
+    // Free accounts reserve by what they get (server/ai.mjs): the light Bea, the smaller card budget.
+    const free = !entitlements.plus.active;
+    const reserve = free && ctx.feature === 'cards' ? RESERVE_USD.cardsFree : free && ctx.feature === 'anulia' ? RESERVE_USD.anuliaFree : RESERVE_USD[ctx.feature] ?? 0.05;
     if (allowance && allowance.spentUsd + reserve > allowance.usd + 1e-9) {
       const tier = entitlements.plus.active ? 'plus' : 'free';
       return { allowed: false, status: 402, error: 'quota_exceeded', feature: ctx.feature, reason: 'ai_allowance', tier, resetAt: allowance.resetAt, allowanceUsd: allowance.usd, spentUsd: Math.round(allowance.spentUsd * 100) / 100 };
@@ -181,9 +189,12 @@ export async function allowanceFor(q, { accountId, entitlements, feature, now = 
   } else if (feature === 'art') {
     a = entitlements?.artProgram?.active ? AI_ALLOWANCES.artProgram : AI_ALLOWANCES.freeArt;
     where = " and feature = 'art'";
+  } else if (feature === 'cards') {
+    a = AI_ALLOWANCES.freeCards;
+    where = " and feature = 'cards'";
   } else {
     a = AI_ALLOWANCES.free;
-    where = " and feature <> 'art'";
+    where = " and feature not in ('art', 'cards')";
   }
   let since = null;
   if (a.windowDays) {
@@ -192,7 +203,7 @@ export async function allowanceFor(q, { accountId, entitlements, feature, now = 
   }
   const s = await spentUsd(q, `account_id = $1 and ${COUNTED}${where}${since ? ' and created_at > $2' : ''}`, params);
   const oldest = s.oldest;
-  return { usd: a.usd, spentUsd: s.total, windowDays: a.windowDays, resetAt: a.windowDays && oldest ? oldest + a.windowDays * DAY_MS : null, kind: plus ? 'plus' : feature === 'art' ? (entitlements?.artProgram?.active ? 'artProgram' : 'freeArt') : 'free' };
+  return { usd: a.usd, spentUsd: s.total, windowDays: a.windowDays, resetAt: a.windowDays && oldest ? oldest + a.windowDays * DAY_MS : null, kind: plus ? 'plus' : feature === 'art' ? (entitlements?.artProgram?.active ? 'artProgram' : 'freeArt') : feature === 'cards' ? 'freeCards' : 'free' };
 }
 
 async function decide(t, { accountId, entitlements, ctx, now }) {
@@ -220,7 +231,13 @@ async function decide(t, { accountId, entitlements, ctx, now }) {
     if (used < rule.messages) {
       await writeConversation(t, accountId, convKey, convRow.count + 1, convRow.grace);
       await bump(t, accountId, 'anulia', rule.period, now);
-      return { allowed: true, remaining: rule.messages - used - 1, tier };
+      // Free: Bea's full reply (strong model) for the first message(s) ever.
+      let pro = false;
+      if (rule.proReplies && (await readCounter(t, accountId, 'anulia_pro', 'lifetime', now)) < rule.proReplies) {
+        await bump(t, accountId, 'anulia_pro', 'lifetime', now);
+        pro = true;
+      }
+      return { allowed: true, remaining: rule.messages - used - 1, tier, pro };
     }
     // Gentle landing: an ongoing conversation may finish with a few extra turns
     // (at most gracePerPeriod across all conversations).

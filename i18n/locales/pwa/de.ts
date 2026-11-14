@@ -45,5 +45,9 @@ export const pwaDe: typeof import('./en').pwaEn = {
     extend: 'Um {days} Tage verlängern',
     alreadyOwned: 'Das Kunsttherapie-Programm gehört dir schon. Es gibt nichts zu bezahlen.',
     paidJustNow: 'Deine vorherige Zahlung ist durchgegangen: Plus ist aktiv bis {date}.',
+    beaFreeTitle: 'Kostenlose Version',
+    beaFree: 'Hier antwortet Bea einfach, auf ein paar Nachrichten am Tag. Mit Plus antwortet Bea auf jede Nachricht im vollen, professionellen Modus.',
+    beaFullOnce: 'Das war Beas voller Modus, einmal kostenlos. Ab jetzt antwortet sie einfach; mit Plus gibt es den vollen Modus bei jeder Nachricht.',
+    beaFreeCta: 'Plus holen',
   },
 };
