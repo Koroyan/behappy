@@ -112,7 +112,8 @@ export async function checkAndRecord({ db, accountId, entitlements, ctx, now = D
   return db.tx(async (t) => {
     await t.query('select id from accounts where id = $1 for update', [accountId]);
     const allowance = await allowanceFor(t, { accountId, entitlements, feature: ctx.feature, now });
-    const reserve = RESERVE_USD[ctx.feature] ?? 0.05;
+    // The free card reflection runs on the smaller model (server/ai.mjs), so it reserves less.
+    const reserve = ctx.feature === 'cards' && !entitlements.plus.active ? RESERVE_USD.cardsFree : RESERVE_USD[ctx.feature] ?? 0.05;
     if (allowance && allowance.spentUsd + reserve > allowance.usd + 1e-9) {
       const tier = entitlements.plus.active ? 'plus' : 'free';
       return { allowed: false, status: 402, error: 'quota_exceeded', feature: ctx.feature, reason: 'ai_allowance', tier, resetAt: allowance.resetAt, allowanceUsd: allowance.usd, spentUsd: Math.round(allowance.spentUsd * 100) / 100 };

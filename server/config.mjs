@@ -152,10 +152,24 @@ export const config = {
       // the person's words straight; it uses a stronger model than the others
       // (docs/BEHAPPY_AI_MODEL_EVALUATION.md). Other features stay independent.
       art: modelId(env.AI_MODEL_ART, 'gpt-6.1-sol'),
-      cards: env.AI_MODEL_CARDS || 'gpt-5.4-mini',
+      // Card reflections ask and listen instead of interpreting (prompts/cards.md);
+      // the stronger model follows that method far more reliably.
+      cards: modelId(env.AI_MODEL_CARDS, 'gpt-6.1-sol'),
       community: env.AI_MODEL_COMMUNITY || 'gpt-5.4-mini',
       // Daily reflection: short, checked text from facts (server/reflection).
       reflection: modelId(env.AI_MODEL_REFLECTION, 'gpt-5.4-mini'),
+    },
+    cards: {
+      // The free card reflection (one conversation, inside the free AI allowance
+      // of $0.10 per 30 days): the same instructions on the smaller model.
+      freeModel: modelId(env.AI_MODEL_CARDS_FREE, 'gpt-5.4-mini'),
+      freeReasoning: oneOf(env.AI_REASONING_CARDS_FREE, ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'], 'medium', 'AI_REASONING_CARDS_FREE'),
+      // Used once if the cards model is unavailable for this OpenAI project.
+      fallbackModel: modelId(env.AI_MODEL_CARDS_FALLBACK, 'gpt-5.4-mini'),
+      // low: the same replies as medium in the live check, at about half the wait (2.8 s vs 5–10 s).
+      reasoning: oneOf(env.AI_REASONING_CARDS, ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'], 'low', 'AI_REASONING_CARDS'),
+      // Reasoning tokens count against this budget; too small cuts a reply off.
+      maxOutputTokens: Math.min(16000, Math.max(2048, int(env.AI_CARDS_MAX_OUTPUT_TOKENS, 6000))),
     },
     art: {
       // Used once if the art model is unavailable for this OpenAI project.

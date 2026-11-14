@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = (name) => fs.readFileSync(path.join(here, name), 'utf8').trim();
 
-export const PROMPT_SET_VERSION = '3.4.0';
+export const PROMPT_SET_VERSION = '3.5.0';
 
 // The help screen as the app labels it (i18n safety.title). Without this a
 // Russian reply pointed people to «Get help now», a button they can't find.
@@ -31,7 +31,8 @@ export const REFLECTION_PROMPT = withHelpNames(read('reflection.md'));
 export const SERVER_PROMPTS = {
   anulia: { instructions: withHelpNames(read('anulia.md')), reasoning: { effort: 'none' } },
   art: { instructions: withHelpNames(read('art.md')), reasoning: { effort: 'medium' } },
-  cards: { instructions: withHelpNames(read('cards.md')), reasoning: { effort: 'none' } },
+  // Effort for cards comes from config (AI_REASONING_CARDS); this is used only without it.
+  cards: { instructions: withHelpNames(read('cards.md')), reasoning: { effort: 'low' } },
   // Anulia in public community rooms (server/community/anulia.mjs).
   community: { instructions: withHelpNames(read('community.md')), reasoning: { effort: 'none' } },
 };

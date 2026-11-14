@@ -103,3 +103,65 @@ the live model:** the OpenAI account ran out of credits (HTTP 429
 - Costs are list prices without the cached-input discount; with
   `previous_response_id` most of the ~5k input tokens per turn (instructions,
   earlier turns) are cached, so real costs are lower.
+
+# Card reflections: method and model (14 November 2026)
+
+## What changed
+
+Prompt set 3.5.0 rewrites `server/prompts/cards.md` around how practitioners
+use metaphorical associative cards: the card has no meaning of its own, the
+person finds it by seeing, feeling and remembering, and the companion asks,
+listens and gives the person's own words back. It never interprets, advises,
+names feelings or memories the person didn't mention, offers sample answers or
+describes the card first. One open question per reply. A path the companion
+follows at the person's pace (choice and first look → what is happening →
+feelings and body → their place in it → their life: memories, "has this
+happened to you", what it reminds them of → a theme, if any → change and
+resources → closing), per-deck guidance (emotion, resource, light/heavy pair,
+story), and what to do with "I don't know", "what does it mean?", requests for
+advice, a card that is hard to look at, and overwhelming feelings. The summary
+is built only from the person's words.
+
+Sources read for the method (practitioner material; there is no standard
+protocol): Skillbox interview with a gestalt therapist on MAC; mriya.run on
+symbolisation and limits; mak.arcanes.ru MAC guide (stages, resistance);
+psycholesson.ru technique and question lists; a coach's session structure
+(VK); projectivecards.com and mementotherapy.com on non-interpretive use of
+projective cards.
+
+## Decision
+
+- **Plus: `gpt-6.1-sol`, reasoning `low`** (`AI_MODEL_CARDS`, `AI_REASONING_CARDS`,
+  output budget `AI_CARDS_MAX_OUTPUT_TOKENS=6000`). `medium` gave the same
+  replies at 5–10 s instead of ~2.8 s.
+- **The free card reflection: `gpt-5.4-mini`, reasoning `medium`**
+  (`AI_MODEL_CARDS_FREE`, `AI_REASONING_CARDS_FREE`). Sol for free accounts
+  would not fit the free AI allowance ($0.10 per 30 days) and, as a separate
+  lifetime allowance, broke the economics invariant (Plus 90/365 under 15 GEL
+  per 30 days). `low` on mini still offered choices ("the colour, the light or
+  something else?"); `medium` stopped that.
+- Fallback once to `gpt-5.4-mini` if Sol isn't available to the OpenAI project
+  (`AI_MODEL_CARDS_FALLBACK`). Reservations: Plus $0.12, free $0.05 per call.
+
+## Live check
+
+`node scripts/qa/cards-model-eval.mjs --out docs/eval/cards-eval-2026-11-14.json`:
+three synthetic scenarios with the real deck images (English emotion card,
+Georgian resource card, Russian light/heavy pair), 16 replies per setup,
+including "I don't know", "what does it mean?", "give me advice", "it's hard to
+look at", stopping and the summary.
+
+| Setup | More than one question | Interpreting / advice words | Median reply |
+|---|---|---|---|
+| Plus, Sol low | 0 / 16 | 0 | 2.7 s |
+| Free, mini medium | 0 / 16 | 0 | 1.8 s |
+
+Read by hand: Plus handed every "what does it mean" back, asked what helped
+before instead of advising, slowed down without exercises when the card was
+hard to look at, and summarised only the person's words ("You haven't named a
+source of support in this reflection; that can remain open."). The free model
+was close, with small slips (one unasked "That sounds like a hard time", an
+awkward closing line). Before the final wording, Plus mentioned card numbers
+and jumped to grounding at "hard to look at"; the prompt now covers both.
+
+Limits: synthetic turns, one run per setup, answers vary between runs.

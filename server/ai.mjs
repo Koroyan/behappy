@@ -19,7 +19,10 @@ import { createLimiter } from './rateLimit.mjs';
 
 // The server decides which model each feature uses (config.ai.models overrides);
 // a model a client names is ignored.
-const DEFAULT_MODELS = { anulia: 'gpt-5.4-mini', art: 'gpt-6.1-sol', cards: 'gpt-5.4-mini', journal: 'gpt-4.1-mini', summary: 'gpt-5.4-mini', motivation: 'gpt-4.1-mini' };
+const DEFAULT_MODELS = { anulia: 'gpt-5.4-mini', art: 'gpt-6.1-sol', cards: 'gpt-6.1-sol', journal: 'gpt-4.1-mini', summary: 'gpt-5.4-mini', motivation: 'gpt-4.1-mini' };
+// Card reflections when config.ai.cards doesn't say otherwise (server/config.mjs):
+// Plus on the strong model, the free reflection on the smaller one.
+const CARDS_DEFAULTS = { reasoning: 'low', maxOutputTokens: 6000, freeModel: 'gpt-5.4-mini', freeReasoning: 'medium', fallbackModel: 'gpt-5.4-mini' };
 // Reasoning models: the server sets their output budget and effort (the client can't).
 const REASONING_CHAT_MODELS = new Set(['gpt-5.4-mini', 'gpt-5.4', 'gpt-6.1-sol', 'gpt-6.1-terra']);
 // `prompt` is still accepted from app builds before 3.0, then replaced (see below).
@@ -297,15 +300,23 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
     }
     const serverPrompt = SERVER_PROMPTS[feature];
     const { prompt: _ignoredPrompt, model: _ignoredModel, ...rest } = body;
+    // Card reflections: the server's reasoning effort and output budget (reasoning tokens count against it).
+    const cards = feature === 'cards' ? { ...CARDS_DEFAULTS, ...(config.ai?.cards || {}) } : null;
     const clean = {
       ...rest,
       model: config.ai?.models?.[feature] || DEFAULT_MODELS[feature],
       instructions: serverPrompt.instructions,
-      reasoning: serverPrompt.reasoning,
-      max_output_tokens: Math.min(Number(body.max_output_tokens) || MAX_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS),
+      reasoning: cards?.reasoning ? { effort: cards.reasoning } : serverPrompt.reasoning,
+      max_output_tokens: cards?.maxOutputTokens || Math.min(Number(body.max_output_tokens) || MAX_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS),
     };
 
-    if (!(await meter(req, res))) return;
+    const decision = await meter(req, res);
+    if (!decision) return;
+    // Card reflections: Plus on the strong model; the free one on the smaller model (its allowance).
+    if (cards && decision.tier !== 'plus' && cards.freeModel) {
+      clean.model = cards.freeModel;
+      clean.reasoning = { effort: cards.freeReasoning || 'medium' };
+    }
 
     // Art reflection: every reply is checked before the person sees it
     // (image comparison, their own words, the three-phase state, summaries).
@@ -322,13 +333,28 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
       }
     }
 
-    let upstream;
-    try {
-      upstream = await fetchImpl(`${config.openai.baseUrl}/responses`, {
+    const send = () =>
+      fetchImpl(`${config.openai.baseUrl}/responses`, {
         method: 'POST',
         headers: openaiHeaders({ 'Content-Type': 'application/json', Accept: clean.stream ? 'text/event-stream' : 'application/json' }),
         body: JSON.stringify(clean),
       });
+    let upstream;
+    let failedText = null;
+    try {
+      upstream = await send();
+      // Card reflections: the cards model isn't available to this OpenAI project → the fallback model, once.
+      const fallback = cards?.fallbackModel;
+      if (!upstream.ok && fallback && fallback !== clean.model && [400, 403, 404].includes(upstream.status)) {
+        failedText = await upstream.text().catch(() => '');
+        if (/model/i.test(failedText) && !/previous[_ ]response/i.test(failedText)) {
+          console.warn(`[ai] ${clean.model} is not available for card reflections (HTTP ${upstream.status}); using ${fallback}.`);
+          clean.model = fallback;
+          clean.reasoning = { effort: 'none' };
+          failedText = null;
+          upstream = await send();
+        }
+      }
     } catch {
       await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: 'unreachable', latencyMs: Date.now() - req.aiStartedAt, reservationId: req.reservationId });
       return bad(res, 502, 'ai_upstream_unreachable', 'Could not reach the AI service.');
@@ -336,7 +362,7 @@ export function createAiRouter({ db, config, fetchImpl = globalThis.fetch, clock
 
     if (!upstream.ok) {
       await recordAiUsage(db, { accountId: req.account.id, feature, model: clean.model, status: 'error', errorCode: `upstream_${upstream.status}`, latencyMs: Date.now() - req.aiStartedAt, reservationId: req.reservationId });
-      const text = await upstream.text().catch(() => '');
+      const text = failedText ?? (await upstream.text().catch(() => ''));
       if (upstream.status === 429) {
         if (/insufficient_quota|credit_balance/i.test(text)) console.warn('[ai] OpenAI reports no credits left (insufficient_quota): AI features are unavailable until credits are added.');
         return bad(res, 503, 'ai_unavailable', 'AI is temporarily unavailable. Please try again later.');

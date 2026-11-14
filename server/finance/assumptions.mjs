@@ -82,7 +82,10 @@ export const ASSUMPTIONS = {
   measured: {
     art: { model: 'gpt-6.1-sol', p50: { input: 7774, output: 274 }, p95: { input: 18571, output: 427 }, samples: 54 },
     anulia: { model: 'gpt-5.4-mini', p50: { input: 2009, output: 132 }, p95: { input: 2362, output: 245 }, samples: 11 },
-    cards: { model: 'gpt-5.4-mini', p50: { input: 2384, output: 68 }, p95: { input: 3671, output: 82 }, samples: 11 },
+    // ESTIMATE since 2026-11-14 (Plus cards moved to gpt-6.1-sol, low reasoning): the
+    // measured mini input (2384 / 3671) plus room for longer instructions, and
+    // Art's measured Sol output incl. reasoning. Replace with measured values.
+    cards: { model: 'gpt-6.1-sol', p50: { input: 3000, output: 280 }, p95: { input: 4500, output: 450 }, samples: 0 },
     journal: { model: 'gpt-4.1-mini', p50: { input: 571, output: 86 }, p95: { input: 708, output: 103 }, samples: 12 },
     summary: { model: 'gpt-5.4-mini', p50: { input: 562, output: 154 }, p95: { input: 923, output: 200 }, samples: 6 },
     reflection: { model: 'gpt-5.4-mini', p50: { input: 768, output: 183 }, p95: { input: 945, output: 292 }, samples: 17 },
