@@ -15,6 +15,8 @@
 //  - Errors are mapped onto the push queue's words (push.mjs): 404/410 mean the
 //    subscription is gone ("DeviceNotRegistered"), 429/5xx/network are retried.
 
+import { createHash } from 'node:crypto';
+
 import webpush from 'web-push';
 
 const PUSH_HOSTS = [
@@ -92,6 +94,22 @@ export async function vapidKeys(deps) {
   return deps.vapid;
 }
 
+/**
+ * The Topic header (messages with the same topic replace each other while
+ * waiting at the push service). RFC 8030 allows up to 32 base64url
+ * characters, but Apple also decodes it as base64url and refuses a length
+ * no base64 string can have (4n+1: "chats", "r-checkin") with 400
+ * BadWebPushTopic, so the notification never arrives. Such names, and
+ * anything else unusual, become a fixed 32-character digest of the name:
+ * still the same topic every time for the same name.
+ */
+export function webTopic(name) {
+  if (!name) return undefined;
+  const s = String(name);
+  if (s.length <= 32 && B64URL.test(s) && s.length % 4 !== 1) return s;
+  return createHash('sha256').update(s).digest('base64url').slice(0, 32);
+}
+
 const TEMPORARY_STATUS = (code) => code === 429 || code >= 500;
 
 /**
@@ -104,10 +122,11 @@ export async function sendWebPush(deps, device, message, { ttlSeconds = 4 * 60 *
   if (!keys) return { status: 'error', error: 'web_push_off', final: true };
   const subscription = { endpoint: device.token, keys: { p256dh: device.web_p256dh, auth: device.web_auth } };
   const payload = JSON.stringify(message);
+  const safeTopic = webTopic(topic);
   const options = {
     TTL: ttlSeconds,
     urgency,
-    ...(topic ? { topic } : {}),
+    ...(safeTopic ? { topic: safeTopic } : {}),
     vapidDetails: { subject: keys.subject, publicKey: keys.publicKey, privateKey: keys.privateKey },
     timeout: 15000,
   };

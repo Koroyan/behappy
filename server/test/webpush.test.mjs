@@ -11,7 +11,7 @@ import { after, before, describe, test } from 'node:test';
 import { mountCommunity, startCommunityRealtime } from '../community/index.mjs';
 import { cleanReminders, createPush } from '../notify/push.mjs';
 import { mountPush } from '../notify/routes.mjs';
-import { validWebEndpoint, validWebKeys, vapidSubject } from '../notify/webpush.mjs';
+import { validWebEndpoint, validWebKeys, vapidSubject, webTopic } from '../notify/webpush.mjs';
 import { describeSkew, measureClockSkew } from '../clockCheck.mjs';
 import { startTestServer } from './helpers.mjs';
 
@@ -109,6 +109,20 @@ describe('Web Push rules (pure)', () => {
     assert.equal(vapidSubject({ appPublicUrls: ['http://localhost:8081', 'https://abc.ngrok-free.app'] }), 'https://abc.ngrok-free.app');
     assert.equal(vapidSubject({ appPublicUrls: ['http://localhost:8081'], publicApiUrl: 'http://localhost:8787' }), 'https://behappy.app');
     assert.ok(!/invalid|localhost/.test(vapidSubject({})));
+  });
+
+  test('every Topic is one Apple accepts (a 4n+1 length like "chats" is refused: 400 BadWebPushTopic)', () => {
+    const appleOk = (s) => s.length >= 1 && s.length <= 32 && /^[A-Za-z0-9_-]+$/.test(s) && s.length % 4 !== 1;
+    for (const name of ['chats', 'updates', 'r-checkin', 'r-journal', 'r-cards', 'r-breathing', 'x', 'a:b c/d', 'é', 'r-'.padEnd(40, 'z')]) {
+      const topic = webTopic(name);
+      assert.ok(appleOk(topic), `${name} -> ${topic}`);
+      assert.equal(webTopic(name), topic, 'the same name is the same topic every time');
+    }
+    assert.equal(webTopic('updates'), 'updates', 'a name Apple accepts stays readable');
+    assert.equal(webTopic('chat'), 'chat');
+    assert.notEqual(webTopic('chats'), webTopic('r-checkin'));
+    assert.equal(webTopic(''), undefined);
+    assert.equal(webTopic(undefined), undefined);
   });
 
   test('a wrong computer clock is measured from a Date header (it breaks Apple Web Push)', async () => {
@@ -223,6 +237,8 @@ describe('Web Push', () => {
     assert.equal(headers['Content-Encoding'], 'aes128gcm');
     assert.equal(headers.Urgency, 'high');
     assert.ok(Number(headers.TTL) > 0);
+    assert.match(headers.Topic, /^[A-Za-z0-9_-]{1,32}$/);
+    assert.notEqual(headers.Topic.length % 4, 1, `Topic ${headers.Topic}: Apple refuses a 4n+1 length`);
     verifyVapid(headers, publicKey, tab.endpoint);
   });
 
@@ -259,6 +275,8 @@ describe('Web Push', () => {
     assert.equal(to(tab).length, 1);
     assert.deepEqual(to(tab)[0].message, { title: 'BeHappy', body: 'A few minutes for your journal?', url: '/journal/editor', kind: 'reminder', reminder: 'journal', tag: 'behappy-reminder-journal' });
     verifyVapid(to(tab)[0].headers, publicKey, tab.endpoint);
+    assert.match(to(tab)[0].headers.Topic, /^[A-Za-z0-9_-]{1,32}$/);
+    assert.notEqual(to(tab)[0].headers.Topic.length % 4, 1, 'Apple refuses a 4n+1 Topic length');
 
     await push.flushOnce(now + HOUR + 60 * 1000);
     assert.equal(to(tab).length, 1, 'never twice');
