@@ -24,6 +24,24 @@ html, body { background-color: ${LIGHT_BG}; overscroll-behavior: none; }
 @media (prefers-color-scheme: dark) { html, body { background-color: ${DARK_BG}; } }
 `;
 
+// Errors thrown by browser extensions (wallets, password managers…) injected
+// into the page are not BeHappy's: without this, the development error overlay
+// covered the whole app with them (e.g. a wallet that needs SubtleCrypto on a
+// plain-http LAN address). Runs before the app, so it is the first listener;
+// the app's own errors pass through unchanged.
+const extensionErrorGuard = `
+(function () {
+  var fromExtension = function (s) { return String(s || '').indexOf('-extension:') !== -1; };
+  window.addEventListener('error', function (e) {
+    if (fromExtension(e.filename) || fromExtension(e.error && e.error.stack)) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e.reason;
+    if (fromExtension(r && (r.stack || r.fileName))) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+})();
+`;
+
 export default function Root({ children }: PropsWithChildren) {
   const { htmlAttributes, bodyAttributes, headNodes, bodyNodes } = useServerDocumentContext();
   return (
@@ -49,6 +67,7 @@ export default function Root({ children }: PropsWithChildren) {
 
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: pageStyle }} />
+        <script dangerouslySetInnerHTML={{ __html: extensionErrorGuard }} />
         {headNodes}
       </head>
       <body {...bodyAttributes}>

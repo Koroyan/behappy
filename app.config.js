@@ -53,7 +53,10 @@ module.exports = {
       backgroundColor: '#F7F8F5',
     },
     plugins: [
-      'expo-router',
+      // Web routes load on demand only in the production build (smaller first load);
+      // in development the app is bundled once, so moving between screens never
+      // stops on "Bundling…". iOS/Android always load one bundle.
+      ['expo-router', { asyncRoutes: { web: 'production', default: false } }],
       'expo-web-browser',
       'expo-font',
       'expo-asset',
