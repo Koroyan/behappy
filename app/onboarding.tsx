@@ -1,142 +1,207 @@
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+/**
+ * First launch: one question — "What would you like help with today?" — and
+ * each answer leads straight to something useful (a guided minute of
+ * breathing, a sleep wind-down, Bea, a habits program, verified
+ * psychologists, or just Today). No account, no name, no permissions here:
+ * the name is optional later (Profile), AI consent is asked only for Bea and
+ * only on her screen, usage statistics after the first activity, notifications
+ * when a reminder is turned on.
+ *
+ * Resumable: closing the app before choosing shows this screen again; after
+ * choosing, Today offers to continue where the person left off. People who
+ * finished the earlier onboarding (or used BeHappy before 2.0) never see it.
+ */
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, AppState, Easing, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AnuliaMark, AppText, BrandMark, Button, Card, Chip, Icon, IconName, ProgressBar, space, TextField, useLayout, useTheme } from '@/design';
+import { AnuliaMark, AppText, BrandMark, Button, Card, Icon, IconName, Press, space, useLayout, useTheme } from '@/design';
 import { useT } from '@/i18n';
-import { completeOnboarding } from '@/lib/onboarding';
+import { chooseStartGoal, noteWelcomeExit, noteWelcomeSeen, START_GOALS, StartGoal } from '@/lib/onboarding';
 import { setAiConsent } from '@/lib/privacy/consent';
-import { getUserProfile, saveUserProfile } from '@/services/userProfileService';
 
-const FOCUS = ['stress', 'anxiety', 'mood', 'sleep', 'relationships', 'selfworth', 'creativity', 'curiosity'] as const;
-const BENEFIT_ICONS: IconName[] = ['chatbubble-ellipses-outline', 'color-palette-outline', 'leaf-outline'];
+const META: Record<StartGoal, { icon: IconName; tone: 'sage' | 'lavender' | 'primary' | 'gold' | 'peach' | 'muted' }> = {
+  stress: { icon: 'water-outline', tone: 'sage' },
+  sleep: { icon: 'moon-outline', tone: 'lavender' },
+  bea: { icon: 'chatbubble-ellipses-outline', tone: 'primary' },
+  wellbeing: { icon: 'sunny-outline', tone: 'gold' },
+  psychologist: { icon: 'medkit-outline', tone: 'peach' },
+  explore: { icon: 'compass-outline', tone: 'muted' },
+};
+
+/** Fades and lifts in; instant when the person prefers reduced motion. */
+function useEntrance(reduceMotion: boolean, delay = 0) {
+  const [v] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
+  useEffect(() => {
+    if (reduceMotion) {
+      v.setValue(1);
+      return;
+    }
+    Animated.timing(v, { toValue: 1, duration: 420, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [reduceMotion, delay, v]);
+  return { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] };
+}
 
 export default function Onboarding() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ step?: string }>();
   const { t, tl } = useT();
-  const { colors } = useTheme();
-  const { isCompact, gutter } = useLayout();
+  const { colors, reduceMotion } = useTheme();
+  const { isCompact, gutter, width } = useLayout();
   const insets = useSafeAreaInsets();
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState('');
-  const [focus, setFocus] = useState<string[]>([]);
-  const [aiChoice, setAiChoice] = useState<boolean | null>(null);
-  const total = 5;
-  const benefits = tl('onboarding.benefits') as unknown as { title: string; body: string }[];
+  // Bea's introduction: from the link (?step=bea) or right after choosing her.
+  const [beaChosen, setBeaChosen] = useState(false);
+  const step: 'welcome' | 'bea' = params.step === 'bea' || beaChosen ? 'bea' : 'welcome';
+  const [busy, setBusy] = useState<StartGoal | null>(null);
+  const chose = useRef(false);
+  const head = useEntrance(reduceMotion);
+  const list = useEntrance(reduceMotion, 120);
 
-  const finish = async () => {
-    if (name.trim()) {
-      const existing = await getUserProfile();
-      await saveUserProfile({
-        name: name.trim(),
-        gender: existing?.gender ?? 'prefer_not_to_say',
-        age: existing?.age ?? 0,
-        healthConditions: existing?.healthConditions,
-        mainConcerns: existing?.mainConcerns,
-      });
+  // "Started" and "left without choosing" (anonymous counts, only with the person's permission).
+  useEffect(() => {
+    noteWelcomeSeen().catch(() => {});
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s !== 'active' && !chose.current) noteWelcomeExit().catch(() => {});
+    });
+    return () => sub.remove();
+  }, []);
+
+  const choose = async (goal: StartGoal) => {
+    if (busy) return;
+    setBusy(goal);
+    chose.current = true;
+    try {
+      const route = await chooseStartGoal(goal);
+      if (goal === 'bea') setBeaChosen(true);
+      else router.replace(route as never);
+    } finally {
+      setBusy(null);
     }
-    if (aiChoice) await setAiConsent(true);
-    await completeOnboarding(focus);
-    router.replace('/');
   };
 
-  const next = () => (step < total - 1 ? setStep(step + 1) : finish());
+  const meetBea = async (agree: boolean) => {
+    if (agree) {
+      await setAiConsent(true);
+      router.replace('/anulia' as never);
+    } else {
+      router.replace('/' as never);
+    }
+  };
 
-  const body = [
-    <View key="welcome" style={{ gap: space[6] }}>
-      <BrandMark size={64} />
+  const twoColumns = !isCompact && width >= 720;
+
+  const welcome = (
+    <View style={{ gap: space[6] }}>
+      <Animated.View style={[{ gap: space[4] }, head]}>
+        <BrandMark size={56} />
+        <View style={{ gap: space[2] }}>
+          <AppText variant="display" accessibilityRole="header">
+            {t('jr.start.title')}
+          </AppText>
+          <AppText variant="body" color="textSecondary">
+            {t('jr.start.subtitle')}
+          </AppText>
+        </View>
+      </Animated.View>
+      <Animated.View style={[{ flexDirection: twoColumns ? 'row' : 'column', flexWrap: 'wrap', gap: space[3] }, list]} accessibilityRole="radiogroup">
+        {START_GOALS.map((g) => (
+          <Press
+            key={g}
+            onPress={() => choose(g)}
+            disabled={Boolean(busy)}
+            accessibilityRole="button"
+            accessibilityLabel={`${t(`jr.start.options.${g}.title`)}. ${t(`jr.start.options.${g}.hint`)}`}
+            testID={`start-${g}`}
+            feedback="scale"
+            style={{
+              flexBasis: twoColumns ? '48%' : undefined,
+              flexGrow: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+              padding: 16,
+              borderRadius: 20,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: busy === g ? colors.primary : colors.border,
+              minHeight: 76,
+            }}
+          >
+            <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: colors[META[g].tone === 'muted' ? 'surfaceMuted' : (`${META[g].tone}Soft` as 'sageSoft')], alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name={META[g].icon} size={23} color="text" />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <AppText variant="bodyStrong">{t(`jr.start.options.${g}.title`)}</AppText>
+              <AppText variant="small" color="textSecondary">
+                {t(`jr.start.options.${g}.hint`)}
+              </AppText>
+            </View>
+            <Icon name="chevron-forward" size={18} color="textTertiary" />
+          </Press>
+        ))}
+      </Animated.View>
       <View style={{ gap: space[3] }}>
-        <AppText variant="display">{t('onboarding.welcomeTitle')}</AppText>
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+          <Icon name="lock-closed-outline" size={18} color="textSecondary" />
+          <AppText variant="small" color="textSecondary" style={{ flex: 1 }}>
+            {t('jr.start.privacy')}
+          </AppText>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+          <Icon name="heart-circle-outline" size={18} color="onDangerSoft" />
+          <AppText variant="small" color="textSecondary" style={{ flex: 1 }}>
+            {t('jr.start.care')}{' '}
+            <AppText variant="smallStrong" color="danger" onPress={() => router.push('/safety')} accessibilityRole="link" testID="start-help">
+              {t('nav.needHelpNow')}
+            </AppText>
+          </AppText>
+        </View>
+      </View>
+    </View>
+  );
+
+  const bea = (
+    <View style={{ gap: space[5] }} testID="start-bea">
+      <AnuliaMark size={64} />
+      <View style={{ gap: space[2] }}>
+        <AppText variant="title1" accessibilityRole="header">
+          {t('jr.start.beaTitle')}
+        </AppText>
         <AppText variant="body" color="textSecondary">
-          {t('onboarding.welcomeBody')}
+          {t('jr.start.beaBody')}
         </AppText>
       </View>
-      <View style={{ gap: space[3] }}>
-        {benefits.map((b, i) => (
-          <Card key={b.title} tone={(['primary', 'peach', 'sage'] as const)[i]} padding={18}>
-            <View style={{ flexDirection: 'row', gap: 14 }}>
-              <Icon name={BENEFIT_ICONS[i]} size={22} color="text" />
-              <View style={{ flex: 1, gap: 4 }}>
-                <AppText variant="title3">{b.title}</AppText>
-                <AppText variant="small" color="textSecondary">
-                  {b.body}
-                </AppText>
-              </View>
+      <Card tone="muted" padding={16}>
+        <AppText variant="smallStrong" style={{ marginBottom: space[2] }}>
+          {t('consent.title')}
+        </AppText>
+        <View style={{ gap: 10 }}>
+          {tl('consent.points').map((p) => (
+            <View key={p} style={{ flexDirection: 'row', gap: 10 }}>
+              <Icon name="checkmark-circle-outline" size={20} color="brand" />
+              <AppText variant="small" style={{ flex: 1 }}>
+                {p}
+              </AppText>
             </View>
-          </Card>
-        ))}
-      </View>
-    </View>,
-    <View key="name" style={{ gap: space[5] }}>
-      <AppText variant="title1">{t('onboarding.nameTitle')}</AppText>
-      <AppText variant="body" color="textSecondary">
-        {t('onboarding.nameBody')}
-      </AppText>
-      <TextField value={name} onChangeText={setName} placeholder={t('personal.namePlaceholder')} autoFocus autoComplete="given-name" returnKeyType="next" onSubmitEditing={next} testID="onboarding-name" />
-    </View>,
-    <View key="focus" style={{ gap: space[5] }}>
-      <AppText variant="title1">{t('onboarding.focusTitle')}</AppText>
-      <AppText variant="body" color="textSecondary">
-        {t('onboarding.focusBody')}
-      </AppText>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-        {FOCUS.map((f) => (
-          <Chip key={f} label={t(`onboarding.focus.${f}`)} selected={focus.includes(f)} onPress={() => setFocus((cur) => (cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f]))} />
-        ))}
-      </View>
-    </View>,
-    <View key="ai" style={{ gap: space[5] }}>
-      <AnuliaMark size={64} />
-      <AppText variant="title1">{t('onboarding.aiTitle')}</AppText>
-      <AppText variant="body" color="textSecondary">
-        {t('onboarding.aiBody')}
+          ))}
+        </View>
+      </Card>
+      <AppText variant="caption" color="textTertiary">
+        {t('jr.start.beaNote')}
       </AppText>
       <View style={{ gap: 10 }}>
-        {tl('consent.points').map((p) => (
-          <View key={p} style={{ flexDirection: 'row', gap: 10 }}>
-            <Icon name="checkmark-circle-outline" size={20} color="brand" />
-            <AppText variant="small" style={{ flex: 1 }}>
-              {p}
-            </AppText>
-          </View>
-        ))}
+        <Button label={t('jr.start.beaAgree')} onPress={() => meetBea(true)} fullWidth testID="start-bea-agree" />
+        <Button label={t('jr.start.beaLater')} variant="quiet" onPress={() => meetBea(false)} fullWidth testID="start-bea-later" />
       </View>
-      <View style={{ gap: 10 }}>
-        <Button label={t('onboarding.aiEnable')} variant={aiChoice === true ? 'primary' : 'outline'} icon={aiChoice === true ? 'checkmark' : undefined} onPress={() => setAiChoice(true)} fullWidth testID="onboarding-ai-on" />
-        <Button label={t('onboarding.aiLater')} variant={aiChoice === false ? 'secondary' : 'quiet'} onPress={() => setAiChoice(false)} fullWidth />
-      </View>
-    </View>,
-    <View key="care" style={{ gap: space[5] }}>
-      <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.dangerSoft, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="heart-circle-outline" size={34} color="onDangerSoft" />
-      </View>
-      <AppText variant="title1">{t('onboarding.careTitle')}</AppText>
-      <AppText variant="body" color="textSecondary">
-        {t('onboarding.careBody')}
-      </AppText>
-    </View>,
-  ][step];
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }} testID="screen-onboarding">
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: gutter, paddingTop: insets.top + space[6], paddingBottom: space[6] }} keyboardShouldPersistTaps="handled">
-        <View style={{ width: '100%', maxWidth: 560, alignSelf: 'center', flex: 1, gap: space[6] }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <ProgressBar value={(step + 1) / total} />
-            </View>
-            {step > 0 && step < total - 1 ? <Button label={t('common.skip')} variant="ghost" size="sm" onPress={next} /> : null}
-          </View>
-          <View style={{ flex: 1, justifyContent: isCompact ? 'flex-start' : 'center' }}>{body}</View>
-        </View>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: gutter, paddingTop: insets.top + space[6], paddingBottom: Math.max(insets.bottom, 16) + space[6] }} keyboardShouldPersistTaps="handled">
+        <View style={{ width: '100%', maxWidth: twoColumns ? 760 : 560, alignSelf: 'center', flex: 1, justifyContent: isCompact ? 'flex-start' : 'center' }}>{step === 'bea' ? bea : welcome}</View>
       </ScrollView>
-      <View style={{ paddingHorizontal: gutter, paddingBottom: Math.max(insets.bottom, 16) + 8, paddingTop: 8 }}>
-        <View style={{ width: '100%', maxWidth: 560, alignSelf: 'center', flexDirection: 'row', gap: 10 }}>
-          {step > 0 ? <Button label={t('common.back')} variant="quiet" onPress={() => setStep(step - 1)} /> : null}
-          <Button label={step === 0 ? t('onboarding.begin') : step === total - 1 ? t('onboarding.finish') : t('common.continue')} onPress={next} style={{ flex: 1 }} fullWidth testID="onboarding-next" />
-        </View>
-      </View>
     </View>
   );
 }

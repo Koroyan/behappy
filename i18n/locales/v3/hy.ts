@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsHy } from '../alerts/hy';
 import { pwaHy } from '../pwa/hy';
 import { wbHy } from '../wb/hy';
+import { jrHy } from '../jr/hy';
 
 /** Հայերեն — BeHappy 3.0 (համայնք, մասնագետներ, մասնագետի աշխատատարածք)։ Ջերմ տոն («դուք»)։ */
 export const hy3: PartialMessages = {
@@ -10,6 +11,8 @@ export const hy3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaHy,
   wb: wbHy,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrHy,
   shell: {
     personal: 'Անձնական',
     community: 'Համայնք',

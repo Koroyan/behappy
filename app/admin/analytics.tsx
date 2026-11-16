@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Button, useFeedback } from '@/design';
+import { ActivationPanels } from '@/features/admin/ActivationPanels';
 import { useAdmin } from '@/features/admin/AdminProvider';
 import { adminDownload, errorCode, useAdminData } from '@/features/admin/api';
 import { CohortTable, RankedBars, TrendChart } from '@/features/admin/charts';
@@ -77,6 +78,8 @@ export default function AdminAnalytics() {
             <Panel title={t('ac.analytics.retentionTitle')} subtitle={t('ac.analytics.retentionSub')}>
               {ret.data ? <CohortTable cohorts={ret.data.cohorts} weekLabel={(w) => t('ac.analytics.week', { n: w })} sizeLabel={t('ac.analytics.people')} /> : null}
             </Panel>
+            {/* Activation, day-N retention, journey, programs, anonymous choices, community and business. */}
+            <ActivationPanels />
           </>
         ) : null}
       </AdminState>

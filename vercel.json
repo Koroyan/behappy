@@ -115,6 +115,10 @@
       "destination": "/messages/[id].html"
     },
     {
+      "source": "/programs/:id",
+      "destination": "/programs/[id].html"
+    },
+    {
       "source": "/pro/receipt/:orderId",
       "destination": "/pro/receipt/[orderId].html"
     },

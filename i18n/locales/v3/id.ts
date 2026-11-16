@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsId } from '../alerts/id';
 import { pwaId } from '../pwa/id';
 import { wbId } from '../wb/id';
+import { jrId } from '../jr/id';
 
 /** Bahasa Indonesia — BeHappy 3.0. Hangat dan akrab («kamu»). */
 export const id3: PartialMessages = {
@@ -10,6 +11,8 @@ export const id3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaId,
   wb: wbId,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrId,
   shell: {
     personal: 'Pribadi',
     community: 'Komunitas',

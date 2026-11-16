@@ -385,6 +385,7 @@ export const wbHy = {
       "kindness7": "Յոթ բարի գործ",
       "gratitude7": "Յոթ շնորհակալություն",
       "checkIn10": "Տասը ինքնազգացողության նշում",
+      "programDone": "Ծրագիրն ավարտված է",
       "challenge": "Մարտահրավերն ավարտված է"
     },
     "challenges": {

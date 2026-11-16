@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsKo } from '../alerts/ko';
 import { pwaKo } from '../pwa/ko';
 import { wbKo } from '../wb/ko';
+import { jrKo } from '../jr/ko';
 
 /** 한국어 — BeHappy 3.0. 따뜻하고 정중한 해요체. */
 export const ko3: PartialMessages = {
@@ -10,6 +11,8 @@ export const ko3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaKo,
   wb: wbKo,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrKo,
   shell: {
     personal: '나',
     community: '커뮤니티',

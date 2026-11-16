@@ -385,6 +385,7 @@ export const wbId = {
       "kindness7": "Tujuh kebaikan",
       "gratitude7": "Tujuh ungkapan syukur",
       "checkIn10": "Sepuluh kabar diri",
+      "programDone": "Satu program selesai",
       "challenge": "Tantangan selesai"
     },
     "challenges": {

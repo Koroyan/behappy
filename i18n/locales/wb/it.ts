@@ -385,6 +385,7 @@ export const wbIt = {
       "kindness7": "Sette gesti gentili",
       "gratitude7": "Sette grazie",
       "checkIn10": "Dieci momenti di ascolto",
+      "programDone": "Un programma completato",
       "challenge": "Sfida completata"
     },
     "challenges": {

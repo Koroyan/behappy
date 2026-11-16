@@ -13,9 +13,11 @@ import { loadActivity } from '@/lib/storage/activity';
 import { dayKey } from '@/lib/wellbeing/dates';
 import { loadEvents } from '@/lib/wellbeing/eventStore';
 import { loadReflection } from '@/lib/wellbeing/reflectionStore';
+import { activeRun, loadPrograms } from '@/lib/wellbeing/programStore';
+import { doneCount, PROGRAM_DAYS, runState } from '@/lib/wellbeing/programs';
 import { loadStepData } from '@/lib/wellbeing/stepStore';
 
-import { ActivitySnapshot, DEFAULT_REMINDER_PREFS, planReflectionReminders, planReminders, PlannedReminder, planSleepCheckIn, planStepReminders, ReminderPrefs } from './planner';
+import { ActivitySnapshot, DEFAULT_REMINDER_PREFS, planProgramReminders, planReflectionReminders, planReminders, PlannedReminder, planSleepCheckIn, planStepReminders, ReminderPrefs } from './planner';
 
 const KEY = '@behappy_reminders_v1';
 export const PLAN_KEY = '@behappy_reminders_plan_v1';
@@ -47,7 +49,7 @@ async function snapshot(): Promise<ActivitySnapshot> {
 }
 
 async function requestedPlans(prefs: ReminderPrefs, now: number): Promise<PlannedReminder[]> {
-  const [steps, reflection, events, sound] = await Promise.all([loadStepData(), loadReflection(), loadEvents(), loadSound()]);
+  const [steps, reflection, events, sound, programs] = await Promise.all([loadStepData(), loadReflection(), loadEvents(), loadSound(), loadPrograms()]);
   const marked = new Set(steps.marks.map((m) => `${m.stepId}:${m.day}`));
   const today = dayKey(now);
   const bedtimes = events.filter((e) => e.type === 'sleep.bedtime').map((e) => e.at);
@@ -56,7 +58,16 @@ async function requestedPlans(prefs: ReminderPrefs, now: number): Promise<Planne
     ...planStepReminders(steps.steps, marked, prefs, now),
     ...planReflectionReminders(reflection.settings, reflection.history.some((h) => h.day === today), prefs, now),
     ...planSleepCheckIn(bedtimes.length ? Math.max(...bedtimes) : null, checked, sound.morningCheckIn, prefs, now),
+    ...programReminders(programs, today, prefs, now),
   ];
+}
+
+function programReminders(programs: Awaited<ReturnType<typeof loadPrograms>>, today: string, prefs: ReminderPrefs, now: number): PlannedReminder[] {
+  const run = activeRun(programs);
+  if (!run) return [];
+  const st = runState(run, today);
+  const doneToday = Object.values(run.days).some((m) => m.doneDay === today);
+  return planProgramReminders({ id: run.programId, active: run.status === 'active', reminder: run.reminder, daysLeft: PROGRAM_DAYS - doneCount(run), doneToday, opensOn: st.opensOn }, prefs, now);
 }
 
 /**

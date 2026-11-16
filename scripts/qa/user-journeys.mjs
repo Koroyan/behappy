@@ -73,17 +73,18 @@ const georgian = /[ა-ჿ]/;
 
 // ---------- 1. First run ----------
 await step('onboarding in Georgian', async () => {
+  // First launch: one question. "Talk with Bea" asks for AI consent on its own screen (later steps use AI).
   await go('/');
   await page.waitForSelector(tid('screen-onboarding'), { timeout: 60000 });
-  await page.click(tid('onboarding-next')); // welcome
-  await page.fill(tid('onboarding-name'), 'ნინო');
-  await page.click(tid('onboarding-next'));
-  await page.getByText('სტრესი', { exact: true }).click();
-  await page.getByText('ძილი', { exact: true }).click();
-  await page.click(tid('onboarding-next'));
-  await page.click(tid('onboarding-ai-on'));
-  await page.click(tid('onboarding-next'));
-  await page.click(tid('onboarding-next')); // care note → finish
+  await page.click(tid('start-bea'));
+  await page.click(tid('start-bea-agree'));
+  await page.waitForURL(/anulia/, { timeout: 30000 });
+  // The name is optional and asked later (Profile › Personal details).
+  await go('/profile/personal');
+  await page.fill(tid('personal-name'), 'ნინო');
+  await page.click(tid('personal-save'));
+  await page.waitForTimeout(800);
+  await go('/');
   await page.waitForSelector(tid('screen-today'), { timeout: 30000 });
   const text = await visibleText();
   if (!text.includes('ნინო')) throw new Error('name not used on Today');

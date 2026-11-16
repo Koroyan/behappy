@@ -385,6 +385,7 @@ export const wbAr = {
       "kindness7": "سبع لفتات لطف",
       "gratitude7": "سبع لحظات امتنان",
       "checkIn10": "عشر تسجيلات للحالة",
+      "programDone": "أكملتَ برنامجًا",
       "challenge": "اكتمل التحدي"
     },
     "challenges": {

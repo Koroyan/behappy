@@ -385,6 +385,7 @@ export const wbZh = {
       "kindness7": "七次善意之举",
       "gratitude7": "七次感恩",
       "checkIn10": "十次状态记录",
+      "programDone": "完成了一个计划",
       "challenge": "挑战完成"
     },
     "challenges": {

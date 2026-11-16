@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsZh } from '../alerts/zh';
 import { pwaZh } from '../pwa/zh';
 import { wbZh } from '../wb/zh';
+import { jrZh } from '../jr/zh';
 
 /** 简体中文 — BeHappy 3.0。温和、亲切（“你”）。 */
 export const zh3: PartialMessages = {
@@ -10,6 +11,8 @@ export const zh3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaZh,
   wb: wbZh,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrZh,
   shell: {
     personal: '个人',
     community: '社区',

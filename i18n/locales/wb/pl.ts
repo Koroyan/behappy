@@ -385,6 +385,7 @@ export const wbPl = {
       "kindness7": "Siedem życzliwych gestów",
       "gratitude7": "Siedem podziękowań",
       "checkIn10": "Dziesięć zapisów samopoczucia",
+      "programDone": "Program ukończony",
       "challenge": "Ukończone wyzwanie"
     },
     "challenges": {

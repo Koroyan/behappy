@@ -15,6 +15,8 @@ export function useReminderCopy() {
       }
       if (r.kind === 'reflection') return { title: t('wb.reminders.reflectionTitle'), body: t('wb.reminders.reflectionBody') };
       if (r.kind === 'sleep') return { title: t('wb.reminders.sleepTitle'), body: t('wb.reminders.sleepBody') };
+      // Never the program's name on a lock screen ("Better sleep" says something personal).
+      if (r.kind === 'program') return { title: t('jr.reminders.programTitle'), body: t('jr.reminders.programBody') };
       const base =
         r.kind === 'journal'
           ? r.variant === 'soft'

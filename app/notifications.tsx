@@ -27,6 +27,7 @@ function hrefFor(n: AppNotification, isPro: boolean): string | null {
     case 'community_reply':
     case 'community_mention':
     case 'community_activity':
+    case 'community_event':
     case 'moderation_removed':
       return d.roomId ? `/community/${d.roomId}` : '/community';
     case 'moderation_warning':
@@ -96,7 +97,8 @@ export default function Notifications() {
   const when = (ms?: number) => (ms ? `${formatDate(ms, { weekday: 'short', day: 'numeric', month: 'short' })} ${formatTime(ms)}` : '');
   const title = (n: AppNotification) => {
     const d = n.data || {};
-    const key = `notifications.kinds.${n.kind}`;
+    // Scheduled discussions (jr namespace): starting soon, or cancelled.
+    const key = n.kind === 'community_event' ? (d.cancelled ? 'jr.discover.eventCancelledNote' : 'jr.discover.eventSoonNote') : `notifications.kinds.${n.kind}`;
     const topic = typeof d.roomId === 'string' ? d.roomId.split(':')[0] : '';
     const text = t(key, {
       room: topic ? t(`community.topics.${topic}.name`) : '',

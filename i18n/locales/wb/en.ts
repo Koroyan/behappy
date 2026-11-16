@@ -352,6 +352,7 @@ export const wbEn = {
       kindness7: 'Seven kind acts',
       gratitude7: 'Seven thank-yous',
       checkIn10: 'Ten check-ins',
+      programDone: 'A program completed',
       challenge: 'Challenge completed',
     },
     challenges: {

@@ -67,6 +67,7 @@ export function usePrimaryNav() {
         journal,
         { key: 'art', label: t('explore.items.art.title'), icon: 'color-palette-outline', activeIcon: 'color-palette', href: '/art', match: (p) => p.startsWith('/art') },
         { key: 'cards', label: t('explore.items.cards.title'), icon: 'albums-outline', activeIcon: 'albums', href: '/cards', match: (p) => p.startsWith('/cards') },
+        { key: 'programs', label: t('jr.tools.programsTitle'), icon: 'trail-sign-outline', activeIcon: 'trail-sign', href: '/programs', match: (p) => p.startsWith('/programs') },
         {
           key: 'exercises',
           label: t('shell.exercises'),

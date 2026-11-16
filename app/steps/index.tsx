@@ -3,7 +3,7 @@
  * planned") by default; a classic streak only when the owner's ethics flag is
  * on AND the person opts in (docs/ETHICS.md).
  */
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
@@ -32,7 +32,9 @@ export default function StepsScreen() {
   const streakAllowed = Boolean((me?.platform as { features?: { classicStreak?: boolean } } | undefined)?.features?.classicStreak);
   const [data, setData] = useState<Data | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [picking, setPicking] = useState(false);
+  // ?add=1 (the habits program's first day): open "Add a step" right away.
+  const params = useLocalSearchParams<{ add?: string }>();
+  const [picking, setPicking] = useState(params.add === '1');
   const [editing, setEditing] = useState<Step | null>(null);
   const [today, setToday] = useState(() => dayKey());
   const [month, setMonth] = useState(() => ({ y: new Date().getFullYear(), m: new Date().getMonth() + 1 }));

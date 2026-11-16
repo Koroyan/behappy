@@ -12,6 +12,7 @@ import { ScrollView, View } from 'react-native';
 
 import { AppText, Banner, Button, Card, Chip, Icon, IconButton, Press, radius, Screen, SectionHeader, space, ToggleRow, useLayout } from '@/design';
 import { useT } from '@/i18n';
+import { trackAction } from '@/lib/analytics';
 import { lastFinished, pauseSound, prepareSounds, resumeSound, setMasterVolume, setSoundTimer, startSound, stopSound, useSoundSession } from '@/lib/audio/session';
 import { loadSound, setSoundPrefs, SOUND_TOPIC } from '@/lib/audio/soundStore';
 import { CATEGORIES, Track, TrackCategory, trackById, trackLayers, tracksIn } from '@/lib/audio/tracks';
@@ -48,6 +49,9 @@ export default function SoundsScreen() {
   const refresh = useCallback(() => {
     loadSound().then(setStore).catch(() => {});
   }, []);
+  useEffect(() => {
+    trackAction('sound', 'catalog_opened', params.category ? { category: params.category } : undefined);
+  }, [params.category]);
   useEffect(() => {
     refresh();
     return subscribe(SOUND_TOPIC, refresh);

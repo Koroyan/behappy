@@ -61,6 +61,8 @@ export function toAccount(row) {
     mfaAt: ms(row.session_mfa_at),
     staffSuspendedAt: ms(row.staff_suspended_at),
     analyticsOptOut: Boolean(row.analytics_opt_out),
+    // Usage statistics: 'on' / 'off' as the person chose, null when never asked (and nothing is collected).
+    analyticsChoice: row.analytics_choice_at ? (row.analytics_opt_out ? 'off' : 'on') : row.analytics_opt_out ? null : 'on',
   };
 }
 

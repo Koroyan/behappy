@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsPl } from '../alerts/pl';
 import { pwaPl } from '../pwa/pl';
 import { wbPl } from '../wb/pl';
+import { jrPl } from '../jr/pl';
 
 /** Polski — BeHappy 3.0. Ciepło i bezpośrednio („ty”), bez form zależnych od płci tam, gdzie się da. */
 export const pl3: PartialMessages = {
@@ -10,6 +11,8 @@ export const pl3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaPl,
   wb: wbPl,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrPl,
   shell: {
     personal: 'Osobiste',
     community: 'Społeczność',

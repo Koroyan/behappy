@@ -39,6 +39,7 @@ export const BADGES: BadgeDef[] = [
   { id: 'gratitude7', icon: 'sunny-outline', tone: 'gold', types: ['step.done'], count: 7, when: tpl('gratitude') },
   { id: 'checkIn10', icon: 'happy-outline', tone: 'primary', types: ['mood.checkin'], count: 10 },
   { id: 'challenge', icon: 'trophy-outline', tone: 'gold', types: ['challenge.completed'], count: 1 },
+  { id: 'programDone', icon: 'trail-sign-outline', tone: 'sage', types: ['program.completed'], count: 1 },
 ];
 
 export interface EarnedBadge {

@@ -8,6 +8,13 @@
  * Staff screens are not counted. Events wait in a small on-device queue when
  * offline. People can switch this off in Profile › Privacy; the server also
  * refuses events from accounts that opted out.
+ *
+ * Consent: new accounts send nothing until the person says yes (asked once,
+ * after their first activity). Until then events wait in the queue on this
+ * device only ("pending"), at most three days; a no deletes them.
+ * Optional details of an action (which program, which first-launch option)
+ * never stay with the account on the server: they only add to anonymous
+ * daily totals (server DIMS).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
@@ -17,7 +24,10 @@ import { apiFetch, getStoredAccount } from '@/lib/api/client';
 
 export type Feature =
   | 'today' | 'journal' | 'anulia' | 'art' | 'cards' | 'breathing' | 'meditation' | 'grounding' | 'assessments' | 'insights' | 'goals' | 'explore'
-  | 'safety' | 'community' | 'specialists' | 'appointments' | 'messages' | 'pro' | 'membership' | 'notifications' | 'profile' | 'account' | 'onboarding' | 'quiz' | 'about' | 'other';
+  | 'safety' | 'community' | 'specialists' | 'appointments' | 'messages' | 'pro' | 'membership' | 'notifications' | 'profile' | 'account' | 'onboarding' | 'quiz' | 'about' | 'other'
+  | 'steps' | 'sound' | 'sleep' | 'calm' | 'reflection' | 'programs' | 'badges' | 'backup';
+
+export type AnalyticsState = 'on' | 'off' | 'pending';
 
 interface QueuedEvent {
   id: string;
@@ -33,8 +43,18 @@ const MAX_QUEUE = 300;
 const SESSION_GAP_MS = 30 * 60 * 1000;
 const IDLE_AFTER_MS = 2 * 60 * 1000;
 const FLUSH_EVERY_MS = 60 * 1000;
+/** Events waiting for the person's answer are kept this long on the device, then dropped. */
+const PENDING_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
 const ROUTES: [string, Feature][] = [
+  ['/settings/backup', 'backup'],
+  ['/steps', 'steps'],
+  ['/sound', 'sound'],
+  ['/sleep', 'sleep'],
+  ['/calm', 'calm'],
+  ['/reflection', 'reflection'],
+  ['/programs', 'programs'],
+  ['/badges', 'badges'],
   ['/journal', 'journal'],
   ['/anulia', 'anulia'],
   ['/art', 'art'],
@@ -76,6 +96,8 @@ const rand = () => Math.random().toString(36).slice(2, 10);
 const newId = () => `${Date.now().toString(36)}${rand()}`;
 
 let enabled = true;
+/** Not asked yet: events are queued on the device, nothing is sent. */
+let pending = false;
 let loaded = false;
 let queue: QueuedEvent[] = [];
 let sessionId = '';
@@ -144,13 +166,13 @@ function accrue(now = Date.now()) {
 }
 
 export async function flushAnalytics() {
-  if (flushing || !enabled) return;
+  if (flushing || !enabled || pending) return;
   flushing = true;
   try {
     await load();
     // Never create an account just to send statistics.
     if (!queue.length || !(await getStoredAccount())) return;
-    while (queue.length && enabled) {
+    while (queue.length && enabled && !pending) {
       const batch = queue.slice(0, 50);
       const res = await apiFetch('/api/events', {
         method: 'POST',
@@ -160,6 +182,11 @@ export async function flushAnalytics() {
       if (res.status === 429 || res.status >= 500) return;
       if (res.ok) {
         const data = (await res.json().catch(() => null)) as { disabled?: string } | null;
+        if (data?.disabled === 'pending') {
+          // Not asked yet: keep everything here until the answer.
+          pending = true;
+          return;
+        }
         if (data?.disabled) {
           queue = [];
           persist();
@@ -187,21 +214,50 @@ export function trackScreen(path: string) {
   if (feature) push({ name: 'screen_view', feature, at: now });
 }
 
-/** A meaningful action from the fixed list (see server/analytics/index.mjs ACTIONS). */
-export function trackAction(feature: Feature, kind: string) {
-  push({ name: 'action', feature, props: { kind } });
+/**
+ * A meaningful action from the fixed list (see server/analytics/index.mjs
+ * ACTIONS). `details` are enum values from the server's DIMS list (which
+ * program, which option…): they only ever count in anonymous totals.
+ * Never pass anything a person wrote.
+ */
+export function trackAction(feature: Feature, kind: string, details?: Record<string, string | number>) {
+  push({ name: 'action', feature, props: { ...(details || {}), kind } });
 }
 
-/** Server-confirmed choice (Profile › Privacy). Off clears the local queue. */
-export function setAnalyticsEnabled(on: boolean) {
-  if (enabled === on) return;
-  enabled = on;
-  if (!on) {
-    accrue();
-    queue = [];
-    persist();
-  }
+/** Drops waiting events older than the pending limit. */
+function prunePending(now = Date.now()) {
+  const before = queue.length;
+  queue = queue.filter((e) => now - e.at < PENDING_MAX_AGE_MS);
+  if (queue.length !== before) persist();
 }
+
+/** Server-confirmed state (Profile › Privacy, or the one-time question). Off clears the local queue. */
+export function setAnalyticsState(state: AnalyticsState) {
+  const wasPending = pending;
+  pending = state === 'pending';
+  if (pending) {
+    enabled = true;
+    prunePending();
+    return;
+  }
+  if (state === 'on') {
+    enabled = true;
+    if (wasPending) flushAnalytics();
+    return;
+  }
+  if (!enabled && !wasPending) return;
+  enabled = false;
+  accrue();
+  queue = [];
+  persist();
+}
+
+/** Older callers: on/off as the server reports it. */
+export function setAnalyticsEnabled(on: boolean) {
+  setAnalyticsState(on ? 'on' : 'off');
+}
+
+export const analyticsState = (): AnalyticsState => (pending ? 'pending' : enabled ? 'on' : 'off');
 
 /**
  * "Delete everything": forget unsent events and the current session, so
@@ -211,6 +267,7 @@ export function setAnalyticsEnabled(on: boolean) {
 export async function resetAnalytics() {
   queue = [];
   loaded = true;
+  pending = false;
   sessionId = '';
   lastActivity = 0;
   firstSession = true;
@@ -272,10 +329,10 @@ export function startAnalytics() {
   };
 }
 
-/** For Profile › Privacy: switches statistics on or off on the server. */
+/** For Profile › Privacy and the one-time question: switches statistics on or off on the server. */
 export async function saveAnalyticsChoice(on: boolean) {
   const res = await apiFetch('/api/account/privacy', { method: 'PUT', body: { analytics: on } });
   if (!res.ok) throw new Error(`privacy ${res.status}`);
-  setAnalyticsEnabled(on);
+  setAnalyticsState(on ? 'on' : 'off');
   return on;
 }

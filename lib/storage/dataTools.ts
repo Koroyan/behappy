@@ -8,13 +8,14 @@ import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
 import { resetAnalytics } from '@/lib/analytics';
+import { forgetBackupOnThisDevice } from '@/lib/backup/engine';
 import { deleteServerAccount, forgetAccountOnThisDevice } from '@/lib/api/account';
 import { clearSoundCache } from '@/lib/audio/engine';
 import { clearArtworks } from '@/lib/media/artworkStore';
 import { resetEventCache } from '@/lib/wellbeing/eventStore';
 
 // Never exported: credentials and caches that are not the user's content.
-const EXCLUDE = new Set(['@behappy_account_v1', '@behappy_me_cache_v1']);
+const EXCLUDE = new Set(['@behappy_account_v1', '@behappy_me_cache_v1', '@behappy_backup_key_v1', '@behappy_backup_state_v1']);
 
 export async function collectAllData(): Promise<Record<string, unknown>> {
   const keys = (await AsyncStorage.getAllKeys()).filter((k) => !EXCLUDE.has(k) && !k.startsWith('cached_prompt_instructions'));
@@ -63,8 +64,9 @@ export async function deleteAllData({ localOnly = false }: { localOnly?: boolean
   // Unsent usage events live in memory too; drop them before clearing storage.
   await resetAnalytics();
   await clearArtworks();
-  // Generated Sound Lab files and the cached event log go too.
+  // Generated Sound Lab files and the cached event log go too; the backup key leaves the keychain.
   await clearSoundCache();
+  await forgetBackupOnThisDevice();
   resetEventCache();
   await AsyncStorage.clear();
 }

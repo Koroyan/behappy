@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsAr } from '../alerts/ar';
 import { pwaAr } from '../pwa/ar';
 import { wbAr } from '../wb/ar';
+import { jrAr } from '../jr/ar';
 
 /**
  * العربية — BeHappy 3.0. فصحى مبسّطة ودافئة، بصيغ محايدة جنسيًا حيثما أمكن
@@ -13,6 +14,8 @@ export const ar3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaAr,
   wb: wbAr,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrAr,
   shell: {
     personal: 'شخصي',
     community: 'المجتمع',

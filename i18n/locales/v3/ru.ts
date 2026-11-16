@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsRu } from '../alerts/ru';
 import { pwaRu } from '../pwa/ru';
 import { wbRu } from '../wb/ru';
+import { jrRu } from '../jr/ru';
 
 /** Русский — BeHappy 3.0 (сообщество, специалисты, кабинет специалиста). Тёплый тон на «вы». */
 export const ru3: PartialMessages = {
@@ -10,6 +11,8 @@ export const ru3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaRu,
   wb: wbRu,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrRu,
   shell: {
     personal: 'Личное',
     community: 'Сообщество',

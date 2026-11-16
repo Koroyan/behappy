@@ -71,6 +71,21 @@ export async function deleteArtwork(id: string): Promise<void> {
   publish(ARTWORK_TOPIC);
 }
 
+/**
+ * A saved artwork coming back from an encrypted backup, with its own id and
+ * date (idempotent: an id that is already here is left as it is).
+ */
+export async function importArtwork(item: { id: string; sessionId: number; createdAt: number; note?: string }, dataUrl: string): Promise<void> {
+  await ensureDir();
+  const index = await readJson<Artwork[]>(INDEX_KEY, []);
+  if (index.some((a) => a.id === item.id)) return;
+  const path = `${DIR}${item.id.replace(/[^A-Za-z0-9_-]/g, '')}.jpg`;
+  await FileSystem.writeAsStringAsync(path, dataUrl.replace(/^data:image\/\w+;base64,/, ''), { encoding: FileSystem.EncodingType.Base64 });
+  const next: Artwork = { id: item.id, sessionId: item.sessionId, createdAt: item.createdAt, uri: path, ...(item.note ? { note: item.note } : {}) };
+  await writeJson(INDEX_KEY, [next, ...index].sort((a, b) => b.createdAt - a.createdAt));
+  publish(ARTWORK_TOPIC);
+}
+
 export async function clearArtworks(): Promise<void> {
   await FileSystem.deleteAsync(DIR, { idempotent: true }).catch(() => {});
   await writeJson(INDEX_KEY, []);

@@ -54,7 +54,12 @@ export function requestApiBase(config, req) {
   const host = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
   const proto = String(req.get('x-forwarded-proto') || 'http').split(',')[0].trim();
   const origin = host ? `${proto}://${host}` : '';
-  return origin && config.appPublicUrls.includes(origin) ? origin : config.publicApiUrl;
+  if (origin && config.appPublicUrls.includes(origin)) return origin;
+  // Development only: Metro (metro.config.js) forwards /api with this API's own
+  // address on that computer (host:PORT), because Expo's dev server refuses
+  // Flitt's cross-site POST back to the app; the browser reaches the API there.
+  if (!config.isProduction && /^[A-Za-z0-9.-]+:\d+$/.test(host) && host.endsWith(`:${config.port}`)) return origin;
+  return config.publicApiUrl;
 }
 
 /** Development tools answer only on this machine, never through a tunnel. */
@@ -187,6 +192,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
         sessionKind: a.sessionKind,
         status: a.status,
         analytics: !a.analyticsOptOut,
+        analyticsChoice: a.analyticsChoice,
         emailAvailable: mail.available,
         testCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null,
       },
@@ -227,6 +233,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch, flittClien
       devFixedCode: config.devTools && !config.isProduction ? config.devFixedCode || null : null,
       onSessionsRevoked: (accountId, opts) => deps.realtime?.disconnect(accountId, opts),
       onAuthEvent: authEvent,
+      onVerified: (accountId) => deps.analytics?.recordServerAction(accountId, 'account', 'verified', accountId),
     })
   );
 

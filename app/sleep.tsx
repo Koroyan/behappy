@@ -9,6 +9,7 @@ import { View } from 'react-native';
 
 import { AppText, Button, Card, Chip, IconButton, Screen, SectionHeader, space, useFeedback } from '@/design';
 import { useT } from '@/i18n';
+import { trackAction } from '@/lib/analytics';
 import { startSound, useSoundSession } from '@/lib/audio/session';
 import { loadSound } from '@/lib/audio/soundStore';
 import { suggestTrack, trackLayers } from '@/lib/audio/tracks';
@@ -18,7 +19,7 @@ import { EVENTS_TOPIC, loadEvents, recordEvent, removeEvents } from '@/lib/wellb
 import type { WellbeingEvent } from '@/lib/wellbeing/events';
 
 export default function SleepScreen() {
-  const params = useLocalSearchParams<{ morning?: string }>();
+  const params = useLocalSearchParams<{ morning?: string; from?: string }>();
   const router = useRouter();
   const { t, tl, formatDate } = useT();
   const { toast } = useFeedback();
@@ -44,6 +45,7 @@ export default function SleepScreen() {
     const history = await loadSound().then((s) => s.history.map((h) => h.trackId)).catch(() => []);
     const track = suggestTrack('sleep', history);
     await recordEvent('sleep.bedtime', `routine:${today}`, { minutes: 0 });
+    trackAction('sleep', 'routine_started');
     await startSound({ mode: 'sleep', title: t(`wb.sound.tracks.${track.id}.title`), layers: trackLayers(track), minutes: track.minutes, trackId: track.id });
     router.push('/sound?mode=sleep' as any);
   };
@@ -80,6 +82,14 @@ export default function SleepScreen() {
         </Card>
       ) : null}
 
+      {params.from === 'start' ? (
+        <Card tone="lavender" padding={18} style={{ marginBottom: space[4] }} testID="sleep-start-intro">
+          <AppText variant="bodyStrong">{t('jr.start.sleepIntroTitle')}</AppText>
+          <AppText variant="small" color="textSecondary" style={{ marginTop: 4 }}>
+            {t('jr.start.sleepIntroBody')}
+          </AppText>
+        </Card>
+      ) : null}
       <SectionHeader title={t('wb.sleep.tonight')} />
       <Card padding={20} style={{ marginBottom: space[4] }} testID="sleep-tonight">
         <AppText variant="body" color="textSecondary">

@@ -8,6 +8,7 @@ import { adminPost, adminPut, errorCode, useAdminData } from '@/features/admin/a
 import { RankedBars, TrendChart } from '@/features/admin/charts';
 import { AdminPage, AdminState, DataTable, FilterChips, Grid, KpiTile, Note, Panel, Pill, useFmt } from '@/features/admin/ui';
 import { useAdminColors } from '@/features/admin/theme';
+import { CommunityEventsPanel } from '@/features/admin/CommunityEvents';
 import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES } from '@/contexts/LanguageContext';
 import { useT } from '@/i18n';
 
@@ -122,6 +123,7 @@ export default function AdminCommunity() {
           </Panel>
         ) : null}
       </Grid>
+      <CommunityEventsPanel lang={lang} />
       {room ? <RoomSheet room={room} onClose={() => setRoom(null)} onAction={roomAction} onChanged={rooms.reload} /> : null}
     </AdminPage>
   );

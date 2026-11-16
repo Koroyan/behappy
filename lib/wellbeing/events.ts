@@ -29,8 +29,11 @@ export type EventType =
   | 'sleep.checkin'
   | 'step.done'
   | 'step.skipped'
+  | 'step.created'
   | 'goal.completed'
-  | 'challenge.completed';
+  | 'challenge.completed'
+  | 'program.day'
+  | 'program.completed';
 
 export type EventData = Record<string, string | number | boolean | null>;
 

@@ -6,6 +6,8 @@
  */
 import { useEffect, useState } from 'react';
 
+import { trackAction } from '@/lib/analytics';
+
 import { EngineState, prepareSounds as prepareSoundsNow, soundEngine } from './engine';
 
 export { prepareSounds } from './engine';
@@ -97,6 +99,8 @@ export async function startSound(opts: { mode: SoundMode; title: string; layers:
     finished: false,
   };
   emit();
+  // Usage statistics: the mode and catalog track only count in anonymous totals.
+  trackAction('sound', 'playback_started', { mode: opts.mode, ...(opts.trackId ? { track: opts.trackId } : {}) });
   // Start with what is already generated; the rest is made now and fades in when ready.
   const token = ++startToken;
   const ready = await soundEngine.readyLayers(opts.layers);
@@ -160,6 +164,8 @@ export async function stopSound({ completed, fadeMs = 1200 }: { completed: boole
   await soundEngine.stop(fading ? 0 : fadeMs);
   fading = false;
   const session = await recordSession(s.mode, s.startedAt, s.layers, completed, s.trackId).catch(() => null);
+  trackAction('sound', completed ? 'playback_completed' : 'playback_stopped', completed ? { mode: s.mode, ...(s.trackId ? { track: s.trackId } : {}) } : undefined);
+  if (s.mode === 'sleep' && completed) trackAction('sleep', 'routine_completed');
   current = null;
   emit();
   lastFinished = completed ? { mode: s.mode, at: Date.now() } : null;

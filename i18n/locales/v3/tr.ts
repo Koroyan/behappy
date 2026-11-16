@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsTr } from '../alerts/tr';
 import { pwaTr } from '../pwa/tr';
 import { wbTr } from '../wb/tr';
+import { jrTr } from '../jr/tr';
 
 /** Türkçe — BeHappy 3.0. Sıcak ve yakın («sen»). */
 export const tr3: PartialMessages = {
@@ -10,6 +11,8 @@ export const tr3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaTr,
   wb: wbTr,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrTr,
   shell: {
     personal: 'Kişisel',
     community: 'Topluluk',

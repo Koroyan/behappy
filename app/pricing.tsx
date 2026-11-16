@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { AppText, Badge, Banner, Button, Card, Divider, Icon, Screen, SectionHeader, Skeleton, space, useLayout } from '@/design';
 import { useT } from '@/i18n';
+import { trackAction } from '@/lib/analytics';
 import { useAccount } from '@/lib/api/account';
 import { Catalog, getCatalog, Product } from '@/lib/api/payments';
 
@@ -22,6 +23,7 @@ export default function PricingScreen() {
     useCallback(() => {
       setError(false);
       setOpenedAt(Date.now());
+      trackAction('membership', 'plan_viewed');
       getCatalog()
         .then(setCatalog)
         .catch(() => setError(true));

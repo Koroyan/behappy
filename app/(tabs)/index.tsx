@@ -7,6 +7,7 @@ import { QUOTES } from '@/content/quotes';
 import { AppText, Avatar, Banner, Button, Card, Chip, Icon, IconName, MoodGlyph, ProgressBar, Press, SectionHeader, Screen, space, TextField, useLayout, useTheme } from '@/design';
 import { conversationTitle, listConversations, type Conversation } from '@/features/anulia/anuliaService';
 import { loadProgram, type ProgramState } from '@/features/art/program';
+import { GuideLink, JourneyCard, StatsQuestion } from '@/features/journey/JourneyCards';
 import { MoodPicker } from '@/features/mood/MoodPicker';
 import { InstallCard } from '@/features/pwa/InstallCard';
 import { HeaderActions } from '@/features/shell/ProfileButton';
@@ -18,6 +19,7 @@ import { useAccount } from '@/lib/api/account';
 import { loadActivity, summarize } from '@/lib/storage/activity';
 import { addCheckIn, CheckIn, FEELINGS, Feeling, latestToday, loadCheckIns } from '@/lib/storage/checkins';
 import { JournalEntry, loadEntries, MoodLevel, saveDraft } from '@/lib/storage/journal';
+import { loadStart } from '@/lib/onboarding';
 import { getUserProfile } from '@/services/userProfileService';
 
 type SuggestionKey = 'ground' | 'unload' | 'talk' | 'create' | 'savor';
@@ -61,6 +63,8 @@ export default function TodayScreen() {
   const [program, setProgram] = useState<ProgramState | null>(null);
   const [week, setWeek] = useState({ checkIns: 0, journal: 0, practices: 0 });
   const [loaded, setLoaded] = useState(false);
+  // The first-launch choice (null: none, e.g. people from before it existed).
+  const [startGoal, setStartGoal] = useState<string | null>(null);
   // When the screen last loaded (render stays pure; refreshed on every focus).
   const [loadedAt, setLoadedAt] = useState(() => Date.now());
 
@@ -82,6 +86,7 @@ export default function TodayScreen() {
     setLoaded(true);
     setLoadedAt(Date.now());
     loadProgram(language).then(setProgram).catch(() => setProgram(null));
+    loadStart().then((st) => setStartGoal(st.goal)).catch(() => {});
   }, [language]);
 
   useFocusEffect(
@@ -360,7 +365,8 @@ export default function TodayScreen() {
     </Card>
   );
 
-  const firstTime = isNew ? (
+  // The older "first steps" list, only for new people who chose to look around (others get their own next step).
+  const firstTime = isNew && (!startGoal || startGoal === 'explore') ? (
     <Card tone="sage" padding={22}>
       <AppText variant="title3">{t('today.firstTimeTitle')}</AppText>
       <AppText variant="small" color="textSecondary" style={{ marginTop: 4, marginBottom: space[4] }}>
@@ -471,22 +477,27 @@ export default function TodayScreen() {
             action={<Button label={t('common.close')} size="sm" variant="ghost" onPress={() => setAnnHidden(true)} testID="today-announcement-close" />}
           />
         ) : null}
+        {/* One contextual card at a time: today's program day, or the first-launch choice and then one next step. */}
+        <JourneyCard />
         {firstTime}
         {checkInCard}
+        <StatsQuestion />
         {/* Web on phones only: a gentle "Install BeHappy" (never on the first visit, never in the installed app). */}
         <InstallCard />
         <TodaySteps />
         <TodaySound />
         {toolsStrip}
         {suggestionCard}
-        <TodayRecap />
+        {/* Progressive disclosure: the recap, art and recent entries appear once there is something in them. */}
+        {!isNew ? <TodayRecap /> : null}
         <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: space[5] }}>
           <View style={{ flex: 1 }}>{anuliaCard}</View>
           <View style={{ flex: 1 }}>{quickCard}</View>
         </View>
-        {artCard}
-        {recentCard}
+        {!isNew ? artCard : null}
+        {!isNew ? recentCard : null}
         {connectCard}
+        {isNew ? <GuideLink /> : null}
         <View style={{ alignItems: 'center', marginTop: space[4] }}>
           <Button label={t('today.exploreAll')} variant="ghost" iconRight="arrow-forward" onPress={() => router.push('/tools')} />
         </View>

@@ -1,18 +1,24 @@
 import { usePathname } from 'expo-router';
 import { useEffect } from 'react';
 
-import { setAnalyticsEnabled, startAnalytics, trackScreen } from '@/lib/analytics';
+import { setAnalyticsState, startAnalytics, trackScreen } from '@/lib/analytics';
 import { useAccount } from '@/lib/api/account';
 
-/** Counts which part of the app is open (never content); off when the person opted out. */
+/**
+ * Counts which part of the app is open (never content). Off when the person
+ * said no; "pending" (kept on this device, nothing sent) until they answer.
+ */
 export function AnalyticsTracker() {
   const pathname = usePathname();
   const { me } = useAccount();
-  const on = (me?.identity as { analytics?: boolean } | undefined)?.analytics;
+  const identity = me?.identity as { analytics?: boolean; analyticsChoice?: 'on' | 'off' | null } | undefined;
+  const on = identity?.analytics;
+  const choice = identity?.analyticsChoice;
   useEffect(() => startAnalytics(), []);
   useEffect(() => {
-    if (on !== undefined) setAnalyticsEnabled(on);
-  }, [on]);
+    if (on === undefined) return;
+    setAnalyticsState(on ? 'on' : choice === undefined || choice === 'off' ? 'off' : 'pending');
+  }, [on, choice]);
   useEffect(() => {
     trackScreen(pathname);
   }, [pathname]);

@@ -2,12 +2,13 @@
  * Calm now: three instant ways to settle — a guided minute of breathing,
  * grounding, or a dim, silent screen. No network, no AI, no account needed.
  */
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, View } from 'react-native';
 
 import { AppText, Button, Card, Chip, Icon, IconName, Screen, space, useTheme } from '@/design';
 import { useT } from '@/i18n';
+import { trackAction } from '@/lib/analytics';
 import { recordEvent } from '@/lib/wellbeing/eventStore';
 
 const IN_MS = 4000;
@@ -16,6 +17,9 @@ const CYCLES = 6; // one minute
 
 export default function CalmNowScreen() {
   const router = useRouter();
+  // ?start=breathe: begin the guided minute right away (from the first-launch question or a program day).
+  const params = useLocalSearchParams<{ start?: string; from?: string }>();
+  const autoStarted = useRef(false);
   const { t } = useT();
   const { colors, reduceMotion } = useTheme();
   const [breathing, setBreathing] = useState(false);
@@ -25,6 +29,21 @@ export default function CalmNowScreen() {
   const [silence, setSilence] = useState<number | null>(null);
   const [silenceLeft, setSilenceLeft] = useState(0);
   const [scale] = useState(() => new Animated.Value(0.6));
+
+  useEffect(() => {
+    if (params.start === 'breathe' && !autoStarted.current) {
+      autoStarted.current = true;
+      setDone(false);
+      setBreathing(true);
+    }
+  }, [params.start]);
+
+  useEffect(() => {
+    if (breathing) trackAction('calm', 'exercise_started', { exercise: 'breathe' });
+  }, [breathing]);
+  useEffect(() => {
+    if (silence !== null) trackAction('calm', 'exercise_started', { exercise: 'silence' });
+  }, [silence]);
 
   useEffect(() => {
     if (!breathing) return;
@@ -101,6 +120,8 @@ export default function CalmNowScreen() {
           {done ? (
             <Card tone="sage" padding={18} testID="calm-done">
               <AppText variant="body">{t('wb.calm.done')}</AppText>
+              {/* After the first-launch choice: one gentle next step (on Today), not the whole catalog. */}
+              {params.from === 'start' ? <Button label={t('jr.next.continue')} iconRight="arrow-forward" size="sm" variant="secondary" onPress={() => router.replace('/')} style={{ alignSelf: 'flex-start', marginTop: space[3] }} testID="calm-next" /> : null}
             </Card>
           ) : null}
           {option('leaf-outline', t('wb.calm.breathe'), t('wb.calm.breatheSub'), () => {

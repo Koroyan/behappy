@@ -110,6 +110,12 @@ export const config = {
     // Aggregates for groups smaller than this are hidden in the staff tools.
     minCohort: int(env.ANALYTICS_MIN_COHORT, 5),
   },
+  // Optional end-to-end encrypted backup: storage limits per account (encrypted data only).
+  backup: {
+    maxSnapshotMb: int(env.BACKUP_MAX_SNAPSHOT_MB, 25),
+    maxBlobMb: int(env.BACKUP_MAX_BLOB_MB, 8),
+    maxBlobsMb: int(env.BACKUP_MAX_BLOBS_MB, 200),
+  },
   supportEmail: env.SUPPORT_EMAIL || '',
   port: int(env.PORT, 8787),
   // Public URL of this API, used to build Flitt response/callback URLs.

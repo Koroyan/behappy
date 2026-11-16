@@ -11,6 +11,7 @@ import { acEn } from '../admin/en';
 import { alertsEn } from '../alerts/en';
 import { pwaEn } from '../pwa/en';
 import { wbEn } from '../wb/en';
+import { jrEn } from '../jr/en';
 
 type Plural = { zero?: string; one: string; two?: string; few?: string; many?: string; other: string };
 const plural = (one: string, other: string): Plural => ({ one, other });
@@ -22,6 +23,8 @@ export const en3 = {
   pwa: pwaEn,
   // Well-being ecosystem: Sound Lab, Steps, badges, reflection, memory (see ../wb).
   wb: wbEn,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrEn,
   // Admin center (English and Georgian; see ../admin).
   ac: acEn,
   shell: {

@@ -385,6 +385,7 @@ export const wbKo = {
       "kindness7": "일곱 번의 친절",
       "gratitude7": "일곱 번의 감사",
       "checkIn10": "열 번의 마음 확인",
+      "programDone": "프로그램 완료",
       "challenge": "도전 완료"
     },
     "challenges": {

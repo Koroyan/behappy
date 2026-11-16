@@ -385,6 +385,7 @@ export const wbRu = {
       "kindness7": "Семь добрых поступков",
       "gratitude7": "Семь благодарностей",
       "checkIn10": "Десять отметок настроения",
+      "programDone": "Программа пройдена",
       "challenge": "Челлендж завершён"
     },
     "challenges": {

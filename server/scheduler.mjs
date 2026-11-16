@@ -13,6 +13,7 @@
 
 import { safetyFor } from './admin/safety.mjs';
 import { analyticsFor } from './analytics/index.mjs';
+import { communityFor } from './community/index.mjs';
 import { ms, ts } from './db/index.mjs';
 import { entitlementsForAccount } from './entitlements.mjs';
 import { notify } from './notify/notifications.mjs';
@@ -23,7 +24,9 @@ const DAY = 24 * 60 * 60 * 1000;
 export async function runAllJobs(deps, now = deps.clock.now()) {
   const { db } = deps;
   const pro = professionalsFor(deps);
-  const out = { bookings: await pro.booking.runJobs(now), reminders: 0, expiredNotices: 0, verificationExpired: 0, cleaned: 0 };
+  const out = { bookings: await pro.booking.runJobs(now), reminders: 0, expiredNotices: 0, verificationExpired: 0, cleaned: 0, eventReminders: 0 };
+  // Scheduled community discussions: a reminder to interested people ~15 minutes before.
+  out.eventReminders = await communityFor(deps).discovery.remindUpcoming(now).catch(() => 0);
 
   const ending = await db.query(
     `select p.id, p.account_id, p.reminders_enabled, p.membership_cancelled_at, max(m.ends_at) as ends

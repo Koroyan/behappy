@@ -3,6 +3,7 @@ import { acKa } from '../admin/ka';
 import { alertsKa } from '../alerts/ka';
 import { pwaKa } from '../pwa/ka';
 import { wbKa } from '../wb/ka';
+import { jrKa } from '../jr/ka';
 
 /** ქართული — BeHappy 3.0 (საზოგადოება, სპეციალისტები, პროფესიული სივრცე). თბილი ტონი, „შენ“. */
 export const ka3: PartialMessages = {
@@ -12,6 +13,8 @@ export const ka3: PartialMessages = {
   pwa: pwaKa,
   // Well-being ecosystem: Sound Lab, Steps, badges, reflection, memory (see ../wb).
   wb: wbKa,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrKa,
   // ადმინისტრირების ცენტრი (იხ. ../admin).
   ac: acKa,
   shell: {

@@ -2,12 +2,16 @@
 // node --test, without a bundler. Modules that import React Native or Expo
 // are not pure and must not be loaded this way.
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const cache = new Map();
+// Audited pure-JavaScript libraries the app ships (cryptography): loaded as they are.
+const PURE_PACKAGES = ['@noble/ciphers/', '@noble/hashes/'];
+const requireFromRoot = createRequire(path.join(ROOT, 'package.json'));
 
 export function loadTs(file) {
   const abs = path.resolve(file);
@@ -17,6 +21,7 @@ export function loadTs(file) {
   cache.set(abs, mod);
   const req = (spec) => {
     let target;
+    if (PURE_PACKAGES.some((p) => spec.startsWith(p))) return requireFromRoot(spec);
     if (spec.startsWith('./') || spec.startsWith('../')) target = path.resolve(path.dirname(abs), spec);
     else if (spec.startsWith('@/')) target = path.resolve(ROOT, spec.slice(2));
     else throw new Error(`load-ts: "${spec}" (from ${path.relative(ROOT, abs)}) is not a pure module`);

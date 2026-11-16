@@ -3,6 +3,7 @@
 
 import { registerAccountDeletionHook } from '../lifecycle.mjs';
 import { createCommunityAnulia } from './anulia.mjs';
+import { createDiscovery } from './discovery.mjs';
 import { seedCommunity } from './constants.mjs';
 import { createModeration } from './moderation.mjs';
 import { startRealtime } from './realtime.mjs';
@@ -19,7 +20,8 @@ export function communityFor(deps) {
     const community = createCommunity({ db: deps.db, clock: deps.clock, bus });
     const moderation = createModeration({ db: deps.db, clock: deps.clock, bus });
     community.onAnulia(createCommunityAnulia({ db: deps.db, config: deps.config, fetchImpl: deps.fetchImpl, clock: deps.clock, bus, settings: settingsFor(deps) }));
-    instances.set(deps, { bus, community, moderation, seeded: seedCommunity(deps.db) });
+    const discovery = createDiscovery({ db: deps.db, clock: deps.clock });
+    instances.set(deps, { bus, community, moderation, discovery, seeded: seedCommunity(deps.db) });
   }
   return instances.get(deps);
 }
@@ -31,7 +33,7 @@ export function mountCommunity(app, deps) {
     await c.seeded;
     next();
   });
-  app.use('/api/community', communityRouter({ db: deps.db, clock: deps.clock, community: c.community }));
+  app.use('/api/community', communityRouter({ db: deps.db, clock: deps.clock, community: c.community, discovery: c.discovery }));
   app.use('/api/moderation', moderationRouter({ db: deps.db, clock: deps.clock, moderation: c.moderation, guard: (perm) => staffFor(deps).guard(perm) }));
   deps.meSections.push({ name: 'community', fn: (q, account) => c.community.meSection(q, account) });
 }

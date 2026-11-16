@@ -94,6 +94,18 @@ export async function deleteArtwork(id: string): Promise<void> {
   publish(ARTWORK_TOPIC);
 }
 
+/**
+ * A saved artwork coming back from an encrypted backup, with its own id and
+ * date (idempotent: an id that is already here is left as it is).
+ */
+export async function importArtwork(item: { id: string; sessionId: number; createdAt: number; note?: string }, dataUrl: string): Promise<void> {
+  const existing = await tx<any>('readonly', (s) => s.get(item.id)).catch(() => null);
+  if (existing) return;
+  const blob = await (await fetch(dataUrl)).blob();
+  await tx('readwrite', (s) => s.put({ id: item.id, sessionId: item.sessionId, createdAt: item.createdAt, blob }));
+  publish(ARTWORK_TOPIC);
+}
+
 export async function clearArtworks(): Promise<void> {
   try {
     await tx('readwrite', (s) => s.clear());

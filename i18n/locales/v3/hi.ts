@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsHi } from '../alerts/hi';
 import { pwaHi } from '../pwa/hi';
 import { wbHi } from '../wb/hi';
+import { jrHi } from '../jr/hi';
 
 /**
  * हिन्दी — BeHappy 3.0। आत्मीय, विनम्र «आप»। जहाँ स्वाभाविक लगे, वहाँ लिंग-निरपेक्ष
@@ -13,6 +14,8 @@ export const hi3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaHi,
   wb: wbHi,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrHi,
   shell: {
     personal: 'निजी',
     community: 'समुदाय',

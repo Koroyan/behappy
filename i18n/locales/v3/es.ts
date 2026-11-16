@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsEs } from '../alerts/es';
 import { pwaEs } from '../pwa/es';
 import { wbEs } from '../wb/es';
+import { jrEs } from '../jr/es';
 
 /** Español — BeHappy 3.0. Cálido y cercano («tú»). */
 export const es3: PartialMessages = {
@@ -10,6 +11,8 @@ export const es3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaEs,
   wb: wbEs,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrEs,
   shell: {
     personal: 'Personal',
     community: 'Comunidad',

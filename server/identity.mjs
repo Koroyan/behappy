@@ -121,7 +121,7 @@ class Window {
 
 const langOf = (req) => (typeof req.body?.lang === 'string' && /^[a-z]{2}$/.test(req.body.lang) ? req.body.lang : 'en');
 
-export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }, devFixedCode = null, limits = {}, onSessionsRevoked = () => {}, onAuthEvent = () => {} }) {
+export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }, devFixedCode = null, limits = {}, onSessionsRevoked = () => {}, onAuthEvent = () => {}, onVerified = null }) {
   // Security events for the staff security center (never passwords or codes).
   const event = (kind, req, accountId = null, metadata = {}) => Promise.resolve(onAuthEvent(kind, { accountId, ip: req.ip, metadata })).catch(() => {});
   // Open live connections of revoked sessions are closed right away (not only at their next check).
@@ -189,6 +189,8 @@ export function createAuthRouter({ db, mailer, clock = { now: () => Date.now() }
       return { ok: true, email: checked.target };
     });
     if (!result.ok) return fail(res, result.error === 'email_in_use' ? 409 : 400, result.error, result.attemptsLeft !== undefined ? { attemptsLeft: result.attemptsLeft } : {});
+    // Usage statistics (only for people who allow them; never fails the request).
+    await Promise.resolve(onVerified?.(req.account.id)).catch(() => {});
     res.json({ ok: true, registered: true, email: result.email });
   });
 

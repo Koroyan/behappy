@@ -385,6 +385,7 @@ export const wbJa = {
       "kindness7": "7回のやさしい行動",
       "gratitude7": "7回のありがとう",
       "checkIn10": "10回のチェックイン",
+      "programDone": "プログラムを修了",
       "challenge": "チャレンジ達成"
     },
     "challenges": {

@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsAz } from '../alerts/az';
 import { pwaAz } from '../pwa/az';
 import { wbAz } from '../wb/az';
+import { jrAz } from '../jr/az';
 
 /** Azərbaycanca — BeHappy 3.0. Səmimi və hörmətli («siz»). */
 export const az3: PartialMessages = {
@@ -10,6 +11,8 @@ export const az3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaAz,
   wb: wbAz,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrAz,
   shell: {
     personal: 'Şəxsi',
     community: 'İcma',

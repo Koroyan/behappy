@@ -7,6 +7,8 @@ import { AppText, Badge, Banner, Button, Card, Divider, EmptyState, Screen, Sect
 import { AccountGate } from '@/features/account/AccountParts';
 import { InfoRow, ProAvatar, VerifiedBadge } from '@/features/pro/ProParts';
 import { useT } from '@/i18n';
+import { trackAction } from '@/lib/analytics';
+import { noteFirstActivity } from '@/lib/onboarding';
 import { useIdentity } from '@/lib/api/account';
 import { getPro, PublicPro, startThread } from '@/lib/api/pros';
 
@@ -22,6 +24,8 @@ export default function SpecialistProfile() {
 
   useFocusEffect(
     useCallback(() => {
+      trackAction('specialists', 'profile_viewed');
+      noteFirstActivity('specialist').catch(() => {});
       getPro(String(id))
         .then(setPro)
         .catch(() => setPro(null));

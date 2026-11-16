@@ -385,6 +385,7 @@ export const wbHi = {
       "kindness7": "दयालुता के सात काम",
       "gratitude7": "सात धन्यवाद",
       "checkIn10": "दस बार हाल दर्ज किया",
+      "programDone": "एक कार्यक्रम पूरा हुआ",
       "challenge": "चुनौती पूरी हुई"
     },
     "challenges": {

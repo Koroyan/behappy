@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsUk } from '../alerts/uk';
 import { pwaUk } from '../pwa/uk';
 import { wbUk } from '../wb/uk';
+import { jrUk } from '../jr/uk';
 
 /** Українська — BeHappy 3.0. Тепло й шанобливо («ви»). */
 export const uk3: PartialMessages = {
@@ -10,6 +11,8 @@ export const uk3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaUk,
   wb: wbUk,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrUk,
   shell: {
     personal: 'Особисте',
     community: 'Спільнота',

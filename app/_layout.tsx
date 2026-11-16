@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { FeedbackProvider, ThemeProvider, useTheme } from '@/design';
 import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
+import { BackupBridge } from '@/features/backup/BackupBridge';
 import { ConsentProvider } from '@/features/common/Consent';
 import { PwaBridge } from '@/features/pwa/PwaBridge';
 import { PendingPaymentWatcher } from '@/features/payments/PendingPaymentWatcher';
@@ -31,6 +32,8 @@ function Navigator() {
         <AnalyticsTracker />
         <NotificationsBridge />
         <WellbeingBridge />
+        {/* Optional encrypted backup: only when the person turned it on. */}
+        <BackupBridge />
         {/* A payment finished elsewhere (iPhone: Flitt's browser sheet over the installed app) is noticed here. */}
         <PendingPaymentWatcher />
         <Stack

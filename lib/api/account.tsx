@@ -30,6 +30,10 @@ export interface Identity {
   emailAvailable: boolean;
   /** Development servers only: the fixed test code (never set in production). */
   testCode?: string | null;
+  /** Usage statistics allowed (server-side). */
+  analytics?: boolean;
+  /** The person's answer about usage statistics; null: not asked yet (nothing is sent). */
+  analyticsChoice?: 'on' | 'off' | null;
 }
 
 export interface Me {

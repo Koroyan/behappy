@@ -385,6 +385,7 @@ export const wbAz = {
       "kindness7": "Yeddi yaxşılıq",
       "gratitude7": "Yeddi təşəkkür",
       "checkIn10": "On hal qeydi",
+      "programDone": "Proqram tamamlandı",
       "challenge": "Sınaq tamamlandı"
     },
     "challenges": {

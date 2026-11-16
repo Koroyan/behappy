@@ -30,6 +30,7 @@ export const TOOLS: Tool[] = [
   { key: 'calm', icon: 'water-outline', tone: 'sage', route: '/calm', section: 'calm', ...wb('calm') },
   { key: 'sound', icon: 'musical-notes-outline', tone: 'lavender', route: '/sound', section: 'calm', ...wb('sound') },
   { key: 'sleep', icon: 'moon-outline', tone: 'lavender', route: '/sleep', section: 'calm', ...wb('sleep') },
+  { key: 'programs', icon: 'trail-sign-outline', tone: 'sage', route: '/programs', section: 'grow', title: 'jr.tools.programsTitle', subtitle: 'jr.tools.programsSub' },
   { key: 'steps', icon: 'footsteps-outline', tone: 'primary', route: '/steps', section: 'grow', ...wb('steps') },
   { key: 'badges', icon: 'ribbon-outline', tone: 'gold', route: '/badges', section: 'grow', ...wb('badges') },
   { key: 'reflection', icon: 'sparkles-outline', tone: 'peach', route: '/reflection', section: 'grow', ...wb('reflection') },

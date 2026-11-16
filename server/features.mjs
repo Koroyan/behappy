@@ -12,6 +12,7 @@ import { mountSafety } from './admin/safety.mjs';
 import { mountSensitive } from './admin/sensitive.mjs';
 import { mountUsersAdmin } from './admin/users.mjs';
 import { mountAnalytics } from './analytics/index.mjs';
+import { mountBackup } from './backup/index.mjs';
 import { mountCommunity, startCommunityRealtime } from './community/index.mjs';
 import { mountPush, startPushService } from './notify/routes.mjs';
 import { mountProfessionals } from './professional/index.mjs';
@@ -24,6 +25,7 @@ export const FEATURE_MODULES = [
   mountProfessionals,
   mountPush,
   mountAnalytics,
+  mountBackup,
   mountSupport,
   mountAdmin,
   mountUsersAdmin,

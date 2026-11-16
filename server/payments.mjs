@@ -44,6 +44,17 @@ export function registerFulfillment(kind, handlers) {
   FULFILLMENT.set(kind, handlers);
 }
 
+/**
+ * Told after a verified status change has been committed (usage statistics:
+ * a confirmed purchase, a failed payment). A listener can never undo or delay
+ * the payment: it runs after the commit and its errors are ignored.
+ */
+const STATUS_LISTENERS = new Set();
+export function onOrderStatusChange(fn) {
+  STATUS_LISTENERS.add(fn);
+  return () => STATUS_LISTENERS.delete(fn);
+}
+
 export function newOrderId() {
   return `bh-${Date.now().toString(36)}-${crypto.randomBytes(5).toString('hex')}`;
 }
@@ -146,7 +157,15 @@ export async function createCheckout({ db, config, flitt, accountId, productId, 
  * via: 'callback' | 'return' | 'status'
  * Returns { ok, order, changed, duplicate, reason }.
  */
-export async function applyFlittUpdate({ db, config, payload, via, trustedChannel = false, now = Date.now() }) {
+export async function applyFlittUpdate(args) {
+  const result = await applyFlittUpdateTx(args);
+  if (result?.changed && result.order) {
+    for (const fn of STATUS_LISTENERS) await Promise.resolve(fn(result.order)).catch(() => {});
+  }
+  return result;
+}
+
+async function applyFlittUpdateTx({ db, config, payload, via, trustedChannel = false, now = Date.now() }) {
   if (!payload || typeof payload !== 'object') return { ok: false, reason: 'empty_payload' };
   const orderId = String(payload.order_id || '');
 

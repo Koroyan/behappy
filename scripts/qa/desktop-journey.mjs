@@ -84,13 +84,18 @@ const oneLine = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 const onboard = async (p, name) => {
   await p.goto(`${app}/`, { waitUntil: 'load', timeout: 90000 });
   await p.waitForSelector(tid('screen-onboarding'), { timeout: 60000 });
-  await p.click(tid('onboarding-next')); // welcome
-  if (name) await p.fill(tid('onboarding-name'), name);
-  await p.click(tid('onboarding-next')); // name
-  await p.click(tid('onboarding-next')); // focus (optional)
-  await p.click(tid('onboarding-ai-on'));
-  await p.click(tid('onboarding-next')); // AI consent
-  await p.click(tid('onboarding-next')); // care note → finish
+  // First launch: one question; "Talk with Bea" asks for AI consent on its own screen.
+  await p.click(tid('start-bea'));
+  await p.click(tid('start-bea-agree'));
+  await p.waitForURL(/anulia/, { timeout: 30000 });
+  if (name) {
+    // The name is optional and asked later (Profile › Personal details).
+    await p.goto(`${app}/profile/personal`, { waitUntil: 'load' });
+    await p.fill(tid('personal-name'), name);
+    await p.click(tid('personal-save'));
+    await p.waitForTimeout(800);
+  }
+  await p.goto(`${app}/`, { waitUntil: 'load' });
   await p.waitForSelector(tid('screen-today'), { timeout: 30000 });
 };
 const flittPay = async (card) => {

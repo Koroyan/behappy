@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsJa } from '../alerts/ja';
 import { pwaJa } from '../pwa/ja';
 import { wbJa } from '../wb/ja';
+import { jrJa } from '../jr/ja';
 
 /** 日本語 — BeHappy 3.0。やさしく丁寧に（です・ます調）。 */
 export const ja3: PartialMessages = {
@@ -10,6 +11,8 @@ export const ja3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaJa,
   wb: wbJa,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrJa,
   shell: {
     personal: 'パーソナル',
     community: 'コミュニティ',

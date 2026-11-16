@@ -16,7 +16,7 @@ const wrap = (fn) => async (req, res) => {
   }
 };
 
-export function communityRouter({ db, clock, community }) {
+export function communityRouter({ db, clock, community, discovery }) {
   const r = express.Router();
   const auth = requireAccount(db, { clock });
   r.use(express.json({ limit: '32kb' }));
@@ -37,6 +37,14 @@ export function communityRouter({ db, clock, community }) {
     })
   );
   r.get('/my-rooms', wrap(async (req) => ({ rooms: await community.myRooms(req.account) })));
+
+  // Discovery: real recent activity, the person's topic first, scheduled discussions led by people.
+  if (discovery) {
+    r.get('/discover', wrap((req) => discovery.discover(req.account, { language: String(req.query.lang || ''), topic: String(req.query.topic || '') })));
+    r.get('/related', wrap((req) => discovery.related(req.account, { topic: String(req.query.topic || ''), exclude: String(req.query.exclude || '') })));
+    r.get('/rooms/:roomId/events', wrap(async (req) => ({ events: await discovery.events(req.account, { roomId: req.params.roomId }) })));
+    r.post('/events/:id/interest', wrap((req) => discovery.setInterest(req.account, req.params.id, req.body?.on !== false)));
+  }
   r.get('/rooms/:roomId', wrap(async (req) => ({ room: await community.room(req.account, req.params.roomId) })));
   r.post('/rooms/:roomId/join', wrap(async (req) => ({ room: await community.join(req.account, req.params.roomId) })));
   r.post('/rooms/:roomId/leave', wrap((req) => community.leave(req.account, req.params.roomId)));

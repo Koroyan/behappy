@@ -58,7 +58,7 @@ const MAX_REMINDERS = 60;
 const REMINDER_HORIZON = 8 * 24 * HOUR;
 const REMINDER_LATE = 2 * HOUR;
 const REMINDER_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
-const REMINDER_KINDS = new Set(['journal', 'art', 'cards', 'step', 'reflection', 'sleep']);
+const REMINDER_KINDS = new Set(['journal', 'art', 'cards', 'step', 'reflection', 'sleep', 'program']);
 // Only a place inside the app: "/journal/editor", never "//elsewhere" or "https://...".
 const APP_PATH = /^\/(?![\/\\])[A-Za-z0-9/_?=&.%-]{0,200}$/;
 

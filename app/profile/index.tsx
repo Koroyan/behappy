@@ -132,6 +132,8 @@ export default function ProfileScreen() {
       <Divider />
       <ListRow icon="footsteps-outline" iconTone="primary" title={t('wb.tools.steps.title')} subtitle={t('wb.tools.steps.subtitle')} onPress={() => router.push('/steps' as never)} testID="profile-steps" />
       <Divider />
+      <ListRow icon="trail-sign-outline" iconTone="sage" title={t('jr.tools.programsTitle')} subtitle={t('jr.tools.programsSub')} onPress={() => router.push('/programs' as never)} testID="profile-programs" />
+      <Divider />
       <View style={{ paddingVertical: 14, gap: 10 }}>
         <AppText variant="callout">{t('profile.theme')}</AppText>
         <Segmented
@@ -209,6 +211,8 @@ export default function ProfileScreen() {
         right={<Toggle value={analyticsOn} onValueChange={(v) => !analyticsBusy && onAnalytics(v)} label={t('usageStats.title')} testID="toggle-analytics" />}
       />
       <Divider />
+      <ListRow icon="cloud-upload-outline" iconTone="primary" title={t('jr.backup.title')} subtitle={t('jr.backup.entryHint')} onPress={() => router.push('/settings/backup' as never)} testID="profile-backup" />
+      <Divider />
       <ListRow icon="download-outline" iconTone="muted" title={t('profile.exportData')} subtitle={t('profile.exportHint')} onPress={onExport} />
       <Divider />
       <ListRow icon="trash-outline" iconTone="danger" title={t('profile.deleteData')} subtitle={t('profile.deleteHint')} onPress={onDelete} destructive testID="profile-delete" />
@@ -219,6 +223,8 @@ export default function ProfileScreen() {
     <Card padding={20}>
       <SectionHeader title={t('profile.support')} />
       <ListRow icon="heart-circle-outline" iconTone="danger" title={t('safety.title')} onPress={() => router.push('/safety')} />
+      <Divider />
+      <ListRow icon="compass-outline" iconTone="primary" title={t('jr.guide.title')} onPress={() => router.push('/guide' as never)} testID="profile-guide" />
       <Divider />
       <ListRow icon="chatbox-ellipses-outline" title={t('help.title')} onPress={() => router.push('/support' as any)} testID="profile-support" />
       <Divider />

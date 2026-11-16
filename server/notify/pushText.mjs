@@ -21,6 +21,8 @@ const TEXT = {
     pro_message: 'New message from {name}',
     appointment: 'Update about an appointment',
     account: 'Update about your account',
+    community_event: 'A discussion you’re interested in starts soon',
+    community_event_cancelled: 'A discussion you were interested in was cancelled',
   },
   ka: {
     message: 'ახალი შეტყობინება გაქვს',
@@ -32,6 +34,8 @@ const TEXT = {
     pro_message: 'ახალი შეტყობინება — {name}',
     appointment: 'სიახლე შეხვედრის შესახებ',
     account: 'სიახლე შენი ანგარიშის შესახებ',
+    community_event: 'დისკუსია, რომელიც გაინტერესებს, მალე იწყება',
+    community_event_cancelled: 'დისკუსია, რომელიც გაინტერესებდა, გაუქმდა',
   },
   ru: {
     message: 'У вас новое сообщение',
@@ -43,6 +47,8 @@ const TEXT = {
     pro_message: 'Новое сообщение: {name}',
     appointment: 'Новости о вашей встрече',
     account: 'Новости о вашем аккаунте',
+    community_event: 'Скоро начнётся обсуждение, которое вас интересует',
+    community_event_cancelled: 'Обсуждение, которое вас интересовало, отменено',
   },
   hy: {
     message: 'Նոր հաղորդագրություն ունեք',
@@ -54,6 +60,8 @@ const TEXT = {
     pro_message: 'Նոր հաղորդագրություն՝ {name}',
     appointment: 'Նորություն հանդիպման մասին',
     account: 'Նորություն ձեր հաշվի մասին',
+    community_event: 'Ձեզ հետաքրքրող քննարկումը շուտով կսկսվի',
+    community_event_cancelled: 'Ձեզ հետաքրքրող քննարկումը չեղարկվել է',
   },
   uk: {
     message: 'У вас нове повідомлення',
@@ -65,6 +73,8 @@ const TEXT = {
     pro_message: 'Нове повідомлення: {name}',
     appointment: 'Новини про вашу зустріч',
     account: 'Новини про ваш обліковий запис',
+    community_event: 'Скоро почнеться обговорення, яке вас цікавить',
+    community_event_cancelled: 'Обговорення, яке вас цікавило, скасовано',
   },
   az: {
     message: 'Yeni mesajınız var',
@@ -76,6 +86,8 @@ const TEXT = {
     pro_message: 'Yeni mesaj: {name}',
     appointment: 'Görüşünüzlə bağlı yenilik',
     account: 'Hesabınızla bağlı yenilik',
+    community_event: 'Maraqlandığınız müzakirə tezliklə başlayır',
+    community_event_cancelled: 'Maraqlandığınız müzakirə ləğv edildi',
   },
   tr: {
     message: 'Yeni bir mesajın var',
@@ -87,6 +99,8 @@ const TEXT = {
     pro_message: 'Yeni mesaj: {name}',
     appointment: 'Randevunla ilgili bir güncelleme',
     account: 'Hesabınla ilgili bir güncelleme',
+    community_event: 'İlgilendiğin sohbet birazdan başlıyor',
+    community_event_cancelled: 'İlgilendiğin sohbet iptal edildi',
   },
   de: {
     message: 'Du hast eine neue Nachricht',
@@ -98,6 +112,8 @@ const TEXT = {
     pro_message: 'Neue Nachricht von {name}',
     appointment: 'Neuigkeit zu einem Termin',
     account: 'Neuigkeit zu deinem Konto',
+    community_event: 'Ein Gespräch, das dich interessiert, beginnt bald',
+    community_event_cancelled: 'Ein Gespräch, das dich interessiert hat, wurde abgesagt',
   },
   fr: {
     message: 'Vous avez un nouveau message',
@@ -109,6 +125,8 @@ const TEXT = {
     pro_message: 'Nouveau message de {name}',
     appointment: 'Du nouveau sur un rendez-vous',
     account: 'Du nouveau sur votre compte',
+    community_event: 'Une discussion qui t’intéresse commence bientôt',
+    community_event_cancelled: 'Une discussion qui t’intéressait a été annulée',
   },
   es: {
     message: 'Tienes un mensaje nuevo',
@@ -120,6 +138,8 @@ const TEXT = {
     pro_message: 'Mensaje nuevo de {name}',
     appointment: 'Novedades sobre una cita',
     account: 'Novedades sobre tu cuenta',
+    community_event: 'Pronto empieza una conversación que te interesa',
+    community_event_cancelled: 'Se canceló una conversación que te interesaba',
   },
   it: {
     message: 'Hai un nuovo messaggio',
@@ -131,6 +151,8 @@ const TEXT = {
     pro_message: 'Nuovo messaggio da {name}',
     appointment: 'Novità su un appuntamento',
     account: 'Novità sul tuo account',
+    community_event: 'Tra poco inizia una discussione che ti interessa',
+    community_event_cancelled: 'Una discussione che ti interessava è stata annullata',
   },
   pt: {
     message: 'Tem uma nova mensagem',
@@ -142,6 +164,8 @@ const TEXT = {
     pro_message: 'Nova mensagem de {name}',
     appointment: 'Novidade sobre uma consulta',
     account: 'Novidade sobre a sua conta',
+    community_event: 'Uma conversa do seu interesse começa em breve',
+    community_event_cancelled: 'Uma conversa do seu interesse foi cancelada',
   },
   pl: {
     message: 'Masz nową wiadomość',
@@ -153,6 +177,8 @@ const TEXT = {
     pro_message: 'Nowa wiadomość: {name}',
     appointment: 'Nowość dotycząca spotkania',
     account: 'Nowość dotycząca Twojego konta',
+    community_event: 'Wkrótce zaczyna się rozmowa, która cię interesuje',
+    community_event_cancelled: 'Rozmowa, która cię interesowała, została odwołana',
   },
   ar: {
     message: 'لديك رسالة جديدة',
@@ -164,6 +190,8 @@ const TEXT = {
     pro_message: 'رسالة جديدة من {name}',
     appointment: 'تحديث بشأن موعد',
     account: 'تحديث بشأن حسابك',
+    community_event: 'يبدأ قريبًا نقاش يهمّك',
+    community_event_cancelled: 'أُلغي نقاش كان يهمّك',
   },
   hi: {
     message: 'आपके लिए एक नया संदेश है',
@@ -175,6 +203,8 @@ const TEXT = {
     pro_message: '{name} का नया संदेश',
     appointment: 'एक अपॉइंटमेंट के बारे में अपडेट',
     account: 'आपके खाते के बारे में अपडेट',
+    community_event: 'आपकी रुचि वाली चर्चा जल्द शुरू होगी',
+    community_event_cancelled: 'आपकी रुचि वाली चर्चा रद्द कर दी गई',
   },
   id: {
     message: 'Ada pesan baru untukmu',
@@ -186,6 +216,8 @@ const TEXT = {
     pro_message: 'Pesan baru dari {name}',
     appointment: 'Kabar tentang janji temu',
     account: 'Kabar tentang akunmu',
+    community_event: 'Diskusi yang kamu minati segera dimulai',
+    community_event_cancelled: 'Diskusi yang kamu minati dibatalkan',
   },
   ja: {
     message: '新しいメッセージがあります',
@@ -197,6 +229,8 @@ const TEXT = {
     pro_message: '{name}さんから新しいメッセージ',
     appointment: '予約についてのお知らせ',
     account: 'アカウントについてのお知らせ',
+    community_event: '気になっている話し合いがまもなく始まります',
+    community_event_cancelled: '気になっていた話し合いは中止になりました',
   },
   ko: {
     message: '새 메시지가 있어요',
@@ -208,6 +242,8 @@ const TEXT = {
     pro_message: '{name}님의 새 메시지',
     appointment: '예약 관련 소식',
     account: '계정 관련 소식',
+    community_event: '관심 있는 대화가 곧 시작돼요',
+    community_event_cancelled: '관심 있던 대화가 취소되었어요',
   },
   zh: {
     message: '你有一条新消息',
@@ -219,6 +255,8 @@ const TEXT = {
     pro_message: '来自 {name} 的新消息',
     appointment: '关于预约的新动态',
     account: '关于你账户的新动态',
+    community_event: '你感兴趣的讨论即将开始',
+    community_event_cancelled: '你感兴趣的讨论已取消',
   },
 };
 
@@ -266,6 +304,8 @@ export function pushText(language, items, { previews = true } = {}) {
   const room = previews ? roomName(language, roomOf(items)) : '';
   if (items.length > 1) return { title: room || title, body: fill(tx.summary, { n: items.length }) };
   const n = items[0];
+  // A scheduled discussion: what it is about stays in the app; the room only with previews on.
+  if (n.kind === 'community_event') return { title: room || title, body: n.data?.cancelled ? tx.community_event_cancelled : tx.community_event };
   const chat = ['community', 'messages'].includes(categoryOf(n.kind));
   if (!previews) return { title, body: chat ? tx.message : tx.notification };
   const name = nameOf(n);

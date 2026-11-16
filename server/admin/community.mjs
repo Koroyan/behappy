@@ -268,6 +268,19 @@ export function mountCommunityAdmin(app, deps) {
   const can = (p) => [json, auth, staff.guard(p)];
   const r = express.Router();
   r.get('/community/rooms', ...can('community.view'), handle((req) => a.rooms(req.query)));
+  // Scheduled discussions: hosted by a real moderator, facilitator or professional (never the AI).
+  const d = communityFor(deps).discovery;
+  r.get('/community/events', ...can('community.view'), handle(() => d.listForStaff()));
+  r.post('/community/events', ...can('community.manage'), handle(async (req) => {
+    const out = await d.createEvent(req.account, req.body || {}).catch((e) => fail(e.status || 400, e.code || 'bad_event'));
+    await audit(deps.db, { actorId: req.account.id, actorRole: primaryRole(req.account.roles) || 'admin', action: 'community.event_created', targetType: 'community_event', targetId: String(out.id), metadata: { roomId: String(req.body?.roomId || '') } });
+    return out;
+  }));
+  r.post('/community/events/:id/cancel', ...can('community.manage'), handle(async (req) => {
+    const out = await d.cancelEvent(req.account, req.params.id).catch((e) => fail(e.status || 400, e.code || 'bad_event'));
+    await audit(deps.db, { actorId: req.account.id, actorRole: primaryRole(req.account.roles) || 'admin', action: 'community.event_cancelled', targetType: 'community_event', targetId: String(req.params.id) });
+    return out;
+  }));
   r.post('/community/rooms/:id/state', ...can('community.manage'), handle((req) => a.setRoomState(req.account, req.params.id, req.body || {})));
   r.put('/community/rooms/:id/description', ...can('community.manage'), handle((req) => a.setDescription(req.account, req.params.id, req.body?.description)));
   r.post('/community/rooms/:id/notice', ...can('community.manage'), handle((req) => a.postNotice(req.account, req.params.id, req.body || {})));

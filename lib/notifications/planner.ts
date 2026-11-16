@@ -19,7 +19,7 @@
  *    (which never mention the mood: lock screens are visible to others).
  */
 
-export type ReminderKind = 'journal' | 'art' | 'cards' | 'step' | 'reflection' | 'sleep';
+export type ReminderKind = 'journal' | 'art' | 'cards' | 'step' | 'reflection' | 'sleep' | 'program';
 export type ReminderVariant = 'default' | 'soft' | 'continue';
 
 export interface ReminderPrefs {
@@ -201,7 +201,7 @@ export function planReminders(activity: ActivitySnapshot, prefs: ReminderPrefs, 
   }
 
   // At most two a day, three hours apart; the journal keeps its place.
-  const rank: Record<ReminderKind, number> = { journal: 0, art: 1, cards: 2, step: 3, reflection: 4, sleep: 5 };
+  const rank: Record<ReminderKind, number> = { journal: 0, art: 1, cards: 2, step: 3, reflection: 4, sleep: 5, program: 6 };
   const kept: PlannedReminder[] = [];
   for (const r of [...plan].sort((a, b) => rank[a.kind] - rank[b.kind] || a.at - b.at)) {
     const sameDay = kept.filter((k) => dayKey(k.at) === dayKey(r.at));
@@ -273,6 +273,34 @@ export function planReflectionReminders(settings: { enabled: boolean; time: stri
     const dayStart = addDays(startOfDay(now), d);
     const at = atMinute(dayStart, outOfQuiet(minute, prefs));
     if (at > now + 5 * MINUTE) out.push({ id: `reflection-${dayKey(dayStart)}`, kind: 'reflection', at, variant: 'default', copyIndex: Math.floor(dayStart / DAY), url: '/reflection?auto=1' });
+  }
+  return out;
+}
+
+/**
+ * My Programs: one reminder a day at the chosen time while the program is
+ * active and there is a day left. Not today when today's day is done or not
+ * open yet (it opens the day after the last one). Paused or finished: none.
+ */
+export function planProgramReminders(
+  program: { id: string; active: boolean; reminder: { enabled: boolean; time: string }; daysLeft: number; doneToday: boolean; opensOn: string | null } | null,
+  prefs: Pick<ReminderPrefs, 'quietFrom' | 'quietTo'>,
+  now: number,
+  { days = 7 }: { days?: number } = {}
+): PlannedReminder[] {
+  if (!program || !program.active || !program.reminder.enabled || program.daysLeft <= 0) return [];
+  const minute = parseHm(program.reminder.time);
+  if (minute === null) return [];
+  const out: PlannedReminder[] = [];
+  let left = program.daysLeft;
+  for (let d = 0; d < days && left > 0; d += 1) {
+    const dayStart = addDays(startOfDay(now), d);
+    const key = dayKey(dayStart);
+    if (d === 0 && program.doneToday) continue;
+    if (program.opensOn && key < program.opensOn) continue;
+    const at = atMinute(dayStart, outOfQuiet(minute, prefs));
+    left -= 1;
+    if (at > now + 5 * MINUTE) out.push({ id: `program-${program.id}-${key}`, kind: 'program', at, variant: 'default', copyIndex: Math.floor(dayStart / DAY), url: `/programs/${program.id}` });
   }
   return out;
 }

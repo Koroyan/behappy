@@ -142,6 +142,12 @@ describe('Analytics', () => {
   let seq = 0;
   const ev = (name, extra = {}) => ({ id: `ev${Date.now().toString(36)}${(seq += 1).toString().padStart(4, '0')}`, session: 'sess_test_0001', at: t.clock.now(), name, ...extra });
   const send = (u, events, platform = 'web') => call(u, '/api/events', 'POST', { events, platform, appVersion: '3.1.0' });
+  // New accounts send nothing until the person says yes (migration 018).
+  const allowed = async () => {
+    const u = await t.newAccount();
+    await call(u, '/api/account/privacy', 'PUT', { analytics: true });
+    return u;
+  };
 
   before(async () => {
     const { mountAnalytics } = await import('../analytics/index.mjs');
@@ -150,7 +156,7 @@ describe('Analytics', () => {
   after(() => t.stop());
 
   test('only allowlisted events with enum or number fields are kept; free text never is', async () => {
-    const u = await t.newAccount();
+    const u = await allowed();
     const res = await send(u, [
       ev('session_start', { props: { kind: 'cold' } }),
       ev('engagement', { feature: 'journal', props: { seconds: 60 } }),
@@ -181,7 +187,7 @@ describe('Analytics', () => {
 
   test('aggregates hide small groups; analysts see them, support does not; exports are confirmed and logged', async () => {
     const people = [];
-    for (let i = 0; i < 6; i += 1) people.push(await t.newAccount());
+    for (let i = 0; i < 6; i += 1) people.push(await allowed());
     for (const p of people) await send(p, [ev('session_start'), ev('engagement', { feature: 'community', props: { seconds: 120 } }), ev('action', { feature: 'community', props: { kind: 'room_joined' } })], 'android');
     for (const p of people.slice(0, 2)) await send(p, [ev('engagement', { feature: 'art', props: { seconds: 300 } })], 'android');
     const analyst = await t.registered(`analyst-${Date.now()}@example.org`);
@@ -216,7 +222,7 @@ describe('Analytics', () => {
   });
 
   test('switching analytics off stops collection and deletes what was kept; the owner can stop it for everyone', async () => {
-    const u = await t.newAccount();
+    const u = await allowed();
     await send(u, [ev('engagement', { feature: 'breathing', props: { seconds: 90 } })]);
     assert.equal((await t.db.query('select count(*)::int as n from analytics_events where account_id = $1', [u.accountId])).rows[0].n, 1);
     assert.equal((await call(u, '/api/account/privacy', 'PUT', { analytics: false })).json.analytics, false);

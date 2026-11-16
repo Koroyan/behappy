@@ -385,6 +385,7 @@ export const wbUk = {
       "kindness7": "Сім добрих справ",
       "gratitude7": "Сім подяк",
       "checkIn10": "Десять відміток самопочуття",
+      "programDone": "Програму пройдено",
       "challenge": "Виклик завершено"
     },
     "challenges": {

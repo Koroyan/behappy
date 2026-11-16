@@ -11,6 +11,7 @@ import { LANGUAGE_NAMES } from '@/contexts/LanguageContext';
 import { AppText, Banner, Button, Card, IconButton, Screen, SectionHeader, space, ToggleRow } from '@/design';
 import { FactLine, useFactText } from '@/features/wellbeing/FactLine';
 import { useT } from '@/i18n';
+import { trackAction } from '@/lib/analytics';
 import { askNotificationPermission } from '@/lib/notifications/reminders';
 import { subscribe } from '@/lib/storage/json';
 import { dayKey, formatTime, parseTime } from '@/lib/wellbeing/dates';
@@ -35,6 +36,9 @@ export default function ReflectionScreen() {
   }, []);
   useFocusEffect(refresh);
   useEffect(() => {
+    trackAction('reflection', 'opened');
+  }, []);
+  useEffect(() => {
     const a = subscribe(REFLECTION_TOPIC, refresh);
     const b = subscribe(EVENTS_TOPIC, refresh);
     return () => {
@@ -48,6 +52,7 @@ export default function ReflectionScreen() {
     setBusy(true);
     try {
       await makeReflection(language, LANGUAGE_NAMES[language] || 'English', { describe });
+      trackAction('reflection', 'completed');
     } finally {
       setBusy(false);
     }

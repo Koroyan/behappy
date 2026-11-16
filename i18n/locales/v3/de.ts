@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsDe } from '../alerts/de';
 import { pwaDe } from '../pwa/de';
 import { wbDe } from '../wb/de';
+import { jrDe } from '../jr/de';
 
 /** Deutsch — BeHappy 3.0. Warm, persönlich („du“). */
 export const de3: PartialMessages = {
@@ -10,6 +11,8 @@ export const de3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaDe,
   wb: wbDe,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrDe,
   shell: {
     personal: 'Persönlich',
     community: 'Community',

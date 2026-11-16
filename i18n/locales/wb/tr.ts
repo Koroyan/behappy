@@ -385,6 +385,7 @@ export const wbTr = {
       "kindness7": "Yedi iyilik",
       "gratitude7": "Yedi teşekkür",
       "checkIn10": "On durum kaydı",
+      "programDone": "Bir program tamamlandı",
       "challenge": "Meydan okuma tamamlandı"
     },
     "challenges": {

@@ -2,6 +2,7 @@ import type { PartialMessages } from '../../index';
 import { alertsPt } from '../alerts/pt';
 import { pwaPt } from '../pwa/pt';
 import { wbPt } from '../wb/pt';
+import { jrPt } from '../jr/pt';
 
 /** Português (europeu) — BeHappy 3.0. Caloroso e respeitoso. */
 export const pt3: PartialMessages = {
@@ -10,6 +11,8 @@ export const pt3: PartialMessages = {
   // Installed web app: updates, installing, Web Push (see ../pwa).
   pwa: pwaPt,
   wb: wbPt,
+  // First-days journey: first launch, programs, discovery, backup, guide (see ../jr).
+  jr: jrPt,
   shell: {
     personal: 'Pessoal',
     community: 'Comunidade',

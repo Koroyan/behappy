@@ -348,6 +348,7 @@ export const wbKa = {
       kindness7: 'შვიდი კეთილი საქციელი',
       gratitude7: 'შვიდი მადლობა',
       checkIn10: 'ათი აღნიშვნა',
+      programDone: 'პროგრამა დასრულდა',
       challenge: 'გამოწვევა შესრულდა',
     },
     challenges: {

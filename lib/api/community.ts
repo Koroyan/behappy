@@ -102,3 +102,54 @@ export const sendAppeal = (suspensionId: number, body: string) => apiJson('/api/
 
 /** Avatar colours for members (from the seed the server picked). */
 export const AVATAR_TONES = ['sage', 'peach', 'lavender', 'gold'] as const;
+
+// ---------- Discovery (server/community/discovery.mjs) ----------
+
+/** Real recent activity of a room, as a coarse level (never counts of people or messages). */
+export type RoomActivity = 'today' | 'week' | 'quiet';
+
+export interface DiscoverRoom {
+  id: string;
+  topic: TopicId;
+  language: string;
+  icon: string;
+  members: number;
+  joined?: boolean;
+  paused?: boolean;
+  lastActivityAt: number | null;
+  activity: RoomActivity;
+}
+
+/** A discussion scheduled and hosted by a real person (moderator, facilitator or professional). */
+export interface CommunityEvent {
+  id: number;
+  roomId: string;
+  topic: TopicId;
+  language: string;
+  title: string;
+  description: string;
+  startsAt: number;
+  endsAt: number;
+  host: { name: string; role: 'moderator' | 'facilitator' | 'professional' };
+  live: boolean;
+  interested: boolean;
+  /** Shown only from 3 people up (null below). */
+  interestCount: number | null;
+}
+
+export interface Discover {
+  language: string;
+  topicRoom: DiscoverRoom | null;
+  active: DiscoverRoom[];
+  quiet: DiscoverRoom[];
+  moderation: { coverage: 'staffed' | 'limited' };
+  events: CommunityEvent[];
+}
+
+export const discoverRooms = (lang: string, topic?: string | null) => apiJson<Discover>(`/api/community/discover?lang=${encodeURIComponent(lang)}${topic ? `&topic=${encodeURIComponent(topic)}` : ''}`);
+export const relatedRooms = async (topic: string, exclude: string) => (await apiJson<{ rooms: DiscoverRoom[] }>(`/api/community/related?topic=${encodeURIComponent(topic)}&exclude=${encodeURIComponent(exclude)}`)).rooms;
+export const roomEvents = async (roomId: string) => (await apiJson<{ events: CommunityEvent[] }>(`/api/community/rooms/${encodeURIComponent(roomId)}/events`)).events;
+export const setEventInterest = (id: number, on: boolean) => apiJson<{ interested: boolean; interestCount: number | null }>(`/api/community/events/${id}/interest`, { method: 'POST', body: { on } });
+
+/** A room counts as quiet when nobody wrote in the last 7 days (the same rule as the server). */
+export const isQuiet = (lastActivityAt: number | null, now = Date.now()) => !lastActivityAt || now - lastActivityAt > 7 * 24 * 60 * 60 * 1000;

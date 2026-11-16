@@ -3,8 +3,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { AppLanguage, LANGUAGE_NAMES, SUPPORTED_LANGUAGES, useLanguage } from '@/contexts/LanguageContext';
-import { AppText, Banner, Button, Card, Icon, Press, Screen, SectionHeader, Sheet, Skeleton, space, TextField, useFeedback, useLayout } from '@/design';
+import { AppText, Banner, Button, Card, Icon, Press, Screen, SectionHeader, Sheet, space, TextField, useFeedback, useLayout } from '@/design';
 import { AccountGate } from '@/features/account/AccountParts';
+import { DiscoverRooms } from '@/features/community/Discovery';
 import { RoomCard } from '@/features/community/RoomCard';
 import { NotifyPrompt } from '@/features/notifications/NotifyPrompt';
 import { HeaderActions } from '@/features/shell/ProfileButton';
@@ -12,7 +13,7 @@ import { GuidelinesList, MemberAvatar } from '@/features/community/RoomParts';
 import { useT } from '@/i18n';
 import { useAccount, useIdentity } from '@/lib/api/account';
 import { ApiError } from '@/lib/api/client';
-import { listMyRooms, listRooms, Room, saveProfile, sendAppeal, Suspension } from '@/lib/api/community';
+import { listMyRooms, Room, saveProfile, sendAppeal, Suspension } from '@/lib/api/community';
 import { onEvent } from '@/lib/realtime/socket';
 
 interface CommunityMe {
@@ -31,7 +32,6 @@ export default function CommunityHome() {
   const { toast } = useFeedback();
   const community = (me?.community as CommunityMe | undefined) ?? null;
   const [browseLang, setBrowseLang] = useState<AppLanguage>(language);
-  const [rooms, setRooms] = useState<Room[] | null>(null);
   const [mine, setMine] = useState<Room[]>([]);
   const [langOpen, setLangOpen] = useState(false);
   const [name, setName] = useState('');
@@ -49,11 +49,11 @@ export default function CommunityHome() {
   const load = useCallback(
     async (lang: AppLanguage) => {
       try {
-        const [r, m] = await Promise.all([listRooms(lang), listMyRooms()]);
-        setRooms(r);
-        setMine(m);
+        // Rooms in the chosen language come from discovery (DiscoverRooms); here: the person's own rooms.
+        void lang;
+        setMine(await listMyRooms());
       } catch {
-        setRooms([]);
+        setMine([]);
       }
     },
     []
@@ -208,20 +208,10 @@ export default function CommunityHome() {
               )}
             </View>
 
+            {/* Discovery: the person's topic, real recent activity and scheduled discussions first; quiet rooms folded (all 13 topics stay one tap away). */}
             <View>
               <SectionHeader title={t('community.roomsIn', { language: LANGUAGE_NAMES[browseLang] })} actionLabel={t('community.otherLanguage')} onAction={() => setLangOpen(true)} />
-              {rooms === null ? (
-                <View style={{ gap: 12 }}>
-                  <Skeleton height={96} radius={22} />
-                  <Skeleton height={96} radius={22} />
-                </View>
-              ) : (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                  {rooms.map((r) => (
-                    <RoomCard key={r.id} room={r} onPress={() => router.push(`/community/${encodeURIComponent(r.id)}` as any)} />
-                  ))}
-                </View>
-              )}
+              <DiscoverRooms key={browseLang} language={browseLang} onOpen={(id) => router.push(`/community/${encodeURIComponent(id)}` as any)} />
             </View>
             
           </>
@@ -235,7 +225,6 @@ export default function CommunityHome() {
               key={l}
               onPress={() => {
                 setBrowseLang(l);
-                setRooms(null);
                 setLangOpen(false);
                 load(l);
               }}

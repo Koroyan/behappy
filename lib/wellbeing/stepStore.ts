@@ -49,6 +49,8 @@ async function update(fn: (d: StepData) => StepData): Promise<StepData> {
 export async function addStep(template: StepTemplate, patch: Partial<Step> = {}): Promise<Step> {
   const step = newStep(template, uid('step'), Date.now(), patch);
   await update((d) => ({ ...d, steps: [...d.steps, step] }));
+  // A new Step is an event too (the habits program's first day, usage statistics).
+  await recordEvent('step.created', step.id, { template: step.template }, step.createdAt).catch(() => null);
   return step;
 }
 

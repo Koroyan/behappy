@@ -385,6 +385,7 @@ export const wbEs = {
       "kindness7": "Siete gestos amables",
       "gratitude7": "Siete agradecimientos",
       "checkIn10": "Diez registros",
+      "programDone": "Un programa completado",
       "challenge": "Reto completado"
     },
     "challenges": {

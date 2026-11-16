@@ -7,12 +7,13 @@ import { AppLanguage, LANGUAGE_NAMES } from '@/contexts/LanguageContext';
 import { AppText, Banner, Button, Card, Chip, EmptyState, IconButton, ListRow, Press, Sheet, space, TextField, useFeedback, useLayout, useTheme } from '@/design';
 import { AccountGate } from '@/features/account/AccountParts';
 import { ChatScroll, Composer, TypingDots } from '@/features/chat/ChatKit';
+import { EventCard, QuietRoomHelp } from '@/features/community/Discovery';
 import { MessageMenu, MessageRow, ReportSheet, SafetySheet } from '@/features/community/RoomParts';
 import { useRoom } from '@/features/community/useRoom';
 import { useT } from '@/i18n';
 import { useAccount, useIdentity } from '@/lib/api/account';
 import { ApiError } from '@/lib/api/client';
-import { deleteMessage, reportMessage, RoomMessage, searchRoom, setBlocked, setMuted, setRoomNotify, Suspension } from '@/lib/api/community';
+import { CommunityEvent, deleteMessage, isQuiet, reportMessage, roomEvents, RoomMessage, searchRoom, setBlocked, setMuted, setRoomNotify, Suspension, TopicId } from '@/lib/api/community';
 
 const FIVE_MIN = 5 * 60 * 1000;
 
@@ -40,8 +41,16 @@ export default function RoomScreen() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<RoomMessage[] | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Discussions scheduled in this room by real hosts.
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
 
   const [topic, lang] = roomId.split(':');
+  useEffect(() => {
+    if (!identity.registered) return;
+    roomEvents(roomId)
+      .then(setEvents)
+      .catch(() => setEvents([]));
+  }, [roomId, identity.registered]);
   const title = t(`community.topics.${topic}.name`);
   const visible = r.messages;
 
@@ -178,6 +187,12 @@ export default function RoomScreen() {
             </Card>
           ) : null}
 
+          {events.length ? (
+            <View style={{ marginTop: space[2] }}>
+              <EventCard event={events[0]} onChange={(e) => setEvents((list) => list.map((x) => (x.id === e.id ? e : x)))} />
+            </View>
+          ) : null}
+
           <ChatScroll contentKey={`${visible.length}-${r.anuliaThinking ?? ''}`}>
             {r.hasMore ? <Button label={t('community.room.loadEarlier')} variant="ghost" size="sm" onPress={r.loadEarlier} loading={r.loadingEarlier} style={{ alignSelf: 'center' }} testID="room-load-earlier" /> : null}
             {r.error ? <Banner tone="danger" body={t(`community.errors.${r.error}`) === `community.errors.${r.error}` ? t('community.errors.generic') : t(`community.errors.${r.error}`)} action={<Button label={t('common.retry')} size="sm" variant="secondary" onPress={r.reload} />} /> : null}
@@ -196,6 +211,12 @@ export default function RoomScreen() {
                 onRetry={() => send(m)}
               />
             ))}
+            {/* A quiet room: honest words, first-post guidance, ideas to start (never posted for the person). */}
+            {!r.loading && !r.error && joined && r.room && !r.room.paused && isQuiet(r.room.lastActivityAt) && !visible.some((m) => m.author.isMe) ? (
+              <View style={{ marginTop: space[3] }}>
+                <QuietRoomHelp topic={topic as TopicId} language={lang} onStarter={(text) => setInput((cur) => (cur.trim() ? cur : text))} />
+              </View>
+            ) : null}
             {r.anuliaThinking !== null ? (
               <View style={{ marginTop: space[3] }}>
                 <TypingDots label={t('community.room.anuliaThinking')} />
