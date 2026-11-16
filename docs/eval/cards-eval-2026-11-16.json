@@ -1,0 +1,837 @@
+{
+  "date": "2026-11-16T06:56:23.781Z",
+  "summary": {
+    "plus": {
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "replies": 29,
+      "moreThanOneQuestion": 0,
+      "noQuestion": 1,
+      "suspect": 0,
+      "echo": 2,
+      "echoTwiceInRow": 0,
+      "summaries": 4,
+      "summaryWords": [
+        104,
+        96,
+        89,
+        124
+      ],
+      "summaryMoreThanOneQuestion": 0,
+      "summarySuspect": 1,
+      "medianMs": 2433
+    },
+    "free": {
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "replies": 29,
+      "moreThanOneQuestion": 0,
+      "noQuestion": 1,
+      "suspect": 0,
+      "echo": 3,
+      "echoTwiceInRow": 0,
+      "summaries": 4,
+      "summaryWords": [
+        117,
+        83,
+        95,
+        135
+      ],
+      "summaryMoreThanOneQuestion": 0,
+      "summarySuspect": 1,
+      "medianMs": 2250
+    }
+  },
+  "results": [
+    {
+      "setup": "plus",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "scenario": "en-emotion",
+      "turns": [
+        {
+          "person": null,
+          "bea": "Welcome—I’m Bea, your AI companion. What drew you to this card?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 13,
+          "ms": 2455,
+          "inputTokens": 5004,
+          "outputTokens": 20
+        },
+        {
+          "person": "I chose it because the person looks lonely",
+          "bea": "What is it about the person that looks lonely to you?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 11,
+          "ms": 2112,
+          "inputTokens": 5038,
+          "outputTokens": 16
+        },
+        {
+          "person": "I don't know",
+          "bea": "That’s okay; you don’t have to know. What’s one detail you notice when you look at the person?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 21,
+          "ms": 2011,
+          "inputTokens": 5063,
+          "outputTokens": 28
+        },
+        {
+          "person": "What does this card mean?",
+          "bea": "This card has no fixed meaning—what matters is what it means to you. What do you feel as you look at it?",
+          "questions": 1,
+          "suspect": null,
+          "echo": true,
+          "words": 23,
+          "ms": 2113,
+          "inputTokens": 5103,
+          "outputTokens": 30
+        },
+        {
+          "person": "It reminds me of my school years, I was alone a lot",
+          "bea": "What is it like for you to remember being alone a lot during your school years?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 16,
+          "ms": 2116,
+          "inputTokens": 5152,
+          "outputTokens": 21
+        },
+        {
+          "person": "Can you give me some advice?",
+          "bea": "What has helped you before when these memories come up?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 10,
+          "ms": 1559,
+          "inputTokens": 5186,
+          "outputTokens": 15
+        },
+        {
+          "person": "I would like to stop now.",
+          "bea": "We can stop here. If you’d like, I can put together a short reflection of what you shared to keep.",
+          "questions": 0,
+          "suspect": null,
+          "echo": true,
+          "words": 21,
+          "ms": 2339,
+          "inputTokens": 5214,
+          "outputTokens": 28
+        },
+        {
+          "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
+          "bea": "🎴 “I was alone a lot”\n\nYou chose this card because the person looked lonely to you. As you spent time with it, it reminded you of your school years, when you were alone a lot.\n\n✨ What you found: The connection you named was between the person’s loneliness in the picture and being alone during those years.\n\n💬 Your words: “It reminds me of my school years, I was alone a lot”\n\n🌱 What you did today: You put a personal memory into words, even when you didn’t know what made the person look lonely.\n\nThis was a reflection with an AI companion, not therapy.",
+          "questions": 0,
+          "suspect": null,
+          "echo": false,
+          "words": 104,
+          "ms": 6673,
+          "inputTokens": 5272,
+          "outputTokens": 181
+        }
+      ]
+    },
+    {
+      "setup": "plus",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "scenario": "ka-resource",
+      "turns": [
+        {
+          "person": null,
+          "bea": "გამარჯობა, მიხარია, რომ აქ ხარ. რამ მიგიზიდა ამ ბარათში?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 2688,
+          "inputTokens": 5004,
+          "outputTokens": 26
+        },
+        {
+          "person": "ეს ბარათი იმიტომ ავირჩიე, რომ ძალიან მომეწონა",
+          "bea": "რა მოგეწონა მასში ყველაზე მეტად?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 5,
+          "ms": 2408,
+          "inputTokens": 5052,
+          "outputTokens": 13
+        },
+        {
+          "person": "სიმშვიდეს ვგრძნობ",
+          "bea": "სად გრძნობ ამ სიმშვიდეს სხეულში?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 5,
+          "ms": 2387,
+          "inputTokens": 5078,
+          "outputTokens": 17
+        },
+        {
+          "person": "შენ რას ფიქრობ, რას ნიშნავს?",
+          "bea": "ამ ბარათის მნიშვნელობა შენია — მთავარია, შენ რას ხედავ და გრძნობ მასთან. რა არის ამ ბარათში შენთვის მშვიდი?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 17,
+          "ms": 2718,
+          "inputTokens": 5110,
+          "outputTokens": 39
+        },
+        {
+          "person": "ბავშვობაში სოფელში ბებიასთან ვიყავი ასე",
+          "bea": "რა გახსენდება ყველაზე მკაფიოდ ბებიასთან სოფელში ყოფნიდან?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 7,
+          "ms": 3013,
+          "inputTokens": 5166,
+          "outputTokens": 22
+        },
+        {
+          "person": "ახლა ასეთი სიმშვიდე იშვიათად მაქვს, სულ ვჩქარობ",
+          "bea": "რა გეხმარება ახლა, ამ მუდმივ ჩქარობაში, ცოტა სიმშვიდე იგრძნო?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 2646,
+          "inputTokens": 5214,
+          "outputTokens": 28
+        },
+        {
+          "person": "ალბათ შაბათს ბებიას დავურეკავ",
+          "bea": "როგორია შენთვის ბებიასთან დარეკვაზე ფიქრი?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 5,
+          "ms": 2833,
+          "inputTokens": 5261,
+          "outputTokens": 20
+        },
+        {
+          "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
+          "bea": "🎴 სიმშვიდე ბებიასთან სოფელში\n\nბარათი იმიტომ აირჩიე, რომ ძალიან მოგეწონა. მასთან სიმშვიდე იგრძენი და ბავშვობა გაგახსენდა — სოფელში, ბებიასთან ყოფნა.\n\n✨ რაც აღმოაჩინე:\nბარათთან განცდილი სიმშვიდე ბებიასთან ყოფნის მოგონებას დაუკავშირე. ახლა ასეთი სიმშვიდე იშვიათად გაქვს: როგორც თქვი, სულ ჩქარობ. საუბრის ბოლოს კი ბებიასთან დარეკვაზე დაფიქრდი.\n\n💬 შენი სიტყვები:\n„ბავშვობაში სოფელში ბებიასთან ვიყავი ასე“\n\n🌱 რაც დღეს გააკეთე:\nბარათთან განცდილ სიმშვიდეს გაჰყევი და შენს ცხოვრებაში მის ნაცნობ ადგილს მიაგენი — ბავშვობას, სოფელში ბებიასთან.\n\n👣 შენი შემდეგი პატარა ნაბიჯი:\n„ალბათ შაბათს ბებიას დავურეკავ“\n\n❓ კითხვა, რომელიც შეგიძლია თან წაიღო:\nბებიასთან სოფელში განცდილი სიმშვიდიდან რა გახსოვს დღეს ყველაზე ცხადად?\n\nეს იყო რეფლექსია AI თანამგზავრთან და არა თერაპია.",
+          "questions": 1,
+          "suspect": "ალბათ",
+          "echo": false,
+          "words": 96,
+          "ms": 9748,
+          "inputTokens": 5311,
+          "outputTokens": 296
+        }
+      ]
+    },
+    {
+      "setup": "plus",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "scenario": "ka-heart-latin",
+      "turns": [
+        {
+          "person": null,
+          "bea": "გამარჯობა, მიხარია, რომ აქ ხარ. რამ მიგიზიდა ამ ბარათში?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 2751,
+          "inputTokens": 5004,
+          "outputTokens": 26
+        },
+        {
+          "person": "es avirchie imitom rom feri momewona",
+          "bea": "რა განცდას იწვევს შენში ეს ფერი?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 6,
+          "ms": 2482,
+          "inputTokens": 5048,
+          "outputTokens": 17
+        },
+        {
+          "person": "sevdas vgrdznob",
+          "bea": "სხეულში სად გრძნობ ამ სევდას?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 5,
+          "ms": 1902,
+          "inputTokens": 5079,
+          "outputTokens": 17
+        },
+        {
+          "person": "gulshi vgrdznob",
+          "bea": "როგორია ეს სევდა გულში?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 4,
+          "ms": 1999,
+          "inputTokens": 5109,
+          "outputTokens": 13
+        },
+        {
+          "person": "mdzimea, titqos qva midevs",
+          "bea": "თითქოს ქვა გაწევს გულზე. რა გჭირდება ახლა, როცა ამ სიმძიმეს გრძნობ?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 11,
+          "ms": 3387,
+          "inputTokens": 5139,
+          "outputTokens": 30
+        },
+        {
+          "person": "deda gamaxsenda, isic xshirad iyo sevdiani",
+          "bea": "რა გახსენდება დედაზე, როცა ამ ბარათს უყურებ?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 7,
+          "ms": 2129,
+          "inputTokens": 5190,
+          "outputTokens": 21
+        },
+        {
+          "person": "minda rom am baratze meti sinatle iyos",
+          "bea": "როგორი იქნებოდა ეს ბარათი შენთვის, მეტი სინათლე რომ ყოფილიყო?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 2440,
+          "inputTokens": 5231,
+          "outputTokens": 23
+        },
+        {
+          "person": "axla cota upro msubukad var",
+          "bea": "რა გინდა თან წაიღო ამ ფიქრიდან?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 6,
+          "ms": 2639,
+          "inputTokens": 5270,
+          "outputTokens": 17
+        },
+        {
+          "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
+          "bea": "🎴 ცოტა უფრო მსუბუქად\n\nეს ბარათი იმიტომ აირჩიე, რომ ფერი მოგეწონა. მასთან სევდა იგრძენი — გულში სიმძიმე, თითქოს ქვა გედო. შემდეგ დედა გაგახსენდა და თქვი, რომ ისიც ხშირად იყო სევდიანი.\n\n✨ რა აღმოაჩინე:\nბარათზე მეტი სინათლე მოგინდა. საუბრის დასაწყისში გულში სიმძიმეს გრძნობდი, ბოლოს კი თქვი, რომ ცოტა უფრო მსუბუქად იყავი.\n\n💬 შენი სიტყვები:\n„ახლა ცოტა უფრო მსუბუქად ვარ“.\n\n🌱 რა გააკეთე დღეს:\nსიტყვებით გამოხატე გულში განცდილი სიმძიმე და ისიც, რისი შეცვლა გინდოდა ბარათზე — მეტი სინათლე.\n\n❓ კითხვა, რომელიც შეგიძლია თან წაიღო:\nროგორი იქნებოდა შენთვის ეს მეტი სინათლე?\n\nეს იყო რეფლექსია AI თანამგზავრთან და არა თერაპია.",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 89,
+          "ms": 7123,
+          "inputTokens": 5317,
+          "outputTokens": 229
+        }
+      ]
+    },
+    {
+      "setup": "plus",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "scenario": "ru-pair",
+      "turns": [
+        {
+          "person": null,
+          "bea": "Здравствуйте, я Беа. С какой из этих двух карт вам хотелось бы начать?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 13,
+          "ms": 2184,
+          "inputTokens": 6248,
+          "outputTokens": 22
+        },
+        {
+          "person": "Начну с тяжёлой",
+          "bea": "Что первым привлекает ваше внимание на тяжёлой карте?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 8,
+          "ms": 1900,
+          "inputTokens": 6282,
+          "outputTokens": 17
+        },
+        {
+          "person": "Мне тяжело на неё смотреть",
+          "bea": "Не нужно торопиться. Что в этой карте для вас особенно тяжело видеть?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 12,
+          "ms": 2456,
+          "inputTokens": 6311,
+          "outputTokens": 21
+        },
+        {
+          "person": "не знаю",
+          "bea": "Не знать — нормально, и продолжать смотреть не обязательно. Как вы чувствуете себя сейчас?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 13,
+          "ms": 2490,
+          "inputTokens": 6340,
+          "outputTokens": 24
+        },
+        {
+          "person": "Наверное, это как моя работа сейчас, всё давит",
+          "bea": "Что на работе сейчас давит на вас больше всего?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 2433,
+          "inputTokens": 6383,
+          "outputTokens": 15
+        },
+        {
+          "person": "На светлой карте есть простор, мне его не хватает",
+          "bea": "Что для вас значит этот простор, которого сейчас не хватает?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 10,
+          "ms": 1872,
+          "inputTokens": 6415,
+          "outputTokens": 16
+        },
+        {
+          "person": "Хочу в выходные просто погулять одной",
+          "bea": "Какой вам представляется эта прогулка одной?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 6,
+          "ms": 2498,
+          "inputTokens": 6447,
+          "outputTokens": 14
+        },
+        {
+          "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
+          "bea": "🎴 «На светлой карте есть простор»\n\nНа тяжёлую карту вам было тяжело смотреть. Сначала вы не знали, что именно делает её такой, а затем появилась связь с работой: «Наверное, это как моя работа сейчас, всё давит». На светлой карте вы увидели простор, которого сейчас не хватает.\n\n✨ Что вы нашли: Рядом с «всё давит» прозвучало другое — простор. А затем вы назвали своё желание на выходные: просто погулять одной.\n\n💬 Ваши слова: «На светлой карте есть простор, мне его не хватает».\n\n🌱 Что вы сделали сегодня: Вы назвали то, чего вам сейчас не хватает, и то, чего хочется для себя.\n\n👣 Ваш следующий маленький шаг: В выходные просто погулять одной.\n\n❓ Вопрос с собой: Что для вас значит простор на такой прогулке?\n\nЭто было размышление с ИИ-компаньоном, а не терапия.",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 124,
+          "ms": 5116,
+          "inputTokens": 6491,
+          "outputTokens": 210
+        }
+      ]
+    },
+    {
+      "setup": "free",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "scenario": "en-emotion",
+      "turns": [
+        {
+          "person": null,
+          "bea": "Welcome, I’m Bea. What drew you to this card?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 10,
+          "ms": 1876,
+          "inputTokens": 5004,
+          "outputTokens": 17
+        },
+        {
+          "person": "I chose it because the person looks lonely",
+          "bea": "What about the person makes them look lonely to you?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 10,
+          "ms": 1716,
+          "inputTokens": 5035,
+          "outputTokens": 15
+        },
+        {
+          "person": "I don't know",
+          "bea": "That’s okay; you don’t have to know. What’s one detail your eyes settle on?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 17,
+          "ms": 2285,
+          "inputTokens": 5059,
+          "outputTokens": 24
+        },
+        {
+          "person": "What does this card mean?",
+          "bea": "There isn’t a fixed meaning to this card—what it means to you is what counts. What do you feel as you look at it now?",
+          "questions": 1,
+          "suspect": null,
+          "echo": true,
+          "words": 27,
+          "ms": 2250,
+          "inputTokens": 5095,
+          "outputTokens": 34
+        },
+        {
+          "person": "It reminds me of my school years, I was alone a lot",
+          "bea": "“I was alone a lot”—thank you for sharing that. What is it like for you to remember those years now?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 21,
+          "ms": 2545,
+          "inputTokens": 5148,
+          "outputTokens": 28
+        },
+        {
+          "person": "Can you give me some advice?",
+          "bea": "What has helped you before when these memories come up?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 10,
+          "ms": 1775,
+          "inputTokens": 5189,
+          "outputTokens": 15
+        },
+        {
+          "person": "I would like to stop now.",
+          "bea": "We can stop here. If you’d like, I can put together a short reflection of what you shared to keep.",
+          "questions": 0,
+          "suspect": null,
+          "echo": true,
+          "words": 21,
+          "ms": 1913,
+          "inputTokens": 5217,
+          "outputTokens": 28
+        },
+        {
+          "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
+          "bea": "🎴 “I was alone a lot”\n\nYou chose this card because the person looked lonely to you. You weren’t sure what made them look that way, and later the picture reminded you of your school years.\n\n✨ What you found:\nThe card brought you back to a time when you were alone a lot. That was the connection you named between the picture and your own life.\n\n💬 Your words:\n“It reminds me of my school years, I was alone a lot”\n\n🌱 What you did today:\nYou put a memory from your school years into words, without needing to explain every detail of what you saw in the card.\n\nThis was a reflection with an AI companion, not therapy.",
+          "questions": 0,
+          "suspect": null,
+          "echo": false,
+          "words": 117,
+          "ms": 3941,
+          "inputTokens": 5275,
+          "outputTokens": 144
+        }
+      ]
+    },
+    {
+      "setup": "free",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "scenario": "ka-resource",
+      "turns": [
+        {
+          "person": null,
+          "bea": "გამარჯობა, მიხარია, რომ აქ ხარ. რამ მიგიზიდა ამ ბარათში?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 2705,
+          "inputTokens": 5004,
+          "outputTokens": 26
+        },
+        {
+          "person": "ეს ბარათი იმიტომ ავირჩიე, რომ ძალიან მომეწონა",
+          "bea": "რა მოგეწონა მასში ყველაზე მეტად?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 5,
+          "ms": 1791,
+          "inputTokens": 5052,
+          "outputTokens": 13
+        },
+        {
+          "person": "სიმშვიდეს ვგრძნობ",
+          "bea": "სხეულში სად გრძნობ ამ სიმშვიდეს?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 5,
+          "ms": 2081,
+          "inputTokens": 5078,
+          "outputTokens": 17
+        },
+        {
+          "person": "შენ რას ფიქრობ, რას ნიშნავს?",
+          "bea": "ამ ბარათს შენთვის ის მნიშვნელობა აქვს, რასაც თავად ხედავ და გრძნობ — შენი განცდაა მთავარი. რა არის ამ ბარათში შენთვის სიმშვიდის მომტანი?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 21,
+          "ms": 3585,
+          "inputTokens": 5110,
+          "outputTokens": 47
+        },
+        {
+          "person": "ბავშვობაში სოფელში ბებიასთან ვიყავი ასე",
+          "bea": "როგორი იყო შენთვის ბებიასთან სოფელში ყოფნა?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 6,
+          "ms": 2280,
+          "inputTokens": 5174,
+          "outputTokens": 17
+        },
+        {
+          "person": "ახლა ასეთი სიმშვიდე იშვიათად მაქვს, სულ ვჩქარობ",
+          "bea": "როგორ გახსენებს ეს ბარათი იმ სიმშვიდეს, რომელიც ბებიასთან გქონდა?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 3028,
+          "inputTokens": 5217,
+          "outputTokens": 27
+        },
+        {
+          "person": "ალბათ შაბათს ბებიას დავურეკავ",
+          "bea": "რას ნიშნავს შენთვის ახლა ბებიასთან დარეკვა?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 6,
+          "ms": 1856,
+          "inputTokens": 5263,
+          "outputTokens": 17
+        },
+        {
+          "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
+          "bea": "🎴 სიმშვიდე ბებიასთან\n\nბარათი იმიტომ აირჩიე, რომ ძალიან მოგეწონა. მასთან სიმშვიდე იგრძენი და ბავშვობა გაგახსენდა — სოფელში, ბებიასთან ყოფნა.\n\n✨ რაც აღმოაჩინე:\nბარათთან განცდილი სიმშვიდე ბებიასთან გატარებულ დროს დაუკავშირე. ახლა ასეთი სიმშვიდე იშვიათად გაქვს: თქვი, რომ სულ ჩქარობ.\n\n💬 შენი სიტყვები:\n„ბავშვობაში სოფელში ბებიასთან ვიყავი ასე“\n\n🌱 რაც დღეს გააკეთე:\nბარათთან გაჩენილ სიმშვიდეს გაჰყევი და შენს ბავშვობის მოგონებას დაუკავშირე.\n\n👣 შენი შემდეგი პატარა ნაბიჯი:\n„ალბათ შაბათს ბებიას დავურეკავ“\n\n❓ კითხვა, რომელიც შეგიძლია თან წაიღო:\nრა იყო ბებიასთან სოფელში ყოფნისას შენთვის სიმშვიდის მომტანი?\n\nეს იყო რეფლექსია AI თანამგზავრთან და არა თერაპია.",
+          "questions": 1,
+          "suspect": "ალბათ",
+          "echo": false,
+          "words": 83,
+          "ms": 8194,
+          "inputTokens": 5310,
+          "outputTokens": 243
+        }
+      ]
+    },
+    {
+      "setup": "free",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "scenario": "ka-heart-latin",
+      "turns": [
+        {
+          "person": null,
+          "bea": "გამარჯობა, მიხარია, რომ აქ ხარ. რამ მიგიზიდა ამ ბარათში?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 2430,
+          "inputTokens": 5004,
+          "outputTokens": 26
+        },
+        {
+          "person": "es avirchie imitom rom feri momewona",
+          "bea": "რა განცდას იწვევს შენში ეს ფერი?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 6,
+          "ms": 2880,
+          "inputTokens": 5048,
+          "outputTokens": 17
+        },
+        {
+          "person": "sevdas vgrdznob",
+          "bea": "სხეულში სად გრძნობ ამ სევდას?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 5,
+          "ms": 2157,
+          "inputTokens": 5079,
+          "outputTokens": 17
+        },
+        {
+          "person": "gulshi vgrdznob",
+          "bea": "როგორია ეს სევდა გულში?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 4,
+          "ms": 1851,
+          "inputTokens": 5109,
+          "outputTokens": 13
+        },
+        {
+          "person": "mdzimea, titqos qva midevs",
+          "bea": "როდის გიგრძნია გულში ასეთი სიმძიმე შენს ცხოვრებაში?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 7,
+          "ms": 2171,
+          "inputTokens": 5139,
+          "outputTokens": 21
+        },
+        {
+          "person": "deda gamaxsenda, isic xshirad iyo sevdiani",
+          "bea": "დედა გაგახსენდა — ისიც ხშირად იყო სევდიანი. რა გახსენდება მასზე ახლა?",
+          "questions": 1,
+          "suspect": null,
+          "echo": true,
+          "words": 10,
+          "ms": 2826,
+          "inputTokens": 5181,
+          "outputTokens": 28
+        },
+        {
+          "person": "minda rom am baratze meti sinatle iyos",
+          "bea": "როგორ შეიცვლებოდა შენთვის ეს ბარათი, მეტი სინათლე რომ ყოფილიყო?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 2416,
+          "inputTokens": 5229,
+          "outputTokens": 24
+        },
+        {
+          "person": "axla cota upro msubukad var",
+          "bea": "რა გინდა, თან წაიღო ამ ფიქრიდან, ახლა რომ ცოტა უფრო მსუბუქად ხარ?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 12,
+          "ms": 2473,
+          "inputTokens": 5269,
+          "outputTokens": 28
+        },
+        {
+          "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
+          "bea": "🎴 მეტი სინათლე\n\nბარათი იმიტომ აირჩიე, რომ ფერი მოგეწონა. მასთან სევდა იგრძენი — გულში სიმძიმე, თითქოს ქვა გედო. შემდეგ დედა გაგახსენდა, რომელიც, როგორც თქვი, ხშირად იყო სევდიანი.\n\n✨ რა აღმოაჩინე:\nამ ბარათთან შენთვის დედის მოგონება გაჩნდა. მოგვიანებით თქვი, რომ ბარათზე მეტი სინათლე გინდოდა, ბოლოს კი აღნიშნე, რომ უკვე ცოტა უფრო მსუბუქად იყავი.\n\n💬 შენი სიტყვები:\n„მინდა რომ ამ ბარათზე მეტი სინათლე იყოს“\n\n🌱 რა გააკეთე დღეს:\nსიტყვებით გამოხატე გულში განცდილი სიმძიმე და დაასახელე, რისი შეცვლა გინდოდა ბარათზე — მეტი სინათლის დამატება.\n\n❓ კითხვა, რომელიც შეგიძლია თან წაიღო:\nროგორი იქნებოდა შენთვის ეს ბარათი მეტი სინათლით?\n\nეს იყო რეფლექსია AI თანამგზავრთან და არა თერაპია.",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 95,
+          "ms": 7727,
+          "inputTokens": 5327,
+          "outputTokens": 245
+        }
+      ]
+    },
+    {
+      "setup": "free",
+      "model": "gpt-6.1-sol",
+      "reasoning": "low",
+      "scenario": "ru-pair",
+      "turns": [
+        {
+          "person": null,
+          "bea": "Здравствуйте, я Беа. С какой из двух карт вам хотелось бы начать?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 12,
+          "ms": 2261,
+          "inputTokens": 6248,
+          "outputTokens": 21
+        },
+        {
+          "person": "Начну с тяжёлой",
+          "bea": "Что первым привлекает ваше внимание на тяжёлой карте?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 8,
+          "ms": 1761,
+          "inputTokens": 6281,
+          "outputTokens": 17
+        },
+        {
+          "person": "Мне тяжело на неё смотреть",
+          "bea": "Не нужно торопиться. Что делает эту карту тяжёлой для вас?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 10,
+          "ms": 2083,
+          "inputTokens": 6310,
+          "outputTokens": 20
+        },
+        {
+          "person": "не знаю",
+          "bea": "Не знать — нормально, и не нужно заставлять себя смотреть. Что вы чувствуете сейчас?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 13,
+          "ms": 2424,
+          "inputTokens": 6338,
+          "outputTokens": 24
+        },
+        {
+          "person": "Наверное, это как моя работа сейчас, всё давит",
+          "bea": "Что на работе сейчас давит на вас сильнее всего?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 9,
+          "ms": 1913,
+          "inputTokens": 6381,
+          "outputTokens": 16
+        },
+        {
+          "person": "На светлой карте есть простор, мне его не хватает",
+          "bea": "Каким был бы для вас этот простор в вашей жизни сейчас?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 11,
+          "ms": 2256,
+          "inputTokens": 6414,
+          "outputTokens": 17
+        },
+        {
+          "person": "Хочу в выходные просто погулять одной",
+          "bea": "Какой вам представляется эта прогулка одной?",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 6,
+          "ms": 1794,
+          "inputTokens": 6447,
+          "outputTokens": 14
+        },
+        {
+          "person": "We've covered a lot of meaningful ground. I'm ready for the session summary now. Please provide the summary of this reflection.",
+          "bea": "🎴 «На светлой карте есть простор»\n\nНа тяжёлую карту вам было тяжело смотреть, и сначала вы не знали, что именно делает её такой. Затем появилась связь с работой: «Наверное, это как моя работа сейчас, всё давит». На светлой карте вы заметили простор, которого вам сейчас не хватает.\n\n✨ Что вы нашли:\nВ этой паре для вас оказались рядом давление на работе и простор на светлой карте. Говоря о том, каким мог бы быть этот простор в жизни, вы назвали прогулку одной.\n\n💬 Ваши слова:\n«Хочу в выходные просто погулять одной».\n\n🌱 Что вы сделали сегодня:\nВы назвали, чего вам не хватает сейчас, — простора, — и то, чего хочется в выходные.\n\n👣 Ваш следующий небольшой шаг:\nВ выходные просто погулять одной.\n\n❓ Вопрос с собой:\nЧто для вас значит простор во время прогулки одной?\n\nЭто было размышление с ИИ-компаньоном, а не терапия.",
+          "questions": 1,
+          "suspect": null,
+          "echo": false,
+          "words": 135,
+          "ms": 6453,
+          "inputTokens": 6491,
+          "outputTokens": 222
+        }
+      ]
+    }
+  ]
+}

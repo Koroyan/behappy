@@ -169,7 +169,9 @@ const AI_NOTE = new RegExp(String.raw`(?<!\p{L})(AI|ИИ|ШІ|KI|IA)(?!\p{L})|�
  * Keeps only summary sentences supported by what the person said: drops
  * sentences that reverse their feelings, describe drawing changes the
  * comparison didn't find, or use clinical labels. The closing "AI companion"
- * sentence is kept or added.
+ * sentence is kept or added. Checked sentence by sentence and kept line by
+ * line, so a summary written in short paragraphs (a title, a few labelled
+ * parts) keeps them.
  */
 export function cleanSummary(summary, ctx = {}) {
   const sessionFacts = ctx.sessionFacts || [];
@@ -177,18 +179,23 @@ export function cleanSummary(summary, ctx = {}) {
   const sessionPolarity = claimPolarity(evals);
   const noChange = ['identical', 'likely_same'].includes(ctx.comparison?.state) && ctx.hasSecondImage;
   const removed = [];
-  const kept = sentences(summary).filter((s) => {
+  const supported = (s) => {
     if (AI_NOTE.test(s)) return true;
     const claimed = claimPolarity(assertedFeelings(s));
     if (sessionPolarity !== 0 && claimed === -sessionPolarity) return removed.push('contradiction'), false;
     if (noChange && claimsVisualChange(s)) return removed.push('visual_claim'), false;
     if (!ctx.userUsedClinical && clinicalClaims(s).length) return removed.push('clinical'), false;
     return true;
-  });
-  let text = kept.join(' ').trim();
+  };
+  const lines = String(summary || '')
+    .split(/\n+/)
+    .map((line) => sentences(line).filter(supported))
+    .filter((line) => line.length);
+  const kept = lines.flat();
+  let text = lines.map((line) => line.join(' ')).join('\n\n').trim();
   const body = kept.filter((s) => !AI_NOTE.test(s));
   if (!body.length) text = `${artText(ctx.language, 'thanks')} ${kept.filter((s) => AI_NOTE.test(s)).join(' ')}`.trim();
-  if (!AI_NOTE.test(text)) text = `${text} ${artText(ctx.language, 'note')}`.trim();
+  if (!AI_NOTE.test(text)) text = `${text}${text.includes('\n') ? '\n\n' : ' '}${artText(ctx.language, 'note')}`.trim();
   return { text, removed };
 }
 

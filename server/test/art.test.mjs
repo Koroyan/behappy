@@ -151,6 +151,26 @@ describe('Art: building blocks', () => {
     assert.match(bad.text, /красный/);
     assert.ok(bad.text.endsWith(ART_TEXT.ru.note));
   });
+
+  test('summary: a letter in short paragraphs keeps them, and the checks still apply line by line', () => {
+    const ctx = { language: 'ru', hasSecondImage: true, comparison: { state: 'identical' }, sessionFacts: extractFacts('naprajenie ara sasiamovno').feelings };
+    const letter = [
+      '🎨 «Красная энергия»',
+      'Вы начали с красного цвета и сказали, что это энергия. Рядом с ней вы почувствовали напряжение в голове и назвали его неприятным.',
+      '✨ Что вы нашли: в одном рисунке у вас оказались и энергия, и напряжение. Центр рисунка стал ярче.',
+      '💬 Ваши слова: «красный — это энергия».',
+      '❓ Вопрос, который можно взять с собой: что сказал бы красный цвет, если бы мог говорить?',
+    ].join('\n\n');
+    const out = cleanSummary(letter, ctx);
+    assert.deepEqual(out.removed, ['visual_claim']);
+    const parts = out.text.split('\n\n');
+    assert.equal(parts[0], '🎨 «Красная энергия»');
+    assert.equal(parts[2], '✨ Что вы нашли: в одном рисунке у вас оказались и энергия, и напряжение.');
+    assert.match(parts[4], /если бы мог говорить\?$/);
+    // The AI note becomes its own last paragraph.
+    assert.equal(parts.at(-1), ART_TEXT.ru.note);
+    assert.equal(parts.length, 6);
+  });
 });
 
 describe('Art: checked turns through the server', () => {

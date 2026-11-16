@@ -79,6 +79,8 @@ const SCENARIOS = {
   identical: { lang: RU, turns: [{ image: FIRST }, { text: 'красный это энергия' }, { text: 'хочу изменить рисунок', phase: 1 }, { image: FIRST, phase: 1, v2: 'identical' }, { text: 'да', phase: 1, compare: 'identical' }, { text: 'это ничего не значит', phase: 1 }, { text: 'давайте закончим', phase: 2, closes: true }] },
   lighting: { lang: RU, turns: [{ image: FIRST }, { text: 'красный это энергия' }, { text: 'хочу изменить рисунок', phase: 1 }, { image: LIGHTING, phase: 1, v2: 'likely_same' }, { text: 'спокойно', phase: 1, compare: 'likely_same' }] },
   strokes: { lang: KA, turns: [{ image: FIRST }, { text: 'mzes vxatavdi, sixarulia' }, { text: 'minda naxati shevcvalo', phase: 1 }, { image: STROKES, phase: 1, v2: 'different' }, { text: 'ki', phase: 1, compare: 'different' }] },
+  // A whole session that closes, for reading the closing letter (session_summary).
+  letter_ka: { lang: KA, turns: [{ image: FIRST }, { text: 'სითბოს ვგრძნობ, როცა ვუყურებ' }, { text: 'როცა ვხატავდი, დაძაბული ვიყავი, ახლა უფრო მშვიდად ვარ' }, { text: 'წითელი მზე ყველაზე მეტად მიზიდავს, ეს ჩემი ენერგიაა' }, { text: 'ბავშვობა გამახსენდა, ზაფხული ბებიასთან სოფელში' }, { text: '"ზაფხულის სითბოს" დავარქმევდი' }, { text: 'არა, შეცვლა არ მინდა, ასეთი მომწონს' }, { text: 'კარგი, დავასრულოთ', closes: true }] },
   modified: { lang: RU, turns: [{ image: FIRST }, { text: 'солнце это радость' }, { text: 'хочу изменить рисунок', phase: 1 }, { image: MODIFIED, phase: 1, v2: 'different' }, { text: 'интересно', phase: 1, compare: 'different' }] },
 };
 

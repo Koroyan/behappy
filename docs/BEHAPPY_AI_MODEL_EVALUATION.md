@@ -169,6 +169,79 @@ and jumped to grounding at "hard to look at"; the prompt now covers both.
 
 Limits: synthetic turns, one run per setup, answers vary between runs.
 
+# Card and art reflections: less echoing, a closing letter (16 November 2026)
+
+## What changed (prompt set 3.6.0)
+
+- **Cards: replies stop saying the person's words back every time.** Under
+  3.5.0 nearly every reply opened by restating the answer and then asked about
+  it ("გულში გრძნობ. როგორია ეს შეგრძნება?"). That reads as mechanical. Now
+  most replies are one question that builds on what the person said ("როგორია
+  ეს სევდა შენს გულში?"). A word or phrase of theirs comes back only now and
+  then: roughly one reply in three or four, never two in a row, and when it
+  helps (a weighty word said for the first time, linking two things they said,
+  a new part of the reflection). The same reflective listening guidance as
+  before (motivational interviewing: reflections that vary, not parroting).
+- **Cards and art: the closing summary is a short personal letter.** It used to
+  be three fixed parts that often said "you haven't named a support…". Now:
+  - a title from their words;
+  - their path from the card or drawing to their own life;
+  - "✨ What you found": the links *they* made, set side by side so they can
+    see them, with no conclusion added;
+  - "💬 Your words": the sentence that carried the most weight;
+  - "🌱 What you did today": one concrete thing, no praise words;
+  - their next step, only if they named one;
+  - "❓ A question to take with you", left out when the reflection was about
+    distress;
+  - the AI note.
+
+  Parts with nothing real in them are left out. Only the person's words and
+  actions are used, as before. Models for this:
+  - narrative therapy's post-session letters (Epston and White): a record
+    written for the person, in their words;
+  - the motivational interviewing collecting and transitional summary: choose
+    the moments that mattered, link them;
+  - the solution-focused end-of-session message: specific acknowledgement of
+    what the person did, then a step that is theirs.
+- **Art: the server's summary check keeps paragraphs.** `cleanSummary`
+  (server/art/validate.mjs) used to join everything into one paragraph. It now
+  checks sentence by sentence as before, but keeps the lines. Which sentences
+  it removes is unchanged. Nothing else in the art reflection changed: not the
+  sessions, phases, questions, image rules or safety.
+
+## Live check
+
+Cards: `node scripts/qa/cards-model-eval.mjs --out docs/eval/cards-eval-2026-11-16.json`.
+Four synthetic scenarios, 29 replies per setup plus 4 summaries; new is a
+Georgian reflection typed in Latin letters ("gulshi vgrdznob"). The same
+scenarios ran with the 3.5.0 prompt (`--prompt`, from `git show`) for
+comparison. "Echo" = a statement that says most of the person's last words
+back.
+
+| Setup | Echo | Echo twice in a row | More than one question | Interpreting / advice words | Summary words |
+|---|---|---|---|---|---|
+| Plus, 3.5.0 prompt | 11 / 29 | 4 | 0 | 0 | 52–83 |
+| Plus, 3.6.0 | 2 / 29 | 0 | 0 | 0 | 89–124 |
+| Free, 3.6.0 | 3 / 29 | 0 | 0 | 0 | 83–135 |
+
+Read by hand, the 3.6.0 counts include detector false positives: the answer to
+"What does this card mean?" and "We can stop here" after "I'd like to stop".
+The only real echo left is in the free run, and it is the useful kind: "დედა
+გაგახსენდა — ისიც ხშირად იყო სევდიანი.", said when the person first mentioned
+their mother. An earlier 3.6.0 draft run had one more: "You were alone a lot
+during your school years."
+
+Art: `node scripts/qa/art-model-eval.mjs --models gpt-6.1-sol --only letter_ka,stop,identical,regression --out docs/eval/art-summary-eval-2026-11-16.json`.
+24 turns, 0 errors, JSON 100%, 0 contradicted feelings, 0 invented changes,
+4/4 image turns with the two questions. 3 closing letters, all in the new
+shape. One letter was sent back once by the server's check, and the rewrite
+was clean. In the identical-drawing case the letter says no change was
+confirmed.
+
+Limits: synthetic turns, one run each, and answers vary between runs. The
+Georgian, Russian and English letters were read by hand; the other 16
+languages were not run.
+
 # Bea: method and models (14 November 2026)
 
 ## What changed
